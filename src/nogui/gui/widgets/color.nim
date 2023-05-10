@@ -60,17 +60,21 @@ method draw(self: GUIColorBar, ctx: ptr CTXRender) =
   # 2 -- Draw Saturation / Hue Quad
   ctx.addVerts(8, 12); rect.xw -= 25
   # White/Color Gradient
-  vertexCOL(0, rect.x, rect.y, WHITE)
-  vertexCOL(1, rect.xw, rect.y, self.hColor)
-  vertexCOL(2, rect.x, rect.yh, WHITE)
-  vertexCOL(3, rect.xw, rect.yh, self.hColor)
-  triangle(0, 0,1,2); triangle(3, 1,2,3)
+  ctx.vertexCOL(0, rect.x, rect.y, WHITE)
+  ctx.vertexCOL(1, rect.xw, rect.y, self.hColor)
+  ctx.vertexCOL(2, rect.x, rect.yh, WHITE)
+  ctx.vertexCOL(3, rect.xw, rect.yh, self.hColor)
+  # White/Color Elements
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
   # Black/Color Gradient
-  vertexCOL(4, rect.x, rect.y, 0)
-  vertexCOL(5, rect.xw, rect.y, 0)
-  vertexCOL(6, rect.x, rect.yh, BLACK)
-  vertexCOL(7, rect.xw, rect.yh, BLACK)
-  triangle(6, 4,5,6); triangle(9, 5,6,7)
+  ctx.vertexCOL(4, rect.x, rect.y, 0)
+  ctx.vertexCOL(5, rect.xw, rect.y, 0)
+  ctx.vertexCOL(6, rect.x, rect.yh, BLACK)
+  ctx.vertexCOL(7, rect.xw, rect.yh, BLACK)
+  # Black/Color Elements
+  ctx.triangle(6, 4,5,6)
+  ctx.triangle(9, 5,6,7)
   # 3 -- Draw Color Bar
   ctx.addVerts(14, 36)
   # Move to X to Bar
@@ -86,14 +90,14 @@ method draw(self: GUIColorBar, ctx: ptr CTXRender) =
       hue: uint32
     while i < 7:
       if i + 1 < 7: # Quad Elements
-        triangle(k, j, j + 1, j + 2)
-        triangle(k + 3, j + 1, j + 2, j + 3)
+        ctx.triangle(k, j, j + 1, j + 2)
+        ctx.triangle(k + 3, j + 1, j + 2, j + 3)
         # Hue Color
         hue = hueSix[i]
       else: hue = hueSix[0]
       # Bar Vertexs Segment
-      vertexCOL(j, rect.x, rect.yh, hue)
-      vertexCOL(j + 1, rect.xw, rect.yh, hue)
+      ctx.vertexCOL(j, rect.x, rect.yh, hue)
+      ctx.vertexCOL(j + 1, rect.xw, rect.yh, hue)
       rect.yh += h # Next Y
       # Next Hue Quad
       i += 1; j += 2; k += 6

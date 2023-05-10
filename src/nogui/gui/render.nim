@@ -277,42 +277,50 @@ proc addVerts*(ctx: ptr CTXRender, vSize, eSize: int32) =
 # ----------------------
 
 ## X,Y,WHITEU,WHITEV,COLOR
-template vertex(i: int32, a,b: float32) =
-  ctx.pVert[i].x = a # Position X
-  ctx.pVert[i].y = b # Position Y
-  ctx.pVert[i].u = ctx.atlas.whiteU # White U
-  ctx.pVert[i].v = ctx.atlas.whiteV # White V
-  ctx.pVert[i].color = ctx.color # Color RGBA
+proc vertex(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
+  let vert = addr ctx.pVert[i]
+  vert.x = x # Position X
+  vert.y = y # Position Y
+  vert.u = ctx.atlas.whiteU # White U
+  vert.v = ctx.atlas.whiteV # White V
+  vert.color = ctx.color # Color RGBA
 
 ## X,Y,WHITEU,WHITEV,COLORAA
-template vertexAA(i: int32, a,b: float32) =
-  ctx.pVert[i].x = a # Position X
-  ctx.pVert[i].y = b # Position Y
-  ctx.pVert[i].u = ctx.atlas.whiteU # White U
-  ctx.pVert[i].v = ctx.atlas.whiteV # White V
-  ctx.pVert[i].color = ctx.colorAA # Color Antialias
+proc vertexAA(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
+  let vert = addr ctx.pVert[i]
+  vert.x = x # Position X
+  vert.y = y # Position Y
+  vert.u = ctx.atlas.whiteU # White U
+  vert.v = ctx.atlas.whiteV # White V
+  vert.color = ctx.colorAA # Color Antialias
 
 # X,Y,U,V,COLOR
-template vertexUV(i: int32, a,b: float32, c,d: int16) =
-  ctx.pVert[i].x = a # Position X
-  ctx.pVert[i].y = b # Position Y
-  ctx.pVert[i].u = c # Tex U
-  ctx.pVert[i].v = d # Tex V
-  ctx.pVert[i].color = ctx.color # Color RGBA
+proc vertexUV(ctx: ptr CTXRender; i: int32; x, y: float32; u, v: int16) {.inline.} =
+  let vert = addr ctx.pVert[i]
+  vert.x = x # Position X
+  vert.y = y # Position Y
+  vert.u = u # Tex U
+  vert.v = v # Tex V
+  vert.color = ctx.color # Color RGBA
 
 # X,Y,COLOR | PUBLIC
-template vertexCOL*(i: int32, a,b: float32, c: GUIColor) =
-  ctx.pVert[i].x = a # Position X
-  ctx.pVert[i].y = b # Position Y
-  ctx.pVert[i].u = ctx.atlas.whiteU # White U
-  ctx.pVert[i].v = ctx.atlas.whiteV # White V
-  ctx.pVert[i].color = c # Color RGBA
+proc vertexCOL*(ctx: ptr CTXRender; i: int32; x, y: float32; color: GUIColor) {.inline.} =
+  let vert = addr ctx.pVert[i]
+  vert.x = x # Position X
+  vert.y = y # Position Y
+  vert.u = ctx.atlas.whiteU # White U
+  vert.v = ctx.atlas.whiteV # White V
+  vert.color = color # Color RGBA
 
 # Last Vert Index + Offset | PUBLIC
-template triangle*(o: int32, a,b,c: int32) =
-  ctx.pElem[o] = ctx.cursor + cast[uint16](a)
-  ctx.pElem[o+1] = ctx.cursor + cast[uint16](b)
-  ctx.pElem[o+2] = ctx.cursor + cast[uint16](c)
+proc triangle*(ctx: ptr CTXRender; i: int32; a, b, c: int32) {.inline.} =
+  let 
+    element = cast[CTXElementMap](addr ctx.pElem[i])
+    cursor = ctx.cursor
+  # Change Elements
+  element[0] = cursor + cast[uint16](a)
+  element[1] = cursor + cast[uint16](b)
+  element[2] = cursor + cast[uint16](c)
 
 # -----------------------
 # GUI CLIP/COLOR LEVELS PROCS
@@ -351,44 +359,44 @@ proc color*(ctx: ptr CTXRender, color: uint32) {.inline.} =
 
 proc fill*(ctx: ptr CTXRender, r: CTXRect) =
   ctx.addVerts(4, 6)
-  vertex(0, r.x, r.y)
-  vertex(1, r.xw, r.y)
-  vertex(2, r.x, r.yh)
-  vertex(3, r.xw, r.yh)
+  ctx.vertex(0, r.x, r.y)
+  ctx.vertex(1, r.xw, r.y)
+  ctx.vertex(2, r.x, r.yh)
+  ctx.vertex(3, r.xw, r.yh)
   # Elements Definition
-  triangle(0, 0,1,2)
-  triangle(3, 1,2,3)
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
 
 proc line*(ctx: ptr CTXRender, r: CTXRect, s: float32) =
   ctx.addVerts(12, 24)
   # Top Rectangle Vertexs
-  vertex(0, r.x,  r.y)
-  vertex(1, r.xw, r.y)
-  vertex(2, r.x,  r.y + s)
-  vertex(3, r.xw, r.y + s)
+  ctx.vertex(0, r.x,  r.y)
+  ctx.vertex(1, r.xw, r.y)
+  ctx.vertex(2, r.x,  r.y + s)
+  ctx.vertex(3, r.xw, r.y + s)
   # Bottom Rectangle Vertexs
-  vertex(4, r.x, r.yh)
-  vertex(5, r.xw, r.yh)
-  vertex(6, r.x,  r.yh - s)
-  vertex(7, r.xw, r.yh - s)
+  ctx.vertex(4, r.x, r.yh)
+  ctx.vertex(5, r.xw, r.yh)
+  ctx.vertex(6, r.x,  r.yh - s)
+  ctx.vertex(7, r.xw, r.yh - s)
   # Left Side Rectangle Vertexs
-  vertex(8, r.x + s,  r.y + s)
-  vertex(9, r.xw - s, r.y + s)
+  ctx.vertex(8, r.x + s,  r.y + s)
+  ctx.vertex(9, r.xw - s, r.y + s)
   # Right Side Rectangle Vertexs
-  vertex(10, r.x + s,  r.yh - s)
-  vertex(11, r.xw - s, r.yh - s)
+  ctx.vertex(10, r.x + s,  r.yh - s)
+  ctx.vertex(11, r.xw - s, r.yh - s)
   # Top Rectangle
-  triangle(0, 0,1,2)
-  triangle(3, 1,2,3)
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
   # Bottom Rectangle
-  triangle(6, 4,5,6)
-  triangle(9, 5,6,7)
+  ctx.triangle(6, 4,5,6)
+  ctx.triangle(9, 5,6,7)
   # Left Side Rectangle
-  triangle(12, 2,8,10)
-  triangle(15, 2,6,10)
+  ctx.triangle(12, 2,8,10)
+  ctx.triangle(15, 2,6,10)
   # Right Side Rectangle
-  triangle(18, 3, 7,9)
-  triangle(21, 11,7,9)
+  ctx.triangle(18, 3, 7,9)
+  ctx.triangle(21, 11,7,9)
 
 # --------------------------------
 # CUSTOM TEXTURE ID RENDERING PROC
@@ -402,10 +410,10 @@ proc texture*(ctx: ptr CTXRender, r: CTXRect, texID: GLuint) =
   ctx.pVert = # Set Pointer Cursor
     cast[CTXVertexMap](addr ctx.verts[^4])
   # Define Texture Quad Vertexs
-  vertexUV(0, r.x, r.y, 0, 0)
-  vertexUV(1, r.xw, r.y, 1, 0)
-  vertexUV(2, r.x, r.yh, 0, 1)
-  vertexUV(3, r.xw, r.yh, 1, 1)
+  ctx.vertexUV(0, r.x, r.y, 0, 0)
+  ctx.vertexUV(1, r.xw, r.y, 1, 0)
+  ctx.vertexUV(2, r.x, r.yh, 0, 1)
+  ctx.vertexUV(3, r.xw, r.yh, 1, 1)
   # Set Texture ID
   ctx.pCMD.texID = texID
   # Invalidate CMD
@@ -418,11 +426,11 @@ proc texture*(ctx: ptr CTXRender, r: CTXRect, texID: GLuint) =
 proc triangle*(ctx: ptr CTXRender, a,b,c: CTXPoint) =
   ctx.addVerts(9, 21)
   # Triangle Description
-  vertex(0, a.x, a.y)
-  vertex(1, b.x, b.y)
-  vertex(2, c.x, c.y)
+  ctx.vertex(0, a.x, a.y)
+  ctx.vertex(1, b.x, b.y)
+  ctx.vertex(2, c.x, c.y)
   # Elements Description
-  triangle(0, 0,1,2)
+  ctx.triangle(0, 0,1,2)
   var # Antialiased
     i, j: int32 # Sides
     k, l: int32 = 3 # AA
@@ -435,19 +443,19 @@ proc triangle*(ctx: ptr CTXRender, a,b,c: CTXPoint) =
     norm = invSqrt(x*x + y*y)
     x *= norm; y *= norm
     # Add Antialiased Vertexs to Triangle Sides
-    vertexAA(k, ctx.pVert[i].x + x, ctx.pVert[i].y + y)
-    vertexAA(k+1, ctx.pVert[j].x + x, ctx.pVert[j].y + y)
+    ctx.vertexAA(k, ctx.pVert[i].x + x, ctx.pVert[i].y + y)
+    ctx.vertexAA(k+1, ctx.pVert[j].x + x, ctx.pVert[j].y + y)
     # Add Antialiased Elements
-    triangle(l, i, j, k)
-    triangle(l+3, j, k, k+1)
+    ctx.triangle(l, i, j, k)
+    ctx.triangle(l+3, j, k, k+1)
     # Next Triangle Size
     i += 1; k += 2; l += 6
 
 proc line*(ctx: ptr CTXRender, a,b: CTXPoint) =
   ctx.addVerts(6, 12)
   # Line Description
-  vertex(0, a.x, a.y)
-  vertex(1, b.x, b.y)
+  ctx.vertex(0, a.x, a.y)
+  ctx.vertex(1, b.x, b.y)
   var # Distances
     dx = a.y - b.y
     dy = b.x - a.x
@@ -456,17 +464,17 @@ proc line*(ctx: ptr CTXRender, a,b: CTXPoint) =
   # Normalize Distances
   dx *= norm; dy *= norm
   # Antialias Description Top
-  vertexAA(2, a.x + dx, a.y + dy)
-  vertexAA(3, b.x + dx, b.y + dy)
+  ctx.vertexAA(2, a.x + dx, a.y + dy)
+  ctx.vertexAA(3, b.x + dx, b.y + dy)
   # Antialias Description Bottom
-  vertexAA(4, a.x - dx, a.y - dy)
-  vertexAA(5, b.x - dx, b.y - dy)
+  ctx.vertexAA(4, a.x - dx, a.y - dy)
+  ctx.vertexAA(5, b.x - dx, b.y - dy)
   # Top Elements
-  triangle(0, 0,1,2)
-  triangle(3, 1,2,3)
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
   # Bottom Elements
-  triangle(6, 0,1,5)
-  triangle(9, 0,4,5)
+  ctx.triangle(6, 0,1,5)
+  ctx.triangle(9, 0,4,5)
 
 proc circle*(ctx: ptr CTXRender, p: CTXPoint, r: float32) =
   # Move X & Y to Center
@@ -484,20 +492,20 @@ proc circle*(ctx: ptr CTXRender, p: CTXPoint, r: float32) =
     # Direction Normals
     ox = cos(o); oy = sin(o)
     # Vertex Information
-    vertex(j, # Solid
+    ctx.vertex(j, # Solid
       p.x + ox * r, 
       p.y + oy * r)
-    vertexAA(j + 1, # AA
+    ctx.vertexAA(j + 1, # AA
       ctx.pVert[j].x + ox,
       ctx.pVert[j].y + oy)
     if i + 1 < n:
-      triangle(k, 0, j, j + 2)
-      triangle(k + 3, j, j + 1, j + 2)
-      triangle(k + 6, j + 1, j + 2, j + 3)
+      ctx.triangle(k, 0, j, j + 2)
+      ctx.triangle(k + 3, j, j + 1, j + 2)
+      ctx.triangle(k + 6, j + 1, j + 2, j + 3)
     else: # Connect Last With First
-      triangle(k, 0, j, 0)
-      triangle(k + 3, j, 1, 0)
-      triangle(k + 6, j, j + 1, 1)
+      ctx.triangle(k, 0, j, 0)
+      ctx.triangle(k + 3, j, 1, 0)
+      ctx.triangle(k + 6, j, j + 1, 1)
     # Next Circle Triangle
     i += 1; j += 2; k += 9
     o += theta; # Next Angle
@@ -521,13 +529,13 @@ proc text*(ctx: ptr CTXRender, x,y: int32, str: string) =
         y = float32 y - glyph.yo
         yh = y + float32 glyph.h
       # Quad Vertex
-      vertexUV(0, x, y, glyph.x1, glyph.y1)
-      vertexUV(1, xw, y, glyph.x2, glyph.y1)
-      vertexUV(2, x, yh, glyph.x1, glyph.y2)
-      vertexUV(3, xw, yh, glyph.x2, glyph.y2)
+      ctx.vertexUV(0, x, y, glyph.x1, glyph.y1)
+      ctx.vertexUV(1, xw, y, glyph.x2, glyph.y1)
+      ctx.vertexUV(2, x, yh, glyph.x1, glyph.y2)
+      ctx.vertexUV(3, xw, yh, glyph.x2, glyph.y2)
     # Quad Elements
-    triangle(0, 0,1,2)
-    triangle(3, 1,2,3)
+    ctx.triangle(0, 0,1,2)
+    ctx.triangle(3, 1,2,3)
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
@@ -568,13 +576,13 @@ proc text*(ctx: ptr CTXRender, x,y: int32, clip: CTXRect, str: string) =
       # Reserve Vertex and Elements
       ctx.addVerts(4, 6)
       # Quad Vertex
-      vertexUV(0, xo, yo, uo, vo)
-      vertexUV(1, xw, yo, uw, vo)
-      vertexUV(2, xo, yh, uo, vh)
-      vertexUV(3, xw, yh, uw, vh)
+      ctx.vertexUV(0, xo, yo, uo, vo)
+      ctx.vertexUV(1, xw, yo, uw, vo)
+      ctx.vertexUV(2, xo, yh, uo, vh)
+      ctx.vertexUV(3, xw, yh, uw, vh)
       # Quad Elements
-      triangle(0, 0,1,2)
-      triangle(3, 1,2,3)
+      ctx.triangle(0, 0,1,2)
+      ctx.triangle(3, 1,2,3)
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
@@ -588,10 +596,10 @@ proc icon*(ctx: ptr CTXRender, x,y: int32, id: uint16) =
     # Lookup Icon from Atlas
     icon = ctx.atlas.icon(id)
   # Icon Vertex Definition
-  vertexUV(0, x, y, icon.x1, icon.y1)
-  vertexUV(1, xw, y, icon.x2, icon.y1)
-  vertexUV(2, x, yh, icon.x1, icon.y2)
-  vertexUV(3, xw, yh, icon.x2, icon.y2)
+  ctx.vertexUV(0, x, y, icon.x1, icon.y1)
+  ctx.vertexUV(1, xw, y, icon.x2, icon.y1)
+  ctx.vertexUV(2, x, yh, icon.x1, icon.y2)
+  ctx.vertexUV(3, xw, yh, icon.x2, icon.y2)
   # Elements Definition
-  triangle(0, 0,1,2)
-  triangle(3, 1,2,3)
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
