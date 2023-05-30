@@ -1,0 +1,4 @@
+# Ignore Binary Files on Tests
+tests/*
+!tests/*.*
+!tests/**/
