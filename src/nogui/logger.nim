@@ -9,13 +9,14 @@ type
     lvWarning
 
 proc log*(kind: LOGKind, x: varargs[string, `$`]) =
-  block: # Log Kind Header
-    let ty = case kind:
-      of lvError: "\e[1;31m[ERROR]\e[00m "
-      of lvWarning: "\e[1;33m[WARNING]\e[00m "
-      of lvInfo: "\e[1;32m[INFO]\e[00m "
-    # Print Colored Header
-    write(stdout, ty)
+  const headers = [
+    "\e[1;31m[ERROR]\e[00m ",
+    "\e[1;33m[WARNING]\e[00m ",
+    "\e[1;32m[INFO]\e[00m "
+  ]
+  
+  # Print Colored Header
+  write(stdout, headers[ord kind])
   # Print Passed Data
   for args in x:
     write(stdout, args)
