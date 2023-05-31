@@ -4,7 +4,9 @@ from math import floor, ceil, round
 type
   # Range Value
   Value* = object
-    min, max, pos: float32
+    min, max: float32
+    # Calculated Values
+    dist, t: float32
   # Color Models
   RGBColor* = object
     r*, g*, b*: float32
@@ -15,39 +17,46 @@ type
 # RANGED VALUE INT32|FLOAT32
 # --------------------------
 
-proc interval*(value: var Value, min, max: float32) =
+proc toFloat*(value: Value): float32 =
+  value.min + value.dist * value.t
+
+proc toRaw*(value: Value): float32 {.inline.} = 
+  result = value.t
+
+proc toInt*(value: Value): int32 {.inline.} =
+  result = int32(value.toFloat)
+
+proc interval*(value: var Value, min, max: sink float32) =
   # Set Min and Max Values
-  if min < max:
-    value.min = min
-    value.max = max
-  else: # Intercaled
-    value.min = max
-    value.max = min
+  if min > max:
+    swap(min, max)
   # Clamp Value to Range
-  value.pos = clamp(value.pos, 
-    value.min, value.max)
-
-proc interval*(value: var Value): float32 =
-  value.max - value.min
-
-proc lerp*(value: var Value, t: float32, approx = false) =
-  var pos = (value.max - value.min) * t
-  if approx: pos = round(pos)
+  let 
+    dist = max - min
+    v = value.dist * value.t
   # Set Current Value
-  value.pos = pos
+  value.t = clamp(v, 0.0, dist) / dist
+  # Set Current Interval
+  value.max = max
+  value.min = min
+  value.dist = dist
 
-proc val*(value: var Value, val: float32) =
-  value.pos = clamp(val, 
-    value.min, value.max)
+proc interval*(value: Value): tuple[max, min: float32] =
+  result = (value.max, value.min)
 
-proc distance*(value: var Value): float32 {.inline.} =
-  value.pos / (value.max - value.min)
+proc distance*(value: Value): float32 {.inline.} =
+  result = value.dist
 
-template toFloat*(value: Value): float32 =
-  value.pos # Return Current Value
+proc discrete*(value: var Value, t: float32) =
+  let
+    t0 = clamp(t, 0.0, 1.0)
+    dist = value.dist
+  # Set Discretized Parameter
+  value.t = round(dist * t0) / dist
 
-template toInt*(value: Value): int32 =
-  int32(value.pos) # Return Current Value to Int32
+proc lerp*(value: var Value, t: float32) =
+  # Set Continious Parameter
+  value.t = clamp(t, 0.0, 1.0)
 
 # -------------------------
 # HSV to RGB and RGB to HSV
@@ -76,7 +85,7 @@ void hsv2rgb(float* rgb, float* hsv) {
     bb = vv * (1 - (hsv[1] * f));
     cc = vv * (1 - (hsv[1] * (1 - f)));
   
-    switch (i) {
+    switch (i){
       case 0: rgb[0] = vv; rgb[1] = cc; rgb[2] = aa; break;
       case 1: rgb[0] = bb; rgb[1] = vv; rgb[2] = aa; break;
       case 2: rgb[0] = aa; rgb[1] = vv; rgb[2] = cc; break;

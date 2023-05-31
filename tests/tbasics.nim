@@ -367,7 +367,7 @@ when isMainModule:
   var col = RGBColor(r: 50 / 255, g: 50 / 255, b: 50 / 255)
   val2.interval(0, 100)
   val.interval(0, 5)
-  val.lerp(0.5, true)
+  val.lerp(0.5)
   
   # Generate CPU Raster
   cpu_pixels.setLen(512 * 256)

@@ -2,8 +2,7 @@ import ../widget, ../render
 from strutils import 
   formatFloat, ffDecimal
 from ../../omath import
-  Value, distance, lerp,
-  toFloat, toInt
+  Value, toRaw, lerp, discrete, toFloat, toInt
 from ../event import GUIState
 from ../config import 
   metrics, theme
@@ -32,8 +31,7 @@ method draw(self: GUISlider, ctx: ptr CTXRender) =
     ctx.fill(rect)
     # Fill Slider Bar
     rect.xw = # Get Slider Width
-      rect.x + float32(self.rect.w) * 
-        distance(self.value[])
+      rect.x + float32(self.rect.w) * self.value[].toRaw
     ctx.color: # Status Color
       if not self.any(wHoverGrab):
         theme.barScroll
@@ -54,6 +52,10 @@ method draw(self: GUISlider, ctx: ptr CTXRender) =
 
 method event(self: GUISlider, state: ptr GUIState) =
   if self.test(wGrab):
-    self.value[].lerp clamp(
-      (state.mx - self.rect.x) / self.rect.w, 
-      0, 1), self.decimals == 0
+    let 
+      t = (state.mx - self.rect.x) / self.rect.w
+      value = self.value
+    # Change Value
+    if self.decimals > 0:
+      value[].lerp(t)
+    else: value[].discrete(t)
