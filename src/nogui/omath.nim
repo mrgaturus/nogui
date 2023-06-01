@@ -13,9 +13,9 @@ type
   HSVColor* = object
     h*, s*, v*: float32
 
-# --------------------------
-# RANGED VALUE INT32|FLOAT32
-# --------------------------
+# --------------------
+# Numeric Range Values
+# --------------------
 
 proc toFloat*(value: Value): float32 =
   value.min + value.dist * value.t
@@ -58,93 +58,73 @@ proc lerp*(value: var Value, t: float32) =
   # Set Continious Parameter
   value.t = clamp(t, 0.0, 1.0)
 
-# -------------------------
-# HSV to RGB and RGB to HSV
-# -------------------------
+# --------------------
+# RGB/HSV Color Values
+# --------------------
 
-{.emit: """
+proc toRGB*(hsv: HSVColor): RGBColor =
+  let v = hsv.v
+  if hsv.s == 0:
+    return RGBColor(r: v, g: v, b: v)
+  # Convert RGB To HSV
+  var a, b, c, h, f: float32
+  # Hue Section
+  h = hsv.h
+  if h >= 1: h = 0
+  h *= 6
+  # Hue Index
+  f = floor(h)
+  let 
+    i = int32 f
+    s = hsv.s
+  f = h - f
+  # RGB Values
+  a = v - v * s
+  b = v - v * s * f
+  c = v - v * (s - s * f)
+  # Ajust Values Using Index
+  case i:
+  of 0: RGBColor(r: v, g: c, b: a)
+  of 1: RGBColor(r: b, g: v, b: a)
+  of 2: RGBColor(r: a, g: v, b: c)
+  of 3: RGBColor(r: a, g: b, b: v)
+  of 4: RGBColor(r: c, g: a, b: v)
+  of 5: RGBColor(r: v, g: a, b: b)
+  else: RGBColor(r: v, g: v, b: v)
 
-// [H, S, V, A]
-void hsv2rgb(float* rgb, float* hsv) {
-  float vv = hsv[2];
-  if (hsv[1] == 0)
-    rgb[0] = rgb[1] = rgb[2] = vv;
-  else {
-    short i;
-    float aa, bb, cc, h, f;
+proc toHSV*(rgb: RGBColor): HSVColor =
+  let
+    # Max and Min Color Channels
+    max = max(rgb.r, rgb.g).max(rgb.b)
+    min = min(rgb.r, rgb.g).min(rgb.b)
+    # Color Channel Domain
+    delta = max - min
+  # Calculate Saturation/Value
+  result.v = max
+  if max > 0:
+    result.s = delta / max
+  if result.s == 0:
+    return result
+  # Calculate Hue
+  if rgb.r == max:
+    result.h = (rgb.g - rgb.b) / delta
+  elif rgb.g == max:
+    result.h = 2 + (rgb.b - rgb.r) / delta
+  elif rgb.b == max:
+    result.h = 4 + (rgb.r - rgb.g) / delta
+  # Ajust Hue Range
+  result.h *= 60
+  if result.h < 0:
+    result.h += 360
+  result.h /= 360
 
-    h = hsv[0];
-    if (h == 1)
-      h = 0;
-    h *= 6;
-
-    i = floorf(h);
-    f = h - i;
-
-    aa = vv * (1 - hsv[1]);
-    bb = vv * (1 - (hsv[1] * f));
-    cc = vv * (1 - (hsv[1] * (1 - f)));
-  
-    switch (i){
-      case 0: rgb[0] = vv; rgb[1] = cc; rgb[2] = aa; break;
-      case 1: rgb[0] = bb; rgb[1] = vv; rgb[2] = aa; break;
-      case 2: rgb[0] = aa; rgb[1] = vv; rgb[2] = cc; break;
-      case 3: rgb[0] = aa; rgb[1] = bb; rgb[2] = vv; break;
-      case 4: rgb[0] = cc; rgb[1] = aa; rgb[2] = vv; break;
-      case 5: rgb[0] = vv; rgb[1] = aa; rgb[2] = bb; break;
-    }
-  }
-}
-
-void rgb2hsv(float* hsv, float* rgb) {
-  float max, min, delta;
-  // Max Color Channel
-  max = (rgb[0] > rgb[1]) ? rgb[0] : rgb[1];
-  max = (max > rgb[2]) ? max : rgb[2];
-  // Min Color Channel
-  min = (rgb[0] < rgb[1]) ? rgb[0] : rgb[1];
-  min = (min < rgb[2]) ? min : rgb[2];
-  // Delta Max - Min
-  delta = max - min;
-
-  hsv[2] = max;
-  hsv[1] = (max == 0) ? 0 : delta / max;
-  if (hsv[1] == 0)
-    hsv[0] = 0;
-  else {
-    if (rgb[0] == max)
-      hsv[0] = (rgb[1] - rgb[2]) / delta;
-    else if (rgb[1] == max)
-      hsv[0] = 2 + (rgb[2] - rgb[0]) / delta;
-    else if (rgb[2] == max)
-      hsv[0] = 4 + (rgb[0] - rgb[1]) / delta;
-    hsv[0] *= 60;
-    if (hsv[0] < 0)
-      hsv[0] += 360;
-    hsv[0] /= 360;
-  }
-}
-
-unsigned int rgb2bytes(float* rgb) {
-  return 
-    (unsigned int) (rgb[0] * 255) |
-    (unsigned int) (rgb[1] * 255) << 8 |
-    (unsigned int) (rgb[2] * 255) << 16 | 
-    0xFF << 24;
-}
-
-inline char rgb_cmp(float* a, float* b) {
-  return memcmp(a, b, 3) == 0;
-}
-
-""".}
-
-# Color Conversion
-proc hsv*(color: var RGBColor, hsv: var HSVColor) {.importc: "hsv2rgb".}
-proc rgb*(color: var HSVColor, rgb: var RGBColor) {.importc: "rgb2hsv".}
-# RGB Comparation and Conversion
-proc rgb8*(color: var RGBColor): uint32 {.importc: "rgb2bytes".}
-proc `==`*(a, b: var RGBColor): bool {.importc: "rgb_cmp".}
+proc toPacked*(rgb: RGBColor): cuint =
+  let
+    r = cuint(rgb.r * 255.0)
+    g = cuint(rgb.g * 255.0)
+    b = cuint(rgb.b * 255.0)
+  # Pack Color Channels to 32bit
+  r or (g shl 8) or (b shl 16) or (0xFF shl 24)
 
 # ---------------------
 # FAST MATH C-FUNCTIONS

@@ -2,8 +2,8 @@
 
 import ../widget, ../render
 from ../../omath import
-  RGBColor, rgb, rgb8,
-  HSVColor, hsv
+  RGBColor, toRGB, toPacked,
+  HSVColor, toHSV
 from ../event import 
   GUIState, GUIEvent
 
@@ -47,7 +47,7 @@ method draw(self: GUIColorBar, ctx: ptr CTXRender) =
     self.pColor = self.color[]
     # Change Prev HSV
     var nHSV: HSVColor
-    nHSV.rgb(self.pColor)
+    nHSV = toHSV(self.pColor)
     if nHSV.s == 0: # Hue
       nHSV.h = self.pHSV.h
     self.pHSV = nHSV
@@ -55,8 +55,8 @@ method draw(self: GUIColorBar, ctx: ptr CTXRender) =
     nHSV.s = 1; nHSV.v = 1
     self.hColor = block:
       var hRGB: RGBColor
-      hRGB.hsv(nHSV)
-      hRGB.rgb8()
+      hRGB = nHSV.toRGB
+      hRGB.toPacked()
   # 2 -- Draw Saturation / Hue Quad
   ctx.addVerts(8, 12); rect.xw -= 25
   # White/Color Gradient
@@ -145,19 +145,19 @@ method event(self: GUIColorBar, state: ptr GUIState) =
         (self.rect.w - 25), 0, 1)
       self.pHSV.v = 1 - h
       # Change Color
-      self.pColor.hsv(self.pHSV)
+      self.pColor = toRGB(self.pHSV)
       self.color[] = self.pColor
     of gBar:
       var nHSV = self.pHSV
       nHSV.h = h
       # Change Color
       self.pHSV = nHSV
-      self.pColor.hsv(self.pHSV)
+      self.pColor = toRGB(self.pHSV)
       self.color[] = self.pColor
       # Change Hue Color
       nHSV.s = 1; nHSV.v = 1
       self.hColor = block:
         var hRGB: RGBColor
-        hRGB.hsv(nHSV)
-        hRGB.rgb8()
+        hRGB = toRGB(nHSV)
+        hRGB.toPacked()
     of gNothing: discard
