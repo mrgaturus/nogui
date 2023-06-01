@@ -5,7 +5,7 @@ from ../values import
   guiProjection
 # Assets and Metrics
 from config import metrics
-from ../assets import newShader
+from ../data import newShader
 from ../utf8 import runes16
 # Texture Atlas
 import atlas

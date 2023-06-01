@@ -3,7 +3,7 @@ from config import metrics, opaque
 
 import ../libs/gl
 import ../libs/ft2
-import ../assets
+import ../data
 # Import UTF8
 from ../utf8 import
   rune16, runes16
