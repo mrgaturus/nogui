@@ -1,6 +1,6 @@
 # Math and Fast Math Modules
 from math import sin, cos, PI
-from ../omath import
+from ../values import
   fastSqrt, invSqrt,
   guiProjection
 # Assets and Metrics

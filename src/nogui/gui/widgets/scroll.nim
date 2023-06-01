@@ -1,5 +1,5 @@
 import ../widget, ../render
-from ../../omath import
+from ../../values import
   Value, toRaw, lerp,
   distance, toFloat, toInt
 from ../event import 

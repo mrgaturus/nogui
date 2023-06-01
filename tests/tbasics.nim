@@ -20,7 +20,7 @@ from nogui/gui/widgets/color import newColorBar
 import nogui/gui/widgets/label
 from nogui/gui/atlas import width
 from nogui/gui/config import metrics, theme
-from nogui/omath import Value, interval, lerp, RGBColor
+from nogui/values import Value, interval, lerp, RGBColor
 #from nogui/assets import icons
 from nogui/utf8 import UTF8Input, `text=`
 

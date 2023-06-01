@@ -1,7 +1,7 @@
 import ../widget, ../render
 from strutils import 
   formatFloat, ffDecimal
-from ../../omath import
+from ../../values import
   Value, toRaw, lerp, discrete, toFloat, toInt
 from ../event import GUIState
 from ../config import 
