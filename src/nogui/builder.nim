@@ -1,5 +1,5 @@
 import gui/[widget, event, render]
-import macros, std/tables
+import macros, macrocache
 from strformat import fmt
 
 # -------------------
@@ -11,33 +11,37 @@ proc Event(obj: GUIWidget, state: ptr GUIState) {.noconv.} = discard
 proc Update(obj: GUIWidget) {.noconv.} = discard
 proc Layout(obj: GUIWidget) {.noconv.} = discard
 proc Draw(obj: GUIWidget, ctx: ptr CTXRender) {.noconv.} = discard
+# Treeable Constructors
+template node() {.pragma.}
 
 type
   VMethodKind = enum
-    mkHandle, mkEvent, mkUpdate, mkLayout, mkDraw, mkInvalid
-  VMethodTable = array[VMethodKind, NimNode]
+    mkHandle
+    mkEvent 
+    mkUpdate
+    mkLayout
+    mkDraw
+    # Invalid Method
+    mkInvalid
 # Tracking VTable Methods
-var vtables {.compileTime.} = 
-  initTable[string, VMethodTable]()
-# Treeable Constructors
-template node() {.pragma.}
+const mcMethods = CacheTable"vtables"
 
 # ---------------------
 # Widget VTable Methods
 # ---------------------
 
-func vtableCreate(): VMethodTable =
-  result = [
-    bindSym"Handle", 
+func vtableCreate(): NimNode =
+  result = nnkStmtList.newTree(
+    bindSym"Handle",
     bindSym"Event", 
     bindSym"Update", 
     bindSym"Layout", 
     bindSym"Draw",
     # Dummy Value
     newEmptyNode()
-  ]
+  )
 
-func vtableMagic(name: NimNode, m: VMethodTable): NimNode =
+func vtableMagic(name, m: NimNode): NimNode =
   let
     declare = newStrLitNode("const void* vtable__")
     arrayStart = newStrLitNode("[] = {")
@@ -45,6 +49,7 @@ func vtableMagic(name: NimNode, m: VMethodTable): NimNode =
     comma = newStrLitNode(",")
   # Name must be ident
   expectKind(name, nnkIdent)
+  expectKind(m, nnkStmtList)
   let name = newStrLitNode(name.strVal)
   # Emit C Code Definition
   result = nnkPragma.newTree(
@@ -54,11 +59,11 @@ func vtableMagic(name: NimNode, m: VMethodTable): NimNode =
         declare,
         name,
         arrayStart,
-        m[mkHandle], comma,
-        m[mkEvent], comma,
-        m[mkUpdate], comma,
-        m[mkLayout], comma,
-        m[mkDraw], comma,
+        m[ord mkHandle], comma,
+        m[ord mkEvent], comma,
+        m[ord mkUpdate], comma,
+        m[ord mkLayout], comma,
+        m[ord mkDraw], comma,
         arrayEnd
       )
     )
@@ -293,7 +298,7 @@ proc wConstructor(self, fn: NimNode): NimNode =
       params.add(defs)
       defs = nnkIdentDefs.newTree()
     else: continue
-  echo params.treeRepr
+  #echo params.treeRepr
   # Inject Initializers
   let 
     v = ident"v"
@@ -332,7 +337,7 @@ macro widget*(declare, body: untyped) =
     methods = vtableCreate()
     defines = newEmptyNode()
   if declare.kind == nnkInfix:
-    methods = vtables[super.strVal]
+    methods = mcMethods[super.strVal]
   # 2 -- Find Defines, Procs and Methods
   for child in body:
     case child.kind
@@ -346,14 +351,16 @@ macro widget*(declare, body: untyped) =
       procs.add wProc(name, child)
     of nnkMethodDef: # method
       let 
-        kind = wMethodKind(child)
+        kind = ord wMethodKind(child)
         sym = genSym(nskProc, child[0].strVal)
         fn = wMethod(sym, name, child)
       # Overwrite Method
       methods[kind] = sym
       procs.add fn
     else: continue
-  # 3 -- Add Type Definitions
+  # 3 -- Store Methods
+  mcMethods[name.strVal] = methods
+  # 4 -- Add Type Definitions
   result = nnkStmtList.newTree()
   result.add wType(name, super, defines)
   procs.copyChildrenTo(result)
