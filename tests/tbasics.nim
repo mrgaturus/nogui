@@ -10,13 +10,14 @@
 import nogui/libs/gl
 import nogui/libs/ft2
 import nogui/gui/[window, widget, render, event, signal, timer]
-from nogui/gui/widgets/button import newButton
-from nogui/gui/widgets/check import newCheckbox
-from nogui/gui/widgets/radio import newRadio
-from nogui/gui/widgets/textbox import newTextBox
-from nogui/gui/widgets/slider import newSlider
-from nogui/gui/widgets/scroll import newScroll
-from nogui/gui/widgets/color import newColorBar
+from nogui/gui/widgets/button import button
+from nogui/gui/widgets/check import checkbox
+from nogui/gui/widgets/radio import radio
+from nogui/gui/widgets/textbox import textbox
+from nogui/gui/widgets/slider import slider
+from nogui/gui/widgets/scroll import scrollbar
+from nogui/gui/widgets/color import colorbar
+from nogui/builder import widget
 import nogui/gui/widgets/label
 from nogui/gui/atlas import width
 from nogui/gui/config import metrics, theme
@@ -28,25 +29,26 @@ from nogui/utf8 import UTF8Input, `text=`
 # TEST TOOLTIP WIDGET
 # -------------------
 
-type
-  GUITooltip = ref object of GUIWidget
+widget GUITooltip:
+  new tooltip():
+    discard
 
-method draw(tp: GUITooltip, ctx: ptr CTXRender) =
-  ctx.color theme.bgWidget
-  ctx.fill rect(tp.rect.x, tp.rect.y, 
-    "TEST TOOLTIP".width, metrics.fontSize)
-  ctx.color theme.text
-  ctx.text(tp.rect.x, tp.rect.y, "TEST TOOLTIP")
+  method draw(ctx: ptr CTXRender) =
+    ctx.color theme.bgWidget
+    ctx.fill rect(self.rect.x, self.rect.y, 
+      "TEST TOOLTIP".width, metrics.fontSize)
+    ctx.color theme.text
+    ctx.text(self.rect.x, self.rect.y, "TEST TOOLTIP")
 
-method timer(tp: GUITooltip) =
-  if tp.test(wVisible):
-    tp.close()
-  else: tp.open()
+  method update =
+    if self.test(wVisible):
+      self.close()
+    else: self.open()
 
 # ------------------------
 # TEST MENU WIDGET PROTOTYPE
 # ------------------------
-
+#[
 type
   GUIMenuKind = enum
     mkMenu, mkAction
@@ -253,7 +255,7 @@ method event(self: GUIMenuBar, state: ptr GUIState) =
       cursor = space
       inc(index)
   else: discard
-
+]#
 # -----------------------
 # TEST MISC WIDGETS STUFF
 # -----------------------
@@ -261,22 +263,23 @@ method event(self: GUIMenuBar, state: ptr GUIState) =
 type
   Counter = object
     clicked, released: int
-  GUIBlank = ref object of GUIWidget
-    frame: GUIWidget
-    texture: GLuint
-  GUIFondo = ref object of GUIWidget
+
+widget GUIFondo:
+  attributes:
     color: uint32
 
-method draw(fondo: GUIFondo, ctx: ptr CTXRender) =
-  ctx.color if fondo.test(wHover):
-    fondo.color or 0xFF000000'u32
-  else: fondo.color
-  ctx.fill rect(fondo.rect)
+  new newGUIFondo(): discard
 
-method event(fondo: GUIFondo, state: ptr GUIState) =
-  if state.kind == evCursorClick:
-    if not fondo.test(wHover):
-      fondo.close() # Close
+  method draw(ctx: ptr CTXRender) =
+    ctx.color if self.test(wHover):
+      self.color or 0xFF000000'u32
+    else: self.color
+    ctx.fill rect(self.rect)
+
+  method event(state: ptr GUIState) =
+    if state.kind == evCursorClick:
+      if not self.test(wHover):
+        self.close() # Close
 
 var coso: UTF8Input
 proc helloworld*(g, d: pointer) =
@@ -287,51 +290,58 @@ proc helloworld*(g, d: pointer) =
 # GUI BLANK METHODS
 # ------------------
 
-method draw*(widget: GUIBlank, ctx: ptr CTXRender) =
-  ctx.color if widget.test(wHover):
-    0xFF7f7f7f'u32
-  else: 0xFFFFFFFF'u32
-  ctx.fill rect(widget.rect)
-  ctx.texture(rect widget.rect, widget.texture)
+widget GUIBlank:
+  attributes:
+    frame: GUIWidget
+    texture: GLuint
 
-method event*(widget: GUIBlank, state: ptr GUIState) =
-  case state.kind
-  of evCursorClick:
-    if state.key == MiddleButton:
-      echo "middle button xdd"
-    if not isNil(widget.frame) and test(widget.frame, wVisible):
-      close(widget.frame)
-    else:
-      pushTimer(widget.target, 1000)
-      widget.set(wFocus)
-  of evCursorRelease:
+  new newGUIBlank(): discard
+
+  method draw(ctx: ptr CTXRender) =
+    ctx.color if self.test(wHover):
+      0xFF7f7f7f'u32
+    else: 0xFFFFFFFF'u32
+    ctx.fill rect(self.rect)
+    ctx.texture(rect self.rect, self.texture)
+
+  method event(state: ptr GUIState) =
+    case state.kind
+    of evCursorClick:
+      if state.key == MiddleButton:
+        echo "middle button xdd"
+      if not isNil(self.frame) and test(self.frame, wVisible):
+        close(self.frame)
+      else:
+        pushTimer(self.target, 1000)
+        self.set(wFocus)
+    of evCursorRelease:
+      # Remove Timer
+      echo "w timer removed"
+      stopTimer(self.target)
+    of evKeyDown:
+      echo "tool kind: ", state.tool
+      echo " -- mouse  x: ", state.mx
+      echo " -- stylus x: ", state.px
+      echo ""
+      echo " -- mouse  y: ", state.my
+      echo " -- stylus y: ", state.py
+      echo ""
+      echo " -- pressure: ", state.pressure
+      echo ""
+    else: discard
+    if self.test(wGrab) and not isNil(self.frame):
+      move(self.frame, state.mx + 5, state.my + 5)
+
+  method update =
+    echo "w timer open frame"
+    if self.frame != nil:
+      open(self.frame)
     # Remove Timer
-    echo "w timer removed"
-    stopTimer(widget.target)
-  of evKeyDown:
-    echo "tool kind: ", state.tool
-    echo " -- mouse  x: ", state.mx
-    echo " -- stylus x: ", state.px
-    echo ""
-    echo " -- mouse  y: ", state.my
-    echo " -- stylus y: ", state.py
-    echo ""
-    echo " -- pressure: ", state.pressure
-    echo ""
-  else: discard
-  if widget.test(wGrab) and not isNil(widget.frame):
-    move(widget.frame, state.mx + 5, state.my + 5)
+    stopTimer(self.target)
 
-method timer*(widget: GUIBlank) =
-  echo "w timer open frame"
-  if widget.frame != nil:
-    open(widget.frame)
-  # Remove Timer
-  stopTimer(widget.target)
-
-method handle*(widget: GUIBlank, kind: GUIHandle) =
-  echo "handle done: ", kind.repr
-  echo "by: ", cast[uint](widget)
+  method handle(kind: GUIHandle) =
+    echo "handle done: ", kind.repr
+    echo "by: ", cast[uint](self)
 
 proc blend*(dst, src: uint32): uint32{.importc: "blend_normal".}
 proc fill*(buffer: var seq[uint32], x, y, w, h: int32, color: uint32) =
@@ -383,7 +393,8 @@ when isMainModule:
   if ft2_init(addr ft) != 0:
     echo "ERROR: failed initialize FT2"
   # Create a new Window
-  let root = new GUIFondo
+  let root = newGUIFondo()
+  #[
   block: # Create Menu Bar
     var bar = newMenuBar()
     var menu: GUIMenu
@@ -405,6 +416,7 @@ when isMainModule:
     # Add Menu Bar to Root Widget
     bar.geometry(20, 160, 200, bar.hint.h)
     root.add(bar)
+  ]#
   block: # Create Widgets
     # Create two blanks
     var
@@ -413,54 +425,55 @@ when isMainModule:
     # Initialize Root
     root.color = 0xFF323232'u32
     # --- Blank #1 ---
-    blank = new GUIBlank
+    blank = newGUIBlank()
     blank.geometry(300,150,512,256)
     blank.texture = cpu_raster
     root.add(blank)
     # --- Blank #2 ---
-    blank = new GUIBlank
+    blank = newGUIBlank()
     blank.flags = wMouse
     blank.geometry(20,20,100,100)
     blank.texture = cpu_raster
     block: # Menu Blank #2
-      con = new GUIFondo
+      con = newGUIFondo()
       con.flags = wMouse
       con.color = 0xAA637a90'u32
       con.rect.w = 200
       con.rect.h = 100
       # Sub-Blank #1
-      sub = new GUIBlank
+      sub = newGUIBlank()
       sub.geometry(10,10,20,20)
       con.add(sub)
       # Sub-Blank #2
-      sub = new GUIBlank
+      sub = newGUIBlank()
       sub.flags = wMouse
       sub.geometry(40,10,20,20)
       block: # Sub Menu #1
-        let subcon = new GUIFondo
+        let subcon = newGUIFondo()
         subcon.flags = wMouse
         subcon.color = 0x72bdb88f'u32
         subcon.rect.w = 300
         subcon.rect.h = 80
         # Sub-sub blank 1#
-        var subsub = new GUIBlank
+        var subsub = newGUIBlank()
         subsub.geometry(10,10,80,20)
         subcon.add(subsub)
         # Sub-sub blank 2#
-        subsub = new GUIBlank
+        subsub = newGUIBlank()
         subsub.geometry(10,40,80,20)
         subcon.add(subsub)
         # Add Sub to Sub
         block: # Sub Menu #1
-          let fondo = new GUIFondo
+          let fondo = newGUIFondo()
           fondo.color = 0x64000000'u32
           fondo.geometry(90, 50, 300, 80)
           # Sub-sub blank 1#
-          var s = new GUIBlank
+          var s = newGUIBlank()
           s.geometry(10,10,20,20)
           fondo.add(s)
           # Sub-sub blank 2#
-          s = new GUIBlank
+          s = newGUIBlank()
+          echo s.vtable.repr
           s.geometry(10,40,20,20)
           fondo.add(s)
           # Add Fondo to sub
@@ -474,79 +487,80 @@ when isMainModule:
       blank.frame = con
     root.add(blank)
     # Add a GUI Button
-    let button = newButton("Test Button CB", helloworld)
+    let button = button("Test Button CB", helloworld)
     button.geometry(20, 200, 200, button.hint.h)
     block: # Add Checkboxes
-      var check = newCheckbox("Check B", addr bolo)
+      var check = checkbox("Check B", addr bolo)
       check.geometry(20, 250, 100, check.hint.h)
       root.add(check)
-      check = newCheckbox("Check A", addr bala)
+      check = checkbox("Check A", addr bala)
       check.geometry(120, 250, 100, check.hint.h)
       root.add(check)
     block: # Add Radio Buttons
-      var radio = newRadio("Radio B", 1, addr equisde)
+      var radio = radio("Radio B", 1, addr equisde)
       radio.geometry(20, 300, 100, radio.hint.h)
       root.add(radio)
-      radio = newRadio("Radio A", 2, addr equisde)
+      radio = radio("Radio A", 2, addr equisde)
       radio.geometry(120, 300, 100, radio.hint.h)
       root.add(radio)
     block: # Add TextBox
-      var textbox = newTextBox(addr coso)
+      var textbox = textbox(addr coso)
       textbox.geometry(20, 350, 200, textbox.hint.h)
       root.add(textbox)
     block: # Add Slider
-      var slider = newSlider(addr val)
+      var slider = slider(addr val, 0)
       slider.geometry(20, 400, 200, slider.hint.h)
       root.add(slider)
     block: # Add Scroll
-      var scroll = newScroll(addr val)
+      var scroll = scrollbar(addr val, false)
       scroll.geometry(20, 450, 200, scroll.hint.h)
       root.add(scroll)
     block: # Add Scroll
-      var scroll = newScroll(addr val, true)
+      var scroll = scrollbar(addr val, true)
       scroll.geometry(20, 480, scroll.hint.h, 200)
       root.add(scroll)
     block: # Add Scroll
-      var color = newColorBar(addr col)
+      var color = colorbar(addr col)
       color.geometry(50, 500, color.hint.w * 2, color.hint.h * 2)
       root.add(color)
-      color = newColorBar(addr col)
+      color = colorbar(addr col)
       color.geometry(300, 500, color.hint.w * 2, color.hint.h * 2)
       root.add(color)
     block: # Add Labels
-      var label: GUILabel
+      var label: GUIWidget
       let rect = GUIRect(
         x: 550, y: 500, w: 400, h: 300)
       # Right Align
-      label = newLabel("TEST TEXT", hoRight, veTop)
+      label = label("TEST TEXT", hoRight, veTop)
       label.rect = rect; label.hint = rect; root.add(label)
-      label = newLabel("TEST TEXT", hoRight, veMiddle)
+      label = label("TEST TEXT", hoRight, veMiddle)
       label.rect = rect; label.hint = rect; root.add(label)
-      label = newLabel("TEST TEXT", hoRight, veBottom)
+      label = label("TEST TEXT", hoRight, veBottom)
       label.rect = rect; label.hint = rect; root.add(label)
       # Middle Align
-      label = newLabel("TEST TEXT", hoMiddle, veTop)
+      label = label("TEST TEXT", hoMiddle, veTop)
       label.rect = rect; label.hint = rect; root.add(label)
-      label = newLabel("TEST TEXT", hoMiddle, veMiddle)
+      label = label("TEST TEXT", hoMiddle, veMiddle)
       label.rect = rect; label.hint = rect; root.add(label)
-      label = newLabel("TEST TEXT", hoMiddle, veBottom)
+      label = label("TEST TEXT", hoMiddle, veBottom)
       label.rect = rect; label.hint = rect; root.add(label)
       # Left Align
-      label = newLabel("TEST TEXT", hoLeft, veTop)
+      label = label("TEST TEXT", hoLeft, veTop)
       label.rect = rect; label.hint = rect; root.add(label)
-      label = newLabel("TEST TEXT", hoLeft, veMiddle)
+      label = label("TEST TEXT", hoLeft, veMiddle)
       label.rect = rect; label.hint = rect; root.add(label)
-      label = newLabel("TEST TEXT", hoLeft, veBottom)
+      label = label("TEST TEXT", hoLeft, veBottom)
       label.rect = rect; label.hint = rect; root.add(label)
     root.add(button)
   # Create a random tooltip
-  var tooltip = new GUITooltip
-  tooltip.kind = wgTooltip
-  tooltip.rect.x = 40
-  tooltip.rect.y = 180
+  var tp = tooltip()
+  tp.kind = wgTooltip
+  tp.rect.x = 40
+  tp.rect.y = 180
+  echo tp.vtable.repr
   # Open Window
   if win.open(root):
-    pushTimer(tooltip.target, 1000)
+    pushTimer(tp.target, 1000)
     loop(16):
       win.handleEvents() # Input
       if win.handleSignals(): break

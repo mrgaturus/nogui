@@ -34,10 +34,17 @@ type
   GUIKind* = enum
     wgChild, wgFrame # Basic
     wgPopup, wgMenu, wgTooltip
+  # Widget VTable Methods
+  GUIMethods* {.pure.} = object
+    handle*: proc(self: GUIWidget, kind: GUIHandle) {.noconv.}
+    event*: proc(self: GUIWidget, state: ptr GUIState) {.noconv.}
+    update*: proc(self: GUIWidget) {.noconv.}
+    layout*: proc(self: GUIWidget) {.noconv.}
+    draw*: proc(self: GUIWidget, ctx: ptr CTXRender) {.noconv.}
   GUIWidget* {.inheritable.} = ref object
-    # Widget Parent
-    parent*: GUIWidget
+    vtable*: ptr GUIMethods
     # Widget Node Tree
+    parent*: GUIWidget
     next*, prev*: GUIWidget
     first*, last*: GUIWidget
     # Widget Flags
@@ -45,6 +52,16 @@ type
     flags*: GUIFlags
     # Widget Rect&Hint
     rect*, hint*: GUIRect
+
+# ------------------------------------
+# WIDGET ABSTRACT METHODS - FORWARDERS
+# ------------------------------------
+
+template handle*(w: GUIWidget, kind: GUIHandle) = w.vtable.handle(w, kind)
+template event*(w: GUIWidget, state: ptr GUIState) = w.vtable.event(w, state)
+template update*(w: GUIWidget) = w.vtable.update(w)
+template layout*(w: GUIWidget) = w.vtable.layout(w)
+template draw*(w: GUIWidget, ctx: ptr CTXRender) = w.vtable.draw(w, ctx)
 
 # ----------------------------
 # WIDGET NEIGHTBORDS ITERATORS
@@ -188,16 +205,6 @@ proc resize*(widget: GUIWidget, w,h: int32) =
     widget.rect.h = max(h, widget.hint.h)
     # Mark Widget as Dirty
     widget.set(wDirty)
-
-# -----------------------------------------
-# WIDGET ABSTRACT METHODS - Single-Threaded
-# -----------------------------------------
-
-method handle*(widget: GUIWidget, kind: GUIHandle) {.base.} = discard
-method event*(widget: GUIWidget, state: ptr GUIState) {.base.} = discard
-method timer*(widget: GUIWidget) {.base.} = discard
-method layout*(widget: GUIWidget) {.base.} = discard
-method draw*(widget: GUIWidget, ctx: ptr CTXRender) {.base.} = discard
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE
