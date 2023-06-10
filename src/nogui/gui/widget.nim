@@ -35,7 +35,7 @@ type
     wgChild, wgFrame # Basic
     wgPopup, wgMenu, wgTooltip
   # Widget VTable Methods
-  GUIMethods* = object
+  GUIMethods* {.pure.} = object
     handle*: proc(self: GUIWidget, kind: GUIHandle) {.noconv.}
     event*: proc(self: GUIWidget, state: ptr GUIState) {.noconv.}
     update*: proc(self: GUIWidget) {.noconv.}
