@@ -34,10 +34,17 @@ type
   GUIKind* = enum
     wgChild, wgFrame # Basic
     wgPopup, wgMenu, wgTooltip
+  # Widget VTable Methods
+  GUIMethods* = object
+    handle*: proc(self: GUIWidget, kind: GUIHandle) {.noconv.}
+    event*: proc(self: GUIWidget, state: ptr GUIState) {.noconv.}
+    update*: proc(self: GUIWidget) {.noconv.}
+    layout*: proc(self: GUIWidget) {.noconv.}
+    draw*: proc(self: GUIWidget, ctx: ptr CTXRender) {.noconv.}
   GUIWidget* {.inheritable.} = ref object
-    # Widget Parent
-    parent*: GUIWidget
+    vtable*: ptr GUIMethods
     # Widget Node Tree
+    parent*: GUIWidget
     next*, prev*: GUIWidget
     first*, last*: GUIWidget
     # Widget Flags
