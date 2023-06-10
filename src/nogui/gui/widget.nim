@@ -53,6 +53,16 @@ type
     # Widget Rect&Hint
     rect*, hint*: GUIRect
 
+# ------------------------------------
+# WIDGET ABSTRACT METHODS - FORWARDERS
+# ------------------------------------
+
+template handle*(w: GUIWidget, kind: GUIHandle) = w.vtable.handle(w, kind)
+template event*(w: GUIWidget, state: ptr GUIState) = w.vtable.event(w, state)
+template update*(w: GUIWidget) = w.vtable.update(w)
+template layout*(w: GUIWidget) = w.vtable.layout(w)
+template draw*(w: GUIWidget, ctx: ptr CTXRender) = w.vtable.draw(w, ctx)
+
 # ----------------------------
 # WIDGET NEIGHTBORDS ITERATORS
 # ----------------------------
@@ -195,16 +205,6 @@ proc resize*(widget: GUIWidget, w,h: int32) =
     widget.rect.h = max(h, widget.hint.h)
     # Mark Widget as Dirty
     widget.set(wDirty)
-
-# -----------------------------------------
-# WIDGET ABSTRACT METHODS - Single-Threaded
-# -----------------------------------------
-
-method handle*(widget: GUIWidget, kind: GUIHandle) {.base.} = discard
-method event*(widget: GUIWidget, state: ptr GUIState) {.base.} = discard
-method timer*(widget: GUIWidget) {.base.} = discard
-method layout*(widget: GUIWidget) {.base.} = discard
-method draw*(widget: GUIWidget, ctx: ptr CTXRender) {.base.} = discard
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE

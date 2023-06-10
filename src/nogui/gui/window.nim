@@ -539,7 +539,7 @@ proc handleSignals*(win: var GUIWindow): bool =
 
 proc handleTimers*(win: var GUIWindow) =
   for widget in walkTimers():
-    widget.timer()
+    widget.update()
 
 proc render*(win: var GUIWindow) =
   begin(win.ctx) # -- Begin GUI Rendering
