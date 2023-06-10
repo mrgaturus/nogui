@@ -243,7 +243,7 @@ proc renderOnDemand(atlas: CTXAtlas, code: uint16): ptr TEXGlyph =
           copyMem(addr dest[k], addr atlas.buffer[i], stride)
           i += stride; k += atlas.w
         # Replace Buffer With New One
-        shallowCopy(atlas.buffer, dest)
+        atlas.buffer = move dest
         # Try Pack Again, Guaranted
         point = pack(atlas, glyph.w, glyph.h)
         # Mark as Invalid
@@ -344,7 +344,7 @@ proc newCTXAtlas*(): CTXAtlas =
   result.whiteU = result.glyphs[0].x1
   result.whiteV = result.glyphs[0].y1
   # Replace Current Buffer
-  shallowCopy(result.buffer, dest)
+  result.buffer = move dest
   # 5 -- Copy Buffer to a New Texture
   glGenTextures(1, addr result.texID)
   glBindTexture(GL_TEXTURE_2D, result.texID)
