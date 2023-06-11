@@ -285,19 +285,25 @@ proc wConstructor(self, fn: NimNode): NimNode =
   # Translate Each Parameter
   var defs = nnkIdentDefs.newTree()
   for i in 1 ..< count:
-    let e = declare[i]
-    expectKind(e, {nnkIdent, nnkExprColonExpr})
-    # Decide if is 
-    case e.kind
+    let 
+      e = declare[i]
+      kind = e.kind
+    expectKind(e, {nnkIdent,
+      nnkExprColonExpr, nnkExprEqExpr})
+    # Decide Which Parameter
+    case kind
     of nnkIdent:
       defs.add e
     of nnkExprColonExpr:
       e.copyChildrenTo(defs)
       defs.add newEmptyNode()
-      # Add new ident def
+    of nnkExprEqExpr:
+      defs.add e[0], newEmptyNode(), e[1]
+    else: break
+    # Skip to New Ident Def
+    if kind in {nnkExprColonExpr, nnkExprEqExpr}:
       params.add(defs)
       defs = nnkIdentDefs.newTree()
-    else: continue
   #echo params.treeRepr
   # Inject Initializers
   let 
