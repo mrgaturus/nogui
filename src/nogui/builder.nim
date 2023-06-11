@@ -375,13 +375,12 @@ macro widget*(declare, body: untyped) =
   news.copyChildrenTo(result)
   #echo result.repr
 
-macro child*[T: GUIWidget](self: T, body: untyped): T =
-  result = nnkBlockStmt.newTree newEmptyNode()
+macro child(self: GUIWidget, body: untyped) =
   let 
     fresh = genSym(nskLet, "temp")
     hook = bindSym"add"
   # Declare Temporal Variable
-  let stmts = nnkStmtList.newTree(
+  result = nnkStmtList.newTree(
     nnkLetSection.newTree(
       nnkIdentDefs.newTree(
           fresh, newEmptyNode(), self
@@ -390,14 +389,17 @@ macro child*[T: GUIWidget](self: T, body: untyped): T =
     )
   # Warp Each Widget
   for node in body:
+    # Only Expect Any Valuable or Asign Item
+    expectKind(node, {nnkIdent, nnkCall, nnkAsgn})
     let warp = nnkCommand.newTree(
       nnkDotExpr.newTree(fresh, hook), node)
     # Assing and Then Add
     if node.kind == nnkAsgn:
       warp[1] = node[0]
-      stmts.add node
+      result.add node
     # Add Warping
-    stmts.add warp
-  # Return Temporal
-  stmts.add fresh
-  result.add stmts
+    result.add warp
+
+template child*[T: GUIWidget](self: T, body: untyped): T =
+  # Warp Each Children and Return
+  child(self, body); self
