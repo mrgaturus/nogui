@@ -374,3 +374,27 @@ macro widget*(declare, body: untyped) =
   result.add vtableMagic(name, methods)
   news.copyChildrenTo(result)
   #echo result.repr
+
+macro child*[T: GUIWidget](self: T, body: untyped): T =
+  result = nnkBlockStmt.newTree newEmptyNode()
+  let 
+    fresh = genSym(nskLet, "temp")
+    hook = bindSym"add"
+  # Declare Temporal Variable
+  let stmts = nnkStmtList.newTree(
+    nnkLetSection.newTree(
+      nnkIdentDefs.newTree(
+          fresh, newEmptyNode(), self
+        )
+      )
+    )
+  # Warp Each Widget
+  for node in body:
+    # Only Expect Any Valuable Item
+    expectKind(node, {nnkIdent, nnkCall})
+    stmts.add nnkCommand.newTree(
+      nnkDotExpr.newTree(fresh, hook), node
+    )
+  # Return Temporal
+  stmts.add fresh
+  result.add stmts
