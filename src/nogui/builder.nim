@@ -390,11 +390,14 @@ macro child*[T: GUIWidget](self: T, body: untyped): T =
     )
   # Warp Each Widget
   for node in body:
-    # Only Expect Any Valuable Item
-    expectKind(node, {nnkIdent, nnkCall})
-    stmts.add nnkCommand.newTree(
-      nnkDotExpr.newTree(fresh, hook), node
-    )
+    let warp = nnkCommand.newTree(
+      nnkDotExpr.newTree(fresh, hook), node)
+    # Assing and Then Add
+    if node.kind == nnkAsgn:
+      warp[1] = node[0]
+      stmts.add node
+    # Add Warping
+    stmts.add warp
   # Return Temporal
   stmts.add fresh
   result.add stmts
