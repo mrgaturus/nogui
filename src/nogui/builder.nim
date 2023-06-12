@@ -6,14 +6,6 @@ from strformat import fmt
 # Widget VTable Types
 # -------------------
 
-proc Handle(obj: GUIWidget, kind: GUIHandle) {.noconv.} = discard
-proc Event(obj: GUIWidget, state: ptr GUIState) {.noconv.} = discard
-proc Update(obj: GUIWidget) {.noconv.} = discard
-proc Layout(obj: GUIWidget) {.noconv.} = discard
-proc Draw(obj: GUIWidget, ctx: ptr CTXRender) {.noconv.} = discard
-# Treeable Constructors
-template node() {.pragma.}
-
 type
   VMethodKind = enum
     mkHandle
@@ -23,6 +15,12 @@ type
     mkDraw
     # Invalid Method
     mkInvalid
+
+proc Handle(obj: GUIWidget, kind: GUIHandle) {.noconv.} = discard
+proc Event(obj: GUIWidget, state: ptr GUIState) {.noconv.} = discard
+proc Update(obj: GUIWidget) {.noconv.} = discard
+proc Layout(obj: GUIWidget) {.noconv.} = discard
+proc Draw(obj: GUIWidget, ctx: ptr CTXRender) {.noconv.} = discard
 # Tracking VTable Methods
 const mcMethods = CacheTable"vtables"
 
@@ -297,7 +295,6 @@ proc wConstructor(self, fn: NimNode): NimNode =
   let 
     v = ident"v"
     k = bindSym"GUIMethods"
-    pragma = bindSym"node"
     inject = vtableInject(self, v)
     body = quote do:
       new result
@@ -312,7 +309,7 @@ proc wConstructor(self, fn: NimNode): NimNode =
     newEmptyNode(),
     newEmptyNode(),
     params,
-    nnkPragma.newTree(pragma),
+    newEmptyNode(),
     newEmptyNode(),
     body
   )
