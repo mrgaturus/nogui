@@ -47,8 +47,7 @@ func vtableMagic(name, m: NimNode): NimNode =
     arrayStart = newStrLitNode("[] = {")
     arrayEnd = newStrLitNode("};")
     comma = newStrLitNode(",")
-  # Name must be ident
-  expectKind(name, nnkIdent)
+  # m must be statement list
   expectKind(m, nnkStmtList)
   let name = newStrLitNode(name.strVal)
   # Emit C Code Definition
@@ -70,9 +69,6 @@ func vtableMagic(name, m: NimNode): NimNode =
   )
 
 func vtableInject(name, target: NimNode): NimNode =
-  # Name must be ident
-  expectKind(name, nnkIdent)
-  expectKind(target, nnkIdent)
   let name = newStrLitNode(name.strVal)
   # Emit C Code Pointer Magic
   result = nnkPragma.newTree(
@@ -154,6 +150,9 @@ func wDeclare(declare: NimNode): tuple[name, super: NimNode] =
     # There is an Inherit
     name = declare[1]
     super = declare[2]
+    # Expect Kinds
+    expectKind(name, nnkIdent)
+    expectKind(super, nnkIdent)
   # Return Declare
   result = (name, super)
 
@@ -175,8 +174,6 @@ func wType(name, super, defines: NimNode): NimNode =
 # -------------------
 
 func wProc(self, fn: NimNode): NimNode =
-  expectKind(self, nnkIdent)
-  expectKind(fn, nnkProcDef)
   # Duplicate Node
   result = fn
   # Self Parameter
@@ -188,8 +185,6 @@ func wProc(self, fn: NimNode): NimNode =
   result[3].insert(1, param)
 
 func wMethod(symbol, self, fn: NimNode): NimNode =
-  expectKind(self, nnkIdent)
-  expectKind(fn, nnkMethodDef)
   # Create Parameters
   let 
     params = fn[3]
@@ -213,9 +208,6 @@ proc wMethodCheck(fn, expect: NimNode) =
   # Reusable Kind Error Message
   proc error(msg: string, exp, got: NimNode; lines: NimNode) =
     error fmt"{msg} expected <{exp.repr}> got <{got.repr}>", lines
-  # Expect Types
-  expectKind(expect, nnkSym)
-  expectKind(fn, nnkMethodDef)
   let # Parameters
     params = fn[3]
     formal = expect.getTypeImpl[0]
@@ -250,8 +242,6 @@ proc wMethodCheck(fn, expect: NimNode) =
       ident $lenEx, ident $count, params)
 
 func wMethodKind(fn: NimNode): VMethodKind =
-  # Expect A Method
-  expectKind(fn, nnkMethodDef)
   let
     id = fn[0]
     name = id.strVal
@@ -269,8 +259,6 @@ func wMethodKind(fn: NimNode): VMethodKind =
 # ------------------
 
 proc wConstructor(self, fn: NimNode): NimNode =
-  # Expect a new Call
-  expectKind(fn, nnkCommand)
   expectIdent(fn[0], "new")
   # Expect Object Definition
   let 
