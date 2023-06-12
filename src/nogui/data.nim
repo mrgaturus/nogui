@@ -101,12 +101,12 @@ proc newShader*(vert, frag: string): GLuint =
   try: # -- LOAD VERTEX SHADER
     buffer = readFile(shaderPath & vert)
     bAddr = cast[cstring](addr buffer[0])
-  except: log(lvError, "failed loading shader: ", vert)
+  except IOError: log(lvError, "failed loading shader: ", vert)
   glShaderSource(vertShader, 1, cast[cstringArray](addr bAddr), nil)
   try: # -- LOAD FRAGMENT SHADER
     buffer = readFile(shaderPath & frag)
     bAddr = cast[cstring](addr buffer[0])
-  except: log(lvError, "failed loading shader: ", frag)
+  except IOError: log(lvError, "failed loading shader: ", frag)
   glShaderSource(fragShader, 1, cast[cstringArray](addr bAddr), nil)
   # -- COMPILE SHADERS
   glCompileShader(vertShader)
