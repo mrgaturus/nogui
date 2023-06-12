@@ -41,6 +41,12 @@ type
     update*: proc(self: GUIWidget) {.noconv.}
     layout*: proc(self: GUIWidget) {.noconv.}
     draw*: proc(self: GUIWidget, ctx: ptr CTXRender) {.noconv.}
+  # Widget Metrics
+  GUIMetrics* = object
+    x*, y*, w*, h*: int16
+    # Dimensions Hint
+    minW*, minH*: int16
+    maxW*, maxH*: int16
   GUIWidget* {.inheritable.} = ref object
     vtable*: ptr GUIMethods
     # Widget Node Tree
@@ -51,7 +57,8 @@ type
     kind*: GUIKind
     flags*: GUIFlags
     # Widget Rect&Hint
-    rect*, hint*: GUIRect
+    rect*: GUIRect
+    metrics*: GUIMetrics
 
 # ------------------------------------
 # WIDGET ABSTRACT METHODS - FORWARDERS
@@ -143,36 +150,62 @@ proc add*(self, widget: GUIWidget) =
   # Set Kind as Children
   widget.kind = wgChild
 
-# ------------------------------------
-# WIDGET RECT PROCS layout-mouse event
-# ------------------------------------
+# --------------------------------------
+# WIDGET RECT PROCS layout & Mouse event
+# --------------------------------------
 
-proc geometry*(widget: GUIWidget, x,y,w,h: int32) =
-  widget.hint.x = x; widget.hint.y = y
-  widget.rect.w = w; widget.rect.h = h
+proc geometry*(widget: GUIWidget, x, y, w, h: int32) =
+  let metrics = addr widget.metrics
+  # Change Geometry Size
+  metrics.x = cast[int16](x)
+  metrics.y = cast[int16](y)
+  metrics.w = cast[int16](w)
+  metrics.h = cast[int16](h)
 
-proc minimum*(widget: GUIWidget, w,h: int32) =
-  widget.hint.w = w; widget.hint.h = h
+proc geometry*(widget: GUIWidget, rect: GUIRect) {.inline.} =
+  # Unpack Rect and Use Previous Proc
+  widget.geometry(rect.x, rect.y, rect.w, rect.h)
+
+proc minimum*(widget: GUIWidget, w, h: int32) =
+  let metrics = addr widget.metrics
+  # Change Geometry Size
+  metrics.minW = cast[int16](w)
+  metrics.minH = cast[int16](h)
+
+proc maximum*(widget: GUIWidget, w, h: int32) =
+  let metrics = addr widget.metrics
+  # Change Geometry Size
+  metrics.maxW = cast[int16](w)
+  metrics.maxH = cast[int16](h)
 
 # -- Used by Layout for Surface Visibility
 proc calcAbsolute(widget: GUIWidget, pivot: var GUIRect) =
+  let
+    rect = addr widget.rect
+    metrics = addr widget.metrics
+    flags = widget.flags
   # Calcule Absolute Position
-  widget.rect.x = pivot.x + widget.hint.x
-  widget.rect.y = pivot.y + widget.hint.y
+  rect.x = pivot.x + metrics.x
+  rect.y = pivot.y + metrics.y
+  # Calculate Absolute Size
+  rect.w = metrics.w
+  rect.h = metrics.h
   # Test Visibility Boundaries
-  let test = (widget.flags and wHidden) == 0 and
-    widget.rect.x <= pivot.x + pivot.w and
-    widget.rect.y <= pivot.y + pivot.h and
-    widget.rect.x + widget.rect.w >= pivot.x and
-    widget.rect.y + widget.rect.h >= pivot.y
+  let test = (flags and wHidden) == 0 and
+    rect.x <= pivot.x + pivot.w and
+    rect.y <= pivot.y + pivot.h and
+    rect.x + rect.w >= pivot.x and
+    rect.y + rect.h >= pivot.y
   # Mark Visible if Passed Visibility Test
-  widget.flags = (widget.flags and not wVisible) or 
+  widget.flags = (flags and not wVisible) or 
     (cast[uint8](test) shl 2) # See wVisible
 
 proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
-  return (widget.flags and wVisible) == wVisible and
-    x >= widget.rect.x and x <= widget.rect.x + widget.rect.w and
-    y >= widget.rect.y and y <= widget.rect.y + widget.rect.h
+  let rect = addr widget.rect
+  # Check if is visible and point is on area
+  (widget.flags and wVisible) == wVisible and
+    x >= rect.x and x <= rect.x + rect.w and
+    y >= rect.y and y <= rect.y + rect.h
 
 # -----------------------------
 # WIDGET FRAMED Move and Resize
@@ -192,17 +225,18 @@ proc open*(widget: GUIWidget) =
 proc close*(widget: GUIWidget) {.inline.} =
   pushSignal(widget.target, msgClose)
 
-proc move*(widget: GUIWidget, x,y: int32) =
+proc move*(widget: GUIWidget, x, y: int32) =
   if widget.kind > wgChild:
     widget.rect.x = x
     widget.rect.y = y
     # Mark Widget as Dirty
     widget.set(wDirty)
 
-proc resize*(widget: GUIWidget, w,h: int32) =
+proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
-    widget.rect.w = max(w, widget.hint.w)
-    widget.rect.h = max(h, widget.hint.h)
+    let metrics = addr widget.metrics
+    widget.rect.w = max(w, metrics.minW)
+    widget.rect.h = max(h, metrics.minH)
     # Mark Widget as Dirty
     widget.set(wDirty)
 

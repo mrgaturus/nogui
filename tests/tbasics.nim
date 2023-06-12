@@ -204,7 +204,7 @@ method draw(self: GUIMenuBar, ctx: ptr CTXRender) =
     cursor: int32 = self.rect.x
     r: CTXRect
   r.y = float32(self.rect.y)
-  r.yh = r.y + float32(self.hint.h)
+  r.yh = r.y + float32(self.metrics.h)
   # Set Text Color
   ctx.color theme.text
   for item in mitems(self.items):
@@ -414,7 +414,7 @@ when isMainModule:
       sub.add("Kill Program", exit)
       menu.add("The Game", sub)
     # Add Menu Bar to Root Widget
-    bar.geometry(20, 160, 200, bar.hint.h)
+    bar.geometry(20, 160, 200, bar.metrics.h)
     root.add(bar)
   ]#
   block: # Create Widgets
@@ -488,69 +488,72 @@ when isMainModule:
     root.add(blank)
     # Add a GUI Button
     let button = button("Test Button CB", helloworld)
-    button.geometry(20, 200, 200, button.hint.h)
+    button.geometry(20, 200, 200, button.metrics.minH)
     block: # Add Checkboxes
       var check = checkbox("Check B", addr bolo)
-      check.geometry(20, 250, 100, check.hint.h)
+      check.geometry(20, 250, 100, check.metrics.minH)
       root.add(check)
       check = checkbox("Check A", addr bala)
-      check.geometry(120, 250, 100, check.hint.h)
+      check.geometry(120, 250, 100, check.metrics.minH)
       root.add(check)
     block: # Add Radio Buttons
       var radio = radio("Radio B", 1, addr equisde)
-      radio.geometry(20, 300, 100, radio.hint.h)
+      radio.geometry(20, 300, 100, radio.metrics.minH)
       root.add(radio)
       radio = radio("Radio A", 2, addr equisde)
-      radio.geometry(120, 300, 100, radio.hint.h)
+      radio.geometry(120, 300, 100, radio.metrics.minH)
       root.add(radio)
     block: # Add TextBox
       var textbox = textbox(addr coso)
-      textbox.geometry(20, 350, 200, textbox.hint.h)
+      textbox.geometry(20, 350, 200, textbox.metrics.minH)
       root.add(textbox)
     block: # Add Slider
       var slider = slider(addr val, 0)
-      slider.geometry(20, 400, 200, slider.hint.h)
+      slider.geometry(20, 400, 200, slider.metrics.minH)
       root.add(slider)
     block: # Add Scroll
       var scroll = scrollbar(addr val, false)
-      scroll.geometry(20, 450, 200, scroll.hint.h)
+      scroll.geometry(20, 450, 200, scroll.metrics.minH)
       root.add(scroll)
     block: # Add Scroll
       var scroll = scrollbar(addr val, true)
-      scroll.geometry(20, 480, scroll.hint.h, 200)
+      scroll.geometry(20, 480, scroll.metrics.minH, 200)
       root.add(scroll)
     block: # Add Scroll
       var color = colorbar(addr col)
-      color.geometry(50, 500, color.hint.w * 2, color.hint.h * 2)
+      color.geometry(50, 500, color.metrics.minW * 2, color.metrics.minH * 2)
       root.add(color)
       color = colorbar(addr col)
-      color.geometry(300, 500, color.hint.w * 2, color.hint.h * 2)
+      color.geometry(300, 500, color.metrics.minW * 2, color.metrics.minH * 2)
       root.add(color)
     block: # Add Labels
       var label: GUIWidget
       let rect = GUIRect(
-        x: 550, y: 500, w: 400, h: 300)
+        x: 550, y: 500, w: 200, h: 100)
+      let button = button("", nil)
+      button.geometry rect
+      root.add button
       # Right Align
       label = label("TEST TEXT", hoRight, veTop)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       label = label("TEST TEXT", hoRight, veMiddle)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       label = label("TEST TEXT", hoRight, veBottom)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       # Middle Align
       label = label("TEST TEXT", hoMiddle, veTop)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       label = label("TEST TEXT", hoMiddle, veMiddle)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       label = label("TEST TEXT", hoMiddle, veBottom)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       # Left Align
       label = label("TEST TEXT", hoLeft, veTop)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       label = label("TEST TEXT", hoLeft, veMiddle)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
       label = label("TEST TEXT", hoLeft, veBottom)
-      label.rect = rect; label.hint = rect; root.add(label)
+      label.rect = rect; label.geometry rect; root.add(label)
     root.add(button)
   # Create a random tooltip
   var tp = tooltip()

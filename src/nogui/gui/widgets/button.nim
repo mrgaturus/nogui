@@ -34,7 +34,7 @@ widget GUIButton:
     # Put Centered Text
     ctx.color(theme.text)
     ctx.text( # Draw Centered Text
-      self.rect.x + (self.rect.w - self.hint.w) shr 1, 
+      self.rect.x + (self.rect.w - self.metrics.minW) shr 1, 
       self.rect.y + metrics.ascender shr 1, self.label)
 
   method event(state: ptr GUIState) =

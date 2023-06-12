@@ -48,14 +48,15 @@ widget GUILabel:
         h = self.rect.h
         # Text Height
         base = metrics.baseline
-        size = metrics.fontSize
+        asc = metrics.ascender
+        des = metrics.descender
       self.cy =
         case self.v_align
         of veTop: y
         of veMiddle:
           y + (h - base) shr 1
         of veBottom:
-          y + h - size
+          y + h - asc - des
 
   method draw(ctx: ptr CTXRender) =
     ctx.color(theme.text)
