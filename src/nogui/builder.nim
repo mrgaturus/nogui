@@ -256,18 +256,11 @@ func wMethodKind(fn: NimNode): VMethodKind =
 # Widget Constructor
 # ------------------
 
-proc wConstructor(self, fn: NimNode): NimNode =
-  expectIdent(fn[0], "new")
-  # Expect Object Definition
-  let 
-    declare = fn[1]
-    stmts = fn[2]
+proc wConstructorParams(self, declare: NimNode): NimNode =
   expectKind(declare, {nnkObjConstr, nnkCall})
-  expectKind(stmts, nnkStmtList)
-  # Create Parameters
-  let 
-    params = nnkFormalParams.newTree(self)
-    count = declare.len
+  # Create New Formal Parameters
+  result = nnkFormalParams.newTree(self)
+  let count = declare.len
   # Translate Each Parameter
   var defs = nnkIdentDefs.newTree()
   for i in 1 ..< count:
@@ -288,9 +281,19 @@ proc wConstructor(self, fn: NimNode): NimNode =
     else: break
     # Skip to New Ident Def
     if kind in {nnkExprColonExpr, nnkExprEqExpr}:
-      params.add(defs)
+      result.add(defs)
       defs = nnkIdentDefs.newTree()
-  #echo params.treeRepr
+
+proc wConstructor(self, fn: NimNode): NimNode =
+  expectIdent(fn[0], "new")
+  # Expect Object Definition
+  let 
+    declare = fn[1]
+    stmts = fn[2]
+    # Translate Parameters
+    params = wConstructorParams(self, declare)
+  # Expect Statment List
+  expectKind(stmts, nnkStmtList)
   # Inject Initializers
   let 
     v = ident"v"
