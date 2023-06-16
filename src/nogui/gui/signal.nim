@@ -43,9 +43,9 @@ type
   GUICallbackProcEX = # With Parameter
     proc(sender, state, extra: pointer) {.nimcall.}
   # GUI Callbacks
-  GUICallback = object
+  GUICallback* = object
     sender, fn: pointer
-  GUICallbackEX[T] = 
+  GUICallbackEX*[T] = 
     distinct GUICallback
   # GUI Signal and Queue
   GUISignal* = ptr Signal
