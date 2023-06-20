@@ -1,4 +1,7 @@
 import gui/[widget, event, render]
+from gui/signal import 
+  GUICallback, GUICallbackEX, 
+  unsafeCallback, unsafeCallbackEX
 import macros, macrocache
 from strformat import fmt
 
@@ -79,6 +82,87 @@ func vtableInject(name, target: NimNode): NimNode =
         newStrLitNode") &vtable__", name, newStrLitNode";"
       )
     )
+  )
+
+# ---------------------
+# Callback Proc Creator
+# ---------------------
+
+func cbAttribute(self, cb: NimNode): NimNode =
+  let 
+    sym = cb[0]
+    declare = cb[^2]
+    defs = nnkIdentDefs.newTree()
+    inject = nnkAsgn.newTree()
+    # Pointer Cast
+    dot = nnkDotExpr.newTree(ident"self", declare[0])
+    convert = nnkCast.newTree(
+      bindSym"pointer", ident"self")
+  # Return Attribute
+  case declare.kind
+  of nnkIdent:
+    let call = bindSym"unsafeCallback"
+    defs.add declare, bindSym"GUICallback"
+    # Add Simple Injector
+    inject.add(dot, nnkCall.newTree(call, convert, sym))
+  of nnkExprColonExpr:
+    let call = nnkBracketExpr.newTree(
+      bindSym"unsafeCallbackEX", declare[1])
+    defs.add declare[0], nnkBracketExpr.newTree(
+      bindSym"GUICallbackEX", declare[1])
+    # Add Extra Injector
+    inject.add(dot, nnkCall.newTree(call, convert, sym))
+  # is possible reach here?
+  else: discard
+  # Return Attribute and Injector
+  result = nnkExprColonExpr.newTree(defs, inject)
+
+func cbCallback(self, state, fn: NimNode): NimNode =
+  let
+    declare = fn[1]
+    # Callback Proc Parameters
+    params = nnkFormalParams.newTree newEmptyNode()
+  # Add Self and State Parameter
+  params.add nnkIdentDefs.newTree(
+    ident"self", self, newEmptyNode())
+  params.add nnkIdentDefs.newTree(
+    ident"state", state, newEmptyNode())
+  # Add Extra Parameter if exists
+  var
+    stmts = fn[2]
+    name = declare
+  if declare.kind == nnkObjConstr:
+    let extra = declare[1]
+    # Check Parameter
+    expectKind(extra, nnkExprColonExpr)
+    expectLen(extra, 2)
+    var
+      name = extra[0]
+      ty = extra[1]
+    # Simulate Pass by Copy
+    expectKind(ty, {nnkIdent, nnkPtrTy})
+    if ty.kind == nnkIdent:
+      let 
+        fresh = genSym(nskParam)
+        warped = quote do:
+          let `name` = `fresh`[]; stmts
+      # Replace Values
+      name = fresh
+      stmts = warped
+      ty = nnkPtrTy.newTree ty
+    # Add Parameter and Store Extra Value Type
+    params.add nnkIdentDefs.newTree(name, ty, newEmptyNode())
+    name = nnkExprColonExpr.newTree(declare[0], ty[0])
+  # Declare New Callback
+  let sym = genSym(nskProc, name.strVal)
+  result = nnkProcDef.newTree(
+    sym,
+    newEmptyNode(),
+    newEmptyNode(),
+    params,
+    newEmptyNode(),
+    name, # Reserved ^2
+    stmts
   )
 
 # ----------------------
@@ -284,6 +368,19 @@ proc wConstructorParams(self, declare: NimNode): NimNode =
       result.add(defs)
       defs = nnkIdentDefs.newTree()
 
+func wConstructorInject(self: NimNode): NimNode =
+  let
+    v = ident"v"
+    k = bindSym"GUIMethods"
+    inject = vtableInject(self, v)
+  # Statemets to Initialize Widget
+  result = quote do:
+    new result
+    block:
+      var `v`: ptr `k`
+      `inject`
+      result.vtable = `v`
+
 proc wConstructor(self, fn: NimNode): NimNode =
   expectIdent(fn[0], "new")
   # Expect Object Definition
@@ -315,6 +412,30 @@ proc wConstructor(self, fn: NimNode): NimNode =
     newEmptyNode(),
     newEmptyNode(),
     body
+  )
+
+# ----------------------
+# Controller Constructor
+# ----------------------
+
+proc coConstructor(self, callbacks, fn: NimNode): NimNode =
+  # Expect Object Definition
+  let 
+    declare = fn[1]
+    stmts = fn[2]
+    # Translate Parameters
+    params = wConstructorParams(self, declare)
+  # Expect Statment List
+  expectKind(stmts, nnkStmtList)
+  # Create Proc Definition
+  result = nnkProcDef.newTree(
+    postfix(declare[0], "*"),
+    newEmptyNode(),
+    newEmptyNode(),
+    params,
+    newEmptyNode(),
+    newEmptyNode(),
+    stmts
   )
 
 # -----------------------
