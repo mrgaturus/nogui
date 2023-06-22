@@ -94,22 +94,23 @@ func cbAttribute(self, cb: NimNode): NimNode =
     declare = cb[^2]
     defs = nnkIdentDefs.newTree()
     inject = nnkAsgn.newTree()
-    # Pointer Cast
+    # Pointer Casting
     dot = nnkDotExpr.newTree(ident"self", declare[0])
     convert = nnkCast.newTree(
       bindSym"pointer", ident"self")
+    dummy = newEmptyNode()
   # Return Attribute
   case declare.kind
   of nnkIdent:
     let call = bindSym"unsafeCallback"
-    defs.add declare, bindSym"GUICallback"
+    defs.add declare, bindSym"GUICallback", dummy
     # Add Simple Injector
     inject.add(dot, nnkCall.newTree(call, convert, sym))
   of nnkExprColonExpr:
     let call = nnkBracketExpr.newTree(
       bindSym"unsafeCallbackEX", declare[1])
     defs.add declare[0], nnkBracketExpr.newTree(
-      bindSym"GUICallbackEX", declare[1])
+      bindSym"GUICallbackEX", declare[1]), dummy
     # Add Extra Injector
     inject.add(dot, nnkCall.newTree(call, convert, sym))
   # is possible reach here?
@@ -165,9 +166,9 @@ func cbCallback(self, state, fn: NimNode): NimNode =
     stmts
   )
 
-# ----------------------
-# Widget Type Attributes
-# ----------------------
+# ------------------
+# Widget Type Object
+# ------------------
 
 func wIdents(attribute: NimNode, public = false): NimNode =
   result = newNimNode(nnkIdentDefs)
@@ -214,10 +215,6 @@ func wDefines(attributes: NimNode): NimNode =
           result.add wIdents(pub, true)
         # Add New Attribute
     else: continue
-
-# ------------------
-# Widget Type Object
-# ------------------
 
 func wDeclare(declare: NimNode): tuple[name, super: NimNode] =
   var name, super: NimNode
@@ -381,7 +378,7 @@ func wConstructorInject(self: NimNode): NimNode =
       `inject`
       result.vtable = `v`
 
-proc wConstructor(self, fn: NimNode): NimNode =
+proc wConstructor(self, inject, fn: NimNode): NimNode =
   expectIdent(fn[0], "new")
   # Expect Object Definition
   let 
@@ -391,18 +388,6 @@ proc wConstructor(self, fn: NimNode): NimNode =
     params = wConstructorParams(self, declare)
   # Expect Statment List
   expectKind(stmts, nnkStmtList)
-  # Inject Initializers
-  let 
-    v = ident"v"
-    k = bindSym"GUIMethods"
-    inject = vtableInject(self, v)
-    body = quote do:
-      new result
-      block:
-        var `v`: ptr `k`
-        `inject`
-        result.vtable = `v`
-      `stmts`
   # Create Proc Definition
   result = nnkProcDef.newTree(
     postfix(declare[0], "*"),
@@ -411,7 +396,8 @@ proc wConstructor(self, fn: NimNode): NimNode =
     params,
     newEmptyNode(),
     newEmptyNode(),
-    body
+    # Inject -> Statements
+    inject.add(stmts)
   )
 
 # ----------------------
@@ -445,23 +431,43 @@ proc coConstructor(self, callbacks, fn: NimNode): NimNode =
 macro widget*(declare, body: untyped) =
   # 1 -- Declare Widget Type
   let 
-    (name, super) = wDeclare(declare) 
-    procs = nnkStmtList.newTree()
-    news = nnkStmtList.newTree()
-  var
-    methods = vtableCreate()
-    defines = newEmptyNode()
-  if declare.kind == nnkInfix:
-    methods = mcMethods[super.strVal]
+    (name, super) = wDeclare(declare)
+    inject = wConstructorInject(name)
+    # Collect Widget Objects
+    procs = newTree(nnkStmtList)
+    news = newTree(nnkStmtList)
+    callbacks = newTree(nnkStmtList)
+    defines = newTree(nnkStmtList)
+  # Create Methods VTable
+  let methods =
+    if declare.kind != nnkInfix: 
+      vtableCreate()
+    else: mcMethods[super.strVal]
   # 2 -- Find Defines, Procs and Methods
   for child in body:
     case child.kind
     of nnkCall: # attributes
       expectIdent(child[0], "attributes")
-      expectKind(defines, nnkEmpty)
-      defines = wDefines(child)
-    of nnkCommand: # constructor
-      news.add wConstructor(name, child)
+      let stmts = child[1]
+      # Add Define List
+      expectKind(stmts, nnkStmtList)
+      defines.add stmts
+    of nnkCommand: # new or callback
+      let ty = child[0]
+      expectKind(ty, nnkIdent)
+      # TODO: Allow Widget Use A State
+      case ty.strVal
+      of "callback": 
+        let 
+          cb = cbCallback(name, newEmptyNode(), child)
+          attrib = cbAttribute(name, cb)
+        # Add Callback Attribute
+        defines.add attrib[0]
+        inject.add attrib[1]
+        # Add Callback
+        callbacks.add cb
+      of "new": news.add wConstructor(name, inject, child)
+      else: continue
     of nnkProcDef: # proc
       procs.add wProc(name, child)
     of nnkMethodDef: # method
