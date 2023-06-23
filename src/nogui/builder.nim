@@ -193,8 +193,7 @@ func wIdents(attribute: NimNode, public = false): NimNode =
     # Add Boilerplate Empty
     result.add newEmptyNode()
 
-func wDefines(attributes: NimNode): NimNode =
-  result = newNimNode(nnkRecList)
+func wDefines(list, attributes: NimNode) =
   # Expect Statment List
   let stmts = attributes[1]
   expectKind(stmts, nnkStmtList)
@@ -202,7 +201,7 @@ func wDefines(attributes: NimNode): NimNode =
   for ident in stmts:
     case ident.kind
     of nnkCall:
-      result.add wIdents(ident)
+      list.add wIdents(ident)
     of nnkPrefix:
       expectIdent(ident[0], "@")
       expectIdent(ident[1], "public")
@@ -212,7 +211,7 @@ func wDefines(attributes: NimNode): NimNode =
       # Process Each Public Attribute
       for pub in publics:
         if pub.kind == nnkCall:
-          result.add wIdents(pub, true)
+          list.add wIdents(pub, true)
         # Add New Attribute
     else: continue
 
@@ -236,6 +235,15 @@ func wDeclare(declare: NimNode): tuple[name, super: NimNode] =
   result = (name, super)
 
 func wType(name, super, defines: NimNode): NimNode =
+  let recs = nnkRecList.newTree()
+  # Capture Defines
+  for def in defines:
+    case def.kind
+    of nnkStmtList:
+      recs.wDefines(def)
+    of nnkIdentDefs:
+      recs.add def
+    else: discard 
   # ref object of
   let n = nnkRefTy.newTree(
     nnkObjectTy.newTree(
@@ -400,34 +408,65 @@ proc wConstructor(self, inject, fn: NimNode): NimNode =
     inject.add(stmts)
   )
 
-# ----------------------
-# Controller Constructor
-# ----------------------
+# -------------------------
+# Widget Structure Analysis
+# -------------------------
 
-proc coConstructor(self, callbacks, fn: NimNode): NimNode =
-  # Expect Object Definition
-  let 
-    declare = fn[1]
-    stmts = fn[2]
-    # Translate Parameters
-    params = wConstructorParams(self, declare)
-  # Expect Statment List
-  expectKind(stmts, nnkStmtList)
-  # Create Proc Definition
-  result = nnkProcDef.newTree(
-    postfix(declare[0], "*"),
-    newEmptyNode(),
-    newEmptyNode(),
-    params,
-    newEmptyNode(),
-    newEmptyNode(),
-    stmts
-  )
+func wStructure(name, super, state, inject, methods, body: NimNode): NimNode =
+  let
+    # Collect Widget Objects
+    defines = newTree(nnkStmtList)
+    procs = newTree(nnkStmtList)
+    news = newTree(nnkStmtList)
+  # 2 -- Find Defines, Procs and Methods
+  for child in body:
+    case child.kind
+    of nnkCall: # attributes
+      expectIdent(child[0], "attributes")
+      let stmts = child[1]
+      # Add Define List
+      expectKind(stmts, nnkStmtList)
+      defines.add stmts
+    of nnkCommand: # new or callback
+      let ty = child[0]
+      expectKind(ty, nnkIdent)
+      # TODO: Allow Widget Use A State
+      case ty.strVal
+      of "callback":
+        let 
+          cb = cbCallback(name, state, child)
+          attrib = cbAttribute(name, cb)
+        # Add Callback Attribute
+        defines.add attrib[0]
+        inject.add attrib[1]
+        # Add Callback
+        procs.add cb
+      of "new": news.add wConstructor(name, inject, child)
+      else: discard
+    of nnkProcDef: # proc
+      procs.add wProc(name, child)
+    of nnkMethodDef: # method
+      let
+        kind = ord wMethodKind(child)
+        sym = genSym(nskProc, child[0].strVal)
+        fn = wMethod(sym, name, child)
+      # Overwrite Method if is Widget
+      expectKind(methods, nnkStmtList)
+      methods[kind] = sym
+      procs.add fn
+    else: discard
+  # 3 -- Define Type
+  result = nnkStmtList.newTree()
+  result.add wType(name, super, defines)
+  # 3 -- Add Structure
+  result.add procs
+  result.add news
 
 # -----------------------
 # Widget Definition Macro
 # -----------------------
 
+#[
 macro widget*(declare, body: untyped) =
   # 1 -- Declare Widget Type
   let 
@@ -489,6 +528,7 @@ macro widget*(declare, body: untyped) =
   result.add vtableMagic(name, methods)
   news.copyChildrenTo(result)
   #echo result.repr
+]#
 
 macro child(self: GUIWidget, body: untyped) =
   let 
