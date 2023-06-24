@@ -505,6 +505,18 @@ macro widget*(declare, body: untyped) =
   result = nnkStmtList.newTree(magic, struct)
   #echo result.repr
 
+macro controller*(declare, body: untyped) =
+  let
+    dummy = newEmptyNode()
+    idents = wDeclare(declare, dummy)
+    # Simple Injector
+    inject = quote do:
+      new result
+      discard
+  # Return Controller Structure
+  result = wStructure(idents, inject, dummy, body)
+  #echo result.repr
+
 macro child(self: GUIWidget, body: untyped) =
   let 
     fresh = genSym(nskLet, "temp")
