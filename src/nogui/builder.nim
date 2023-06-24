@@ -153,17 +153,21 @@ func cbCallback(self, state, fn: NimNode): NimNode =
       name = extra[0]
       ty = extra[1]
     # Simulate Pass by Copy
-    expectKind(ty, {nnkIdent, nnkPtrTy})
-    if ty.kind == nnkIdent:
+    expectKind(ty, {nnkIdent, nnkCommand})
+    if ty.kind == nnkCommand:
       let 
         fresh = genSym(nskParam)
         warped = quote do:
-          let `name` = `fresh`[]; `stmts`
+          var `name` = `fresh`[]; `stmts`
+      # Remember Line
+      expectIdent(ty[0], "sink")
+      warped[0][0][0].copyLineInfo(extra)
       # Replace Values
       name = fresh
       stmts = warped
-      ty = nnkPtrTy.newTree ty
+      ty = ty[1]
     # Change Info Kind
+    ty = nnkPtrTy.newTree ty
     info.add(declare[0], ty[0])
     # Add Parameter and Store Extra Value Type
     params.add nnkIdentDefs.newTree(name, ty, newEmptyNode())
@@ -305,9 +309,9 @@ func wMethod(symbol, self, fn: NimNode): NimNode =
     stmts
   )
 
-proc wMethodCheck(fn, expect: NimNode) =
+func wMethodCheck(fn, expect: NimNode) =
   # Reusable Kind Error Message
-  proc error(msg: string, exp, got: NimNode; lines: NimNode) =
+  func error(msg: string, exp, got: NimNode; lines: NimNode) =
     error fmt"{msg} expected <{exp.repr}> got <{got.repr}>", lines
   let # Parameters
     params = fn[3]
@@ -359,7 +363,7 @@ func wMethodKind(fn: NimNode): VMethodKind =
 # Widget Constructor
 # ------------------
 
-proc wConstructorParams(self, declare: NimNode): NimNode =
+func wConstructorParams(self, declare: NimNode): NimNode =
   expectKind(declare, {nnkObjConstr, nnkCall})
   # Create New Formal Parameters
   result = nnkFormalParams.newTree(self)
@@ -387,7 +391,7 @@ proc wConstructorParams(self, declare: NimNode): NimNode =
       result.add(defs)
       defs = nnkIdentDefs.newTree()
 
-proc wConstructor(self, inject, fn: NimNode): NimNode =
+func wConstructor(self, inject, fn: NimNode): NimNode =
   expectIdent(fn[0], "new")
   # Expect Object Definition
   let 
@@ -499,6 +503,7 @@ macro widget*(declare, body: untyped) =
   # Return Widget Structure
   mcMethods[name.strVal] = methods
   result = nnkStmtList.newTree(magic, struct)
+  #echo result.repr
 
 macro child(self: GUIWidget, body: untyped) =
   let 
