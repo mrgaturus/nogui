@@ -1,4 +1,7 @@
 import gui/[widget, event, render]
+from gui/signal import 
+  GUICallback, GUICallbackEX, 
+  unsafeCallback, unsafeCallbackEX
 import macros, macrocache
 from strformat import fmt
 
@@ -81,9 +84,109 @@ func vtableInject(name, target: NimNode): NimNode =
     )
   )
 
-# ----------------------
-# Widget Type Attributes
-# ----------------------
+# ---------------------
+# Callback Proc Creator
+# ---------------------
+
+func cbAttribute(self, cb: NimNode): NimNode =
+  let 
+    sym = cb[0]
+    declare = cb[^2]
+  #debugEcho declare.treeRepr
+  let
+    defs = nnkIdentDefs.newTree()
+    inject = nnkAsgn.newTree()
+    # Attribute Definition
+    name = declare[0]
+    ty = declare[1]
+    # Pointer Casting
+    dot = nnkDotExpr.newTree(ident"result", name)
+    convert = nnkCast.newTree(
+      bindSym"pointer", ident"result")
+    dummy = newEmptyNode()
+  # Return Attribute
+  case ty.kind
+  of nnkEmpty:
+    let call = bindSym"unsafeCallback"
+    defs.add name, bindSym"GUICallback", dummy
+    # Add Simple Injector
+    inject.add(dot, nnkCall.newTree(call, convert, sym))
+  of nnkIdent:
+    let call = nnkBracketExpr.newTree(
+      bindSym"unsafeCallbackEX", ty)
+    defs.add name, nnkBracketExpr.newTree(
+      bindSym"GUICallbackEX", ty), dummy
+    # Add Extra Injector
+    inject.add(dot, nnkCall.newTree(call, convert, sym))
+  # is possible reach here?
+  else: discard
+  # Return Attribute and Injector
+  result = nnkExprColonExpr.newTree(defs, inject)
+
+func cbCallback(self, state, fn: NimNode): NimNode =
+  let
+    declare = fn[1]
+    # Callback Proc Parameters
+    params = nnkFormalParams.newTree newEmptyNode()
+    info = nnkExprColonExpr.newTree()
+  # Add Self Parameter
+  params.add nnkIdentDefs.newTree(
+    ident"self", self, newEmptyNode())
+  # Add State Parameter
+  let s = nnkIdentDefs.newTree(
+    ident"state", 
+    nnkPtrTy.newTree(state), 
+    newEmptyNode()
+  )
+  if state.kind == nnkEmpty:
+    s[0] = genSym(nskParam, "state")
+    s[1] = bindSym"pointer"
+  params.add s
+  # Add Extra Parameter if exists
+  var stmts = fn[2]
+  if declare.kind == nnkObjConstr:
+    let extra = declare[1]
+    # Check Parameter
+    expectKind(extra, nnkExprColonExpr)
+    expectLen(extra, 2)
+    var
+      name = extra[0]
+      ty = extra[1]
+    # Simulate Pass by Copy
+    expectKind(ty, {nnkIdent, nnkCommand})
+    if ty.kind == nnkCommand:
+      let 
+        fresh = genSym(nskParam)
+        warped = quote do:
+          var `name` = `fresh`[]; `stmts`
+      # Remember Line
+      expectIdent(ty[0], "sink")
+      warped[0][0][0].copyLineInfo(extra)
+      # Replace Values
+      name = fresh
+      stmts = warped
+      ty = ty[1]
+    # Change Info Kind
+    ty = nnkPtrTy.newTree ty
+    info.add(declare[0], ty[0])
+    # Add Parameter and Store Extra Value Type
+    params.add nnkIdentDefs.newTree(name, ty, newEmptyNode())
+  else: info.add declare, newEmptyNode()
+  # Declare New Callback
+  let sym = genSym(nskProc, info[0].strVal)
+  result = nnkProcDef.newTree(
+    sym,
+    newEmptyNode(),
+    newEmptyNode(),
+    params,
+    newEmptyNode(),
+    info, # Reserved ^2
+    stmts
+  )
+
+# ------------------
+# Widget Type Object
+# ------------------
 
 func wIdents(attribute: NimNode, public = false): NimNode =
   result = newNimNode(nnkIdentDefs)
@@ -108,16 +211,12 @@ func wIdents(attribute: NimNode, public = false): NimNode =
     # Add Boilerplate Empty
     result.add newEmptyNode()
 
-func wDefines(attributes: NimNode): NimNode =
-  result = newNimNode(nnkRecList)
-  # Expect Statment List
-  let stmts = attributes[1]
-  expectKind(stmts, nnkStmtList)
+func wDefines(list, stmts: NimNode) =
   # Get Attributes from Statments
   for ident in stmts:
     case ident.kind
     of nnkCall:
-      result.add wIdents(ident)
+      list.add wIdents(ident)
     of nnkPrefix:
       expectIdent(ident[0], "@")
       expectIdent(ident[1], "public")
@@ -127,40 +226,48 @@ func wDefines(attributes: NimNode): NimNode =
       # Process Each Public Attribute
       for pub in publics:
         if pub.kind == nnkCall:
-          result.add wIdents(pub, true)
+          list.add wIdents(pub, true)
         # Add New Attribute
     else: continue
 
-# ------------------
-# Widget Type Object
-# ------------------
-
-func wDeclare(declare: NimNode): tuple[name, super: NimNode] =
-  var name, super: NimNode
-  # Extract Name and Parent Type
+func wDeclare(declare, fallback: NimNode): NimNode =
+  # Pack idents as [name, super, state]
+  func wNames(n, fallback: NimNode): NimNode =
+    # Check if has a inherit or not
+    result = 
+      if n.kind == nnkInfix:
+        expectIdent(n[0], "of")
+        nnkIdentDefs.newTree(n[1], n[2])
+      else: nnkIdentDefs.newTree(n, fallback)
+    # Add Space for State
+    result.add newEmptyNode()
+  # Check if is ident or not
   expectKind(declare, {nnkIdent, nnkInfix})
-  if declare.kind == nnkIdent:
-    name = declare
-    # Default Inherit
-    super = ident"GUIWidget"
-  else: 
-    expectIdent(declare[0], "of")
-    # There is an Inherit
-    name = declare[1]
-    super = declare[2]
-    # Expect Kinds
-    expectKind(name, nnkIdent)
-    expectKind(super, nnkIdent)
-  # Return Declare
-  result = (name, super)
+  # Check Declare Indents
+  if declare.kind == nnkInfix and declare[0].eqIdent("->"):
+      result = wNames(declare[1], fallback)
+      result[2] = declare[2]
+  else: result = wNames(declare, fallback)
 
 func wType(name, super, defines: NimNode): NimNode =
+  let recs = nnkRecList.newTree()
+  # Capture Defines
+  for def in defines:
+    case def.kind
+    of nnkStmtList:
+      recs.wDefines(def)
+    of nnkIdentDefs:
+      recs.add def
+    else: discard 
+  # check super inherit
+  var inherit = super
+  if inherit.kind != nnkEmpty:
+    inherit = nnkOfInherit.newTree(super)
   # ref object of
   let n = nnkRefTy.newTree(
     nnkObjectTy.newTree(
       nnkEmpty.newNimNode(),
-      nnkOfInherit.newTree(super),
-      defines
+      inherit, recs
     )
   )
   # Declare Type
@@ -202,9 +309,9 @@ func wMethod(symbol, self, fn: NimNode): NimNode =
     stmts
   )
 
-proc wMethodCheck(fn, expect: NimNode) =
+func wMethodCheck(fn, expect: NimNode) =
   # Reusable Kind Error Message
-  proc error(msg: string, exp, got: NimNode; lines: NimNode) =
+  func error(msg: string, exp, got: NimNode; lines: NimNode) =
     error fmt"{msg} expected <{exp.repr}> got <{got.repr}>", lines
   let # Parameters
     params = fn[3]
@@ -250,13 +357,13 @@ func wMethodKind(fn: NimNode): VMethodKind =
   of "update": wMethodCheck(fn, bindSym"Update"); mkUpdate
   of "layout": wMethodCheck(fn, bindSym"Layout"); mkLayout
   of "draw": wMethodCheck(fn, bindSym"Draw"); mkDraw
-  else: error("invalid method name", id);  mkInvalid
+  else: error("invalid method name", id); mkInvalid
 
 # ------------------
 # Widget Constructor
 # ------------------
 
-proc wConstructorParams(self, declare: NimNode): NimNode =
+func wConstructorParams(self, declare: NimNode): NimNode =
   expectKind(declare, {nnkObjConstr, nnkCall})
   # Create New Formal Parameters
   result = nnkFormalParams.newTree(self)
@@ -284,7 +391,7 @@ proc wConstructorParams(self, declare: NimNode): NimNode =
       result.add(defs)
       defs = nnkIdentDefs.newTree()
 
-proc wConstructor(self, fn: NimNode): NimNode =
+func wConstructor(self, inject, fn: NimNode): NimNode =
   expectIdent(fn[0], "new")
   # Expect Object Definition
   let 
@@ -294,18 +401,6 @@ proc wConstructor(self, fn: NimNode): NimNode =
     params = wConstructorParams(self, declare)
   # Expect Statment List
   expectKind(stmts, nnkStmtList)
-  # Inject Initializers
-  let 
-    v = ident"v"
-    k = bindSym"GUIMethods"
-    inject = vtableInject(self, v)
-    body = quote do:
-      new result
-      block:
-        var `v`: ptr `k`
-        `inject`
-        result.vtable = `v`
-      `stmts`
   # Create Proc Definition
   result = nnkProcDef.newTree(
     postfix(declare[0], "*"),
@@ -314,53 +409,112 @@ proc wConstructor(self, fn: NimNode): NimNode =
     params,
     newEmptyNode(),
     newEmptyNode(),
-    body
+    # Inject -> Statements
+    inject.add(stmts)
   )
+
+# -------------------------
+# Widget Structure Analysis
+# -------------------------
+
+func wStructure(idents, inject, methods, body: NimNode): NimNode =
+  let
+    # Unpack Idents
+    name = idents[0]
+    super = idents[1]
+    state = idents[2]
+    # Collect Widget Objects
+    defines = newTree(nnkStmtList)
+    procs = newTree(nnkStmtList)
+    news = newTree(nnkStmtList)
+  # 2 -- Find Defines, Procs and Methods
+  for child in body:
+    case child.kind
+    of nnkCall: # attributes
+      expectIdent(child[0], "attributes")
+      let stmts = child[1]
+      # Add Define List
+      expectKind(stmts, nnkStmtList)
+      defines.add stmts
+    of nnkCommand: # new or callback
+      let ty = child[0]
+      expectKind(ty, nnkIdent)
+      # TODO: Allow Widget Use A State
+      case ty.strVal
+      of "callback":
+        let 
+          cb = cbCallback(name, state, child)
+          attrib = cbAttribute(name, cb)
+        # Add Callback Attribute
+        defines.add attrib[0]
+        inject.add attrib[1]
+        # Add Callback
+        procs.add cb
+      of "new": news.add wConstructor(name, inject, child)
+      else: discard
+    of nnkProcDef: # proc
+      procs.add wProc(name, child)
+    of nnkMethodDef: # method
+      let
+        kind = ord wMethodKind(child)
+        sym = genSym(nskProc, child[0].strVal)
+        fn = wMethod(sym, name, child)
+      # Overwrite Method if is Widget
+      expectKind(methods, nnkStmtList)
+      methods[kind] = sym
+      procs.add fn
+    else: discard
+  # 3 -- Define Type
+  result = nnkStmtList.newTree()
+  result.add wType(name, super, defines)
+  # 3 -- Add Structure
+  result.add procs
+  result.add news
 
 # -----------------------
 # Widget Definition Macro
 # -----------------------
 
 macro widget*(declare, body: untyped) =
-  # 1 -- Declare Widget Type
+  let
+    fallback = bindSym"GUIWidget"
+    idents = wDeclare(declare, fallback)
+    # Unpack Idents
+    name = idents[0]
+    super = idents[1]
+    # Injector
+    v = ident"v"
+    k = bindSym"GUIMethods"
+    inject0 = vtableInject(name, v)
+    # Inject Initializer
+    inject = quote do:
+      new result
+      block:
+        var `v`: ptr `k`
+        `inject0`
+        result.vtable = `v`
+  # Create Widget VTable and Structure
   let 
-    (name, super) = wDeclare(declare) 
-    procs = nnkStmtList.newTree()
-    news = nnkStmtList.newTree()
-  var
-    methods = vtableCreate()
-    defines = newEmptyNode()
-  if declare.kind == nnkInfix:
-    methods = mcMethods[super.strVal]
-  # 2 -- Find Defines, Procs and Methods
-  for child in body:
-    case child.kind
-    of nnkCall: # attributes
-      expectIdent(child[0], "attributes")
-      expectKind(defines, nnkEmpty)
-      defines = wDefines(child)
-    of nnkCommand: # constructor
-      news.add wConstructor(name, child)
-    of nnkProcDef: # proc
-      procs.add wProc(name, child)
-    of nnkMethodDef: # method
-      let 
-        kind = ord wMethodKind(child)
-        sym = genSym(nskProc, child[0].strVal)
-        fn = wMethod(sym, name, child)
-      # Overwrite Method
-      methods[kind] = sym
-      procs.add fn
-    else: continue
-  # 3 -- Store Methods
+    methods = # Create new VTable
+      if super == fallback: vTableCreate()
+      else: mcMethods[super.strVal]
+    struct = wStructure(idents, inject, methods, body)
+    magic = vtableMagic(name, methods)
+  # Return Widget Structure
   mcMethods[name.strVal] = methods
-  # 4 -- Add Type Definitions
-  result = nnkStmtList.newTree()
-  result.add wType(name, super, defines)
-  procs.copyChildrenTo(result)
-  # Add VTable C Magic
-  result.add vtableMagic(name, methods)
-  news.copyChildrenTo(result)
+  result = nnkStmtList.newTree(magic, struct)
+  #echo result.repr
+
+macro controller*(declare, body: untyped) =
+  let
+    dummy = newEmptyNode()
+    idents = wDeclare(declare, dummy)
+    # Simple Injector
+    inject = quote do:
+      new result
+      discard
+  # Return Controller Structure
+  result = wStructure(idents, inject, dummy, body)
   #echo result.repr
 
 macro child(self: GUIWidget, body: untyped) =

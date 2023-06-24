@@ -505,7 +505,7 @@ proc handleEvents*(win: var GUIWindow) =
 proc handleSignals*(win: var GUIWindow): bool =
   for signal in poll(win.queue):
     case signal.kind
-    of sCallback:
+    of sCallback, sCallbackEX:
       signal.call()
     of sWidget:
       let widget =
@@ -519,7 +519,7 @@ proc handleSignals*(win: var GUIWindow): bool =
       of msgPopup: popup(win, widget)
       of msgTooltip: tooltip(win, widget)
     of sWindow:
-      case signal.w_msg
+      case signal.wsg
       of msgOpenIM: XSetICFocus(win.xic)
       of msgCloseIM: XUnsetICFocus(win.xic)
       of msgUnfocus: # Un Focus
