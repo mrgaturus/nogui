@@ -92,7 +92,7 @@ func cbAttribute(self, cb: NimNode): NimNode =
   let 
     sym = cb[0]
     declare = cb[^2]
-  debugEcho declare.treeRepr
+  #debugEcho declare.treeRepr
   let
     defs = nnkIdentDefs.newTree()
     inject = nnkAsgn.newTree()
@@ -134,7 +134,10 @@ func cbCallback(self, state, fn: NimNode): NimNode =
     ident"self", self, newEmptyNode())
   # Add State Parameter
   let s = nnkIdentDefs.newTree(
-    ident"state", state, newEmptyNode())
+    ident"state", 
+    nnkPtrTy.newTree(state), 
+    newEmptyNode()
+  )
   if state.kind == nnkEmpty:
     s[0] = genSym(nskParam, "state")
     s[1] = bindSym"pointer"
@@ -223,24 +226,24 @@ func wDefines(list, stmts: NimNode) =
         # Add New Attribute
     else: continue
 
-func wDeclare(declare: NimNode): tuple[name, super: NimNode] =
-  var name, super: NimNode
-  # Extract Name and Parent Type
+func wDeclare(declare, fallback: NimNode): NimNode =
+  # Pack idents as [name, super, state]
+  func wNames(n, fallback: NimNode): NimNode =
+    # Check if has a inherit or not
+    result = 
+      if n.kind == nnkInfix:
+        expectIdent(n[0], "of")
+        nnkIdentDefs.newTree(n[1], n[2])
+      else: nnkIdentDefs.newTree(n, fallback)
+    # Add Space for State
+    result.add newEmptyNode()
+  # Check if is ident or not
   expectKind(declare, {nnkIdent, nnkInfix})
-  if declare.kind == nnkIdent:
-    name = declare
-    # Default Inherit
-    super = ident"GUIWidget"
-  else: 
-    expectIdent(declare[0], "of")
-    # There is an Inherit
-    name = declare[1]
-    super = declare[2]
-    # Expect Kinds
-    expectKind(name, nnkIdent)
-    expectKind(super, nnkIdent)
-  # Return Declare
-  result = (name, super)
+  # Check Declare Indents
+  if declare.kind == nnkInfix and declare[0].eqIdent("->"):
+      result = wNames(declare[1], fallback)
+      result[2] = declare[2]
+  else: result = wNames(declare, fallback)
 
 func wType(name, super, defines: NimNode): NimNode =
   let recs = nnkRecList.newTree()
@@ -252,11 +255,15 @@ func wType(name, super, defines: NimNode): NimNode =
     of nnkIdentDefs:
       recs.add def
     else: discard 
+  # check super inherit
+  var inherit = super
+  if inherit.kind != nnkEmpty:
+    inherit = nnkOfInherit.newTree(super)
   # ref object of
   let n = nnkRefTy.newTree(
     nnkObjectTy.newTree(
       nnkEmpty.newNimNode(),
-      nnkOfInherit.newTree(super), recs
+      inherit, recs
     )
   )
   # Declare Type
@@ -406,8 +413,12 @@ proc wConstructor(self, inject, fn: NimNode): NimNode =
 # Widget Structure Analysis
 # -------------------------
 
-func wStructure(name, super, state, inject, methods, body: NimNode): NimNode =
+func wStructure(idents, inject, methods, body: NimNode): NimNode =
   let
+    # Unpack Idents
+    name = idents[0]
+    super = idents[1]
+    state = idents[2]
     # Collect Widget Objects
     defines = newTree(nnkStmtList)
     procs = newTree(nnkStmtList)
@@ -462,12 +473,15 @@ func wStructure(name, super, state, inject, methods, body: NimNode): NimNode =
 
 macro widget*(declare, body: untyped) =
   let
-    (name, super) = wDeclare(declare)
+    fallback = bindSym"GUIWidget"
+    idents = wDeclare(declare, fallback)
+    # Unpack Idents
+    name = idents[0]
+    super = idents[1]
     # Injector
     v = ident"v"
     k = bindSym"GUIMethods"
     inject0 = vtableInject(name, v)
-    state = newEmptyNode()
     # Inject Initializer
     inject = quote do:
       new result
@@ -475,17 +489,16 @@ macro widget*(declare, body: untyped) =
         var `v`: ptr `k`
         `inject0`
         result.vtable = `v`
-  # Create New Widget Methods
-  let methods =
-    if super.kind != nnkInfix: 
-      vTableCreate()
-    else: mcMethods[super.strVal]
-  # Inject VTable and Add Structure
+  # Create Widget VTable and Structure
   let 
-    struct = wStructure(name, super, state, inject, methods, body)
+    methods = # Create new VTable
+      if super == fallback: vTableCreate()
+      else: mcMethods[super.strVal]
+    struct = wStructure(idents, inject, methods, body)
     magic = vtableMagic(name, methods)
+  # Return Widget Structure
+  mcMethods[name.strVal] = methods
   result = nnkStmtList.newTree(magic, struct)
-  echo result.repr
 
 macro child(self: GUIWidget, body: untyped) =
   let 
