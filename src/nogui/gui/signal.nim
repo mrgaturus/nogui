@@ -155,17 +155,14 @@ proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
 # UNSAFE CALLBACK CREATION
 # ------------------------
 
-template unsafeCallback*(sender: pointer, cb: proc): GUICallback =
+template unsafeCallback*(self: pointer, call: proc): GUICallback =
   GUICallback(
-    sender: sender, 
-    cb = cast[pointer](cb)
+    sender: self, 
+    fn: cast[pointer](call)
   )
 
-template unsafeCallbackEX*[T](sender: pointer, cb: proc): GUICallbackEX[T] =
-  GUICallbackEX[T](
-    sender: sender, 
-    cb = cast[pointer](cb)
-  )
+template unsafeCallbackEX*[T](self: pointer, call: proc): GUICallbackEX[T] =
+  GUICallbackEX[T](unsafeCallback(self, call))
 
 # ----------------------------------
 # GUI WIDGET SIGNAL PUSHER TEMPLATES
@@ -186,6 +183,12 @@ template push*(cb: GUICallback) =
 
 template push*[T](cb: GUICallbackEX[T], data: sink T) =
   GUICallback(cb).pushCallback(addr data, sizeof T)
+
+proc valid*(cb: GUICallback): bool {.inline.} =
+  not isNil(cb.fn) and not isNil(cb.sender)
+
+template valid*[T](cb: GUICallbackEX[T]): bool =
+  GUICallback(cb).valid
 
 # ---------------------------------
 # GUI SIGNAL DATA POINTER CONVERTER
