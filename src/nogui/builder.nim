@@ -1,3 +1,5 @@
+# TODO: complete inherit initialization
+# TODO: shortcut for {.cursor.} on ref attributes
 import gui/[widget, event, render]
 from gui/signal import 
   GUICallback, GUICallbackEX, 
