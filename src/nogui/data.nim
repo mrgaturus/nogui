@@ -1,7 +1,5 @@
 # TODO: Use fontconfig for extra fonts
 # TODO: Use /usr/share/npainter
-
-import macros
 import logger
 import libs/gl
 from libs/ft2 import
@@ -11,85 +9,93 @@ from libs/ft2 import
   ft2_newFace,
   ft2_setCharSize
 
-type # Buffer Data
-  BUFIcons* = ref object
-    size*: int16 # size*size
-    count*, len*: int32
-    buffer*: UncheckedArray[byte]
 const
-  shaderPath = "data/glsl/"
-  # Font and Icons Atlas
-  fontPath = "data/font.ttf"
-  iconsPath = "data/icons.dat"
+  unixPath = "/usr/share"
+  # Data Packer
+  dataPath = "data"
+  shaderPath = "glsl"
 
-when defined(icons):
-  from strutils import join
-  const icons_pack = 
-    "../svg/icons_pack.sh"
-
-# Initialize Freetype2
+# TODO: move this to a global app object
 var freetype: FT2Library
 if ft2_init(addr freetype) != 0:
   log(lvError, "failed initialize FreeType2")
 
-# ------------------------------
-# GUI FONT & ICONS LOADING PROCS
-# ------------------------------
+# -----------------------
+# Icon Data Loading Procs
+# -----------------------
 
-proc newFont*(): FT2Face =
+type
+  GUIHeaderIcon = object
+    bytes*: cuint
+    w*, h*, fit*: cshort
+    channels*: cshort
+    # Allocated Chunk
+    pad0: cuint
+  GUIBufferIcon = ptr UncheckedArray[byte]
+  GUIChunkIcon* = object
+    info*: ptr GUIHeaderIcon
+    buffer*: GUIBufferIcon
+  GUIPackedIcons = ref object
+    handle: File
+    allocated: int
+    # Current Icon Buffer
+    header*: GUIHeaderIcon
+    buffer*: GUIBufferIcon
+
+proc newIcons*(filename: string): GUIPackedIcons =
+  new result
+  # Try Open File
+  if not open(result.handle, filename, fmRead):
+    raise newException(IOError, filename & " cannot be open")
+  # Read File Signature
+  var signature: uint64
+  if readBuffer(result.handle, addr signature, 8) != 8 or 
+    signature != 0x4955474f4e'u64:
+      raise newException(IOError, filename & " is not valid")
+
+proc bytesIcon(pack: GUIPackedIcons, bytes: int): GUIBufferIcon =
+  if bytes > pack.allocated:
+    pack.allocated = bytes
+    # We dont need prev data
+    let prev = pack.buffer
+    if not isNil(prev):
+      dealloc(prev)
+    pack.buffer = cast[GUIBufferIcon](alloc bytes)
+  # Return Current Buffer
+  pack.buffer
+
+iterator icons*(pack: GUIPackedIcons): GUIChunkIcon =
+  let
+    handle = pack.handle
+    info = addr pack.header
+  # Chunk Yiedler
+  var result: GUIChunkIcon
+  result.info = info
+  # Read Chunk and Write a PNG
+  const headSize = sizeof GUIHeaderIcon
+  while readBuffer(handle, info, headSize) == headSize:
+    let 
+      bytes = int info.bytes
+      data = bytesIcon(pack, bytes)
+    if readBuffer(handle, addr data[0], bytes) == bytes:
+      result.buffer = data
+      yield result
+  # We Can Close File
+  close(pack.handle)
+  # Free Temporal Buffer
+  dealloc(pack.buffer)
+
+# -----------------------
+# Misc Data Loading Procs
+# -----------------------
+
+proc newFont*(font: string): FT2Face =
   # Load Default Font File using FT2 Loader
-  if ft2_newFace(freetype, fontPath, 0, addr result) != 0:
-    log(lvError, "failed loading font file: ", fontPath)
+  if ft2_newFace(freetype, font, 0, addr result) != 0:
+    log(lvError, "failed loading font file: ", font)
   # Set Size With 96 of DPI, DPI Awareness is confusing
   if ft2_setCharSize(result, 0, 9 shl 6, 96, 96) != 0:
     log(lvWarning, "font size was setted not properly")
-
-proc newIcons*(): BUFIcons =
-  var icons: File
-  if open(icons, iconsPath):
-    # Copy File to Buffer
-    var read: int # Bytes Readed
-    let size = getFileSize(icons)
-    result.unsafeNew(size) # Alloc a traced Buffer
-    read = readBuffer(icons, cast[pointer](result), size)
-    if read != size: # Check if was loaded correctly
-      log(lvWarning, "bad icons file size: ", iconsPath)
-    # Close Icons File
-    close(icons)
-  else: # Failed Loading Icons
-    log(lvError, "failed loading icons file: ", iconsPath)
-
-macro icons*(size: Natural, list: untyped) =
-  var index: uint16 # Current Icon ID
-  result = newNimNode(nnkConstSection)
-  when defined(icons): # Generate Dat file
-    var args = # icons_pack arguments
-      @[icons_pack, iconsPath, $size.intVal]
-    for icon in list:
-      # Create New Icon Constant
-      expectKind(icon[0], nnkIdent)
-      result.add(newNimNode(nnkConstDef).add(
-        postfix(icon[0], "*"), newEmptyNode(), newLit(index)))
-      # Add Icon Pack Argument
-      expectKind(icon[1], nnkStrLit)
-      args.add icon[1].strVal
-      # Next Icon ID
-      inc(index)
-    # Create Icon Data using icon_pack
-    let exec = gorgeEx(args.join " ")
-    if exec.exitCode != 0: error(exec.output)
-  else: # Only Generate Enum
-    for icon in list:
-      # Create New Icon Constant
-      expectKind(icon[0], nnkIdent)
-      result.add(newNimNode(nnkConstDef).add(
-        postfix(icon[0], "*"), newEmptyNode(), newLit(index)))
-      # Next Icon ID
-      inc(index)
-
-# -------------------
-# SHADER LOADING PROC
-# -------------------
 
 proc newShader*(vert, frag: string): GLuint =
   var # Prepare Vars
