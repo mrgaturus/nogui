@@ -1,5 +1,9 @@
+# Import Location Management
+from os import `/`, fileExists
+from std/compilesettings import 
+  querySetting, SingleValueSetting
 # TODO: Use fontconfig for extra fonts
-# TODO: Use /usr/share/npainter
+# TODO: errors as exceptions with IOError
 import logger
 import libs/gl
 from libs/ft2 import
@@ -9,16 +13,23 @@ from libs/ft2 import
   ft2_newFace,
   ft2_setCharSize
 
-const
-  unixPath = "/usr/share"
-  # Data Packer
-  dataPath = "data"
-  shaderPath = "glsl"
-
 # TODO: move this to a global app object
 var freetype: FT2Library
 if ft2_init(addr freetype) != 0:
   log(lvError, "failed initialize FreeType2")
+
+# ------------------
+# Data Path Location
+# ------------------
+
+proc toDataPath(path: string): string =
+  const relativePath = "data"
+  # Check if exists on relative path
+  result = relativePath / path
+  when defined(posix):
+    const unixPath = "/usr/share" / querySetting(projectName)
+    if not fileExists(result):
+      result = unixPath / path
 
 # -----------------------
 # Icon Data Loading Procs
@@ -45,13 +56,14 @@ type
 proc newIcons*(filename: string): GUIPackedIcons =
   new result
   # Try Open File
-  if not open(result.handle, filename, fmRead):
-    raise newException(IOError, filename & " cannot be open")
+  let path = toDataPath(filename)
+  if not open(result.handle, path, fmRead):
+    raise newException(IOError, path & " cannot be open")
   # Read File Signature
   var signature: uint64
   if readBuffer(result.handle, addr signature, 8) != 8 or 
     signature != 0x4955474f4e'u64:
-      raise newException(IOError, filename & " is not valid")
+      raise newException(IOError, path & " is not valid")
 
 proc bytesIcon(pack: GUIPackedIcons, bytes: int): GUIBufferIcon =
   if bytes > pack.allocated:
@@ -90,14 +102,16 @@ iterator icons*(pack: GUIPackedIcons): GUIChunkIcon =
 # -----------------------
 
 proc newFont*(font: string): FT2Face =
+  let path = toDataPath(font)
   # Load Default Font File using FT2 Loader
-  if ft2_newFace(freetype, font, 0, addr result) != 0:
-    log(lvError, "failed loading font file: ", font)
+  if ft2_newFace(freetype, cstring path, 0, addr result) != 0:
+    log(lvError, "failed loading font file: ", path)
   # Set Size With 96 of DPI, DPI Awareness is confusing
   if ft2_setCharSize(result, 0, 9 shl 6, 96, 96) != 0:
     log(lvWarning, "font size was setted not properly")
 
 proc newShader*(vert, frag: string): GLuint =
+  let path = toDataPath("glsl")
   var # Prepare Vars
     vertShader = glCreateShader(GL_VERTEX_SHADER)
     fragShader = glCreateShader(GL_FRAGMENT_SHADER)
@@ -105,12 +119,12 @@ proc newShader*(vert, frag: string): GLuint =
     bAddr: cstring
     success: GLint
   try: # -- LOAD VERTEX SHADER
-    buffer = readFile(shaderPath & vert)
+    buffer = readFile(path / vert)
     bAddr = cast[cstring](addr buffer[0])
   except IOError: log(lvError, "failed loading shader: ", vert)
   glShaderSource(vertShader, 1, cast[cstringArray](addr bAddr), nil)
   try: # -- LOAD FRAGMENT SHADER
-    buffer = readFile(shaderPath & frag)
+    buffer = readFile(path / frag)
     bAddr = cast[cstring](addr buffer[0])
   except IOError: log(lvError, "failed loading shader: ", frag)
   glShaderSource(fragShader, 1, cast[cstringArray](addr bAddr), nil)
