@@ -1,3 +1,5 @@
+# Ignore Compiled Packer
+pack/nopack
 # Ignore Binary Files on Tests
 tests/*
 !tests/*.*
