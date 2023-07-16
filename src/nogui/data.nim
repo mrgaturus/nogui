@@ -3,7 +3,9 @@ import macros, macrocache
 from std/compilesettings import 
   querySetting, SingleValueSetting
 from os import parentDir, `/`
-from strutils import join
+# Used for Execute a Command
+when not defined(skipdata):
+  from strutils import join
 
 type GUIRasterIcon* = distinct int32
 const mcIconsCount = CacheCounter"nogui:icon"
@@ -13,10 +15,13 @@ const mcIconsCount = CacheCounter"nogui:icon"
 # ---------------------------
 
 func eorge(line: NimNode, args: openArray[string]) =
-  let (output, code) = gorgeEx(args.join " ")
-  # Check if is succesfully
-  if code != 0:
-    error(output, line)
+  when not defined(skipdata):
+    let (output, code) = gorgeEx(args.join " ")
+    # Check if is succesfully
+    if code != 0:
+      error(output, line)
+  # Avoid Error
+  discard
 
 # ----------------------
 # Folder Preparing Procs
@@ -24,21 +29,15 @@ func eorge(line: NimNode, args: openArray[string]) =
 
 func prepareFolder(line: NimNode, name: string): string =
   result = querySetting(outDir) / name
-  # Create Data Folder if not existst
-  when defined(posix):
-    eorge line, ["test -d", result, "||", "mkdir", result]
-  elif defined(windows):
-    {.error: "windows not supported yet".}
+  # Create Data Folder if not exists
+  eorge line, ["test -d", result, "||", "mkdir", result]
 
 func prepareIcons(line: NimNode): string =
   result = prepareFolder(line, "icons")
   # Reset icon list if exists
   if mcIconsCount.value == 0:
     let file = result / "icons.list"
-    when defined(posix):
-      eorge line, ["rm -f", file]
-    elif defined(windows):
-      {.error: "windows is not supported yet".}
+    eorge line, ["rm -f", file]
 
 # -----------------------
 # Folder Definition Macro
@@ -53,14 +52,11 @@ macro folders*(files: untyped) =
   for file in files:
     expectKind(file, nnkInfix)
     expectIdent(file[0], "->")
-    # Copy Folder
     let
       src = sourcePath / file[1].strVal
       dst = dataPath / file[2].strVal
-    when defined(posix):
-      eorge file, ["cp -r", src, dst]
-    elif defined(windows):
-      {.error: "windows is not supported yet".}
+    # Copy Current Path
+    eorge file, ["cp -r", src, dst]
 
 # ---------------------
 # Icon Definition Macro
@@ -98,10 +94,6 @@ macro icons*(dir: string, list: untyped) =
   for item in list:
     expectKind(item, nnkInfix)
     let filename = dataSubdir / item[2].strVal
-    # Write File to List
-    when defined(posix):
-      eorge item, ["echo", filename, ">>", dataList]
-    elif defined(windows):
-      {.error: "windows is not supported yet".}
+    eorge item, ["echo", filename, ">>", dataList]
     # Add New Fresh Constant
     result.add icon(item)
