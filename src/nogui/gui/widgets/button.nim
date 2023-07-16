@@ -2,7 +2,7 @@ import ../widget, ../render
 from ../event import 
   GUIState, GUIEvent
 from ../signal import 
-  GUICallback, pushCallback
+  GUICallback, push, valid
 from ../config import metrics, theme
 from ../atlas import width
 from ../../builder import widget
@@ -38,6 +38,7 @@ widget GUIButton:
       self.rect.y + metrics.ascender shr 1, self.label)
 
   method event(state: ptr GUIState) =
+    let cb = self.cb
     if state.kind == evCursorRelease and 
-    self.test(wHover) and not isNil(self.cb): 
-      pushCallback(self.cb) # Call Callback
+    self.test(wHover) and cb.valid: 
+      cb.push()
