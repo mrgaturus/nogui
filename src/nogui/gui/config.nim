@@ -19,8 +19,8 @@ type
     # -- Window Dimensions --
     width*, height*: int32
     # -- Font and Glyph Metrics --
+    fontSize*, fontHeight*: int16
     ascender*, descender*, baseline*: int16
-    fontSize*, iconSize*: int32
   # Runtime Globals
   CFGOpaque* = object
     queue*, atlas*: pointer

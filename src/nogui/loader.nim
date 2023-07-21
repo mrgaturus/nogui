@@ -46,7 +46,7 @@ type
   GUIChunkIcon* = object
     info*: ptr GUIHeaderIcon
     buffer*: GUIBufferIcon
-  GUIPackedIcons = ref object
+  GUIPackedIcons* = ref object
     handle: File
     allocated: int
     # Current Icon Buffer
@@ -101,13 +101,13 @@ iterator icons*(pack: GUIPackedIcons): GUIChunkIcon =
 # Misc Data Loading Procs
 # -----------------------
 
-proc newFont*(font: string): FT2Face =
+proc newFont*(font: string, size: cint): FT2Face =
   let path = toDataPath(font)
   # Load Default Font File using FT2 Loader
   if ft2_newFace(freetype, cstring path, 0, addr result) != 0:
     log(lvError, "failed loading font file: ", path)
   # Set Size With 96 of DPI, DPI Awareness is confusing
-  if ft2_setCharSize(result, 0, 9 shl 6, 96, 96) != 0:
+  if ft2_setCharSize(result, 0, size shl 6, 96, 96) != 0:
     log(lvWarning, "font size was setted not properly")
 
 proc newShader*(vert, frag: string): GLuint =
