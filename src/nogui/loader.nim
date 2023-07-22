@@ -1,5 +1,5 @@
 # Import Location Management
-from os import `/`, fileExists
+from os import `/`, getAppDir, dirExists
 from std/compilesettings import 
   querySetting, SingleValueSetting
 # TODO: Use fontconfig for extra fonts
@@ -23,12 +23,13 @@ if ft2_init(addr freetype) != 0:
 # ------------------
 
 proc toDataPath(path: string): string =
-  const relativePath = "data"
-  # Check if exists on relative path
+  let relativePath = getAppDir() / "data"
+  # Check if relative path exists
   result = relativePath / path
   when defined(posix):
     const unixPath = "/usr/share" / querySetting(projectName)
-    if not fileExists(result):
+    # try find on /usr/share/<projectname>
+    if not dirExists(relativePath):
       result = unixPath / path
 
 # -----------------------
