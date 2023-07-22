@@ -51,11 +51,15 @@ macro folders*(files: untyped) =
   # Copy Each Defined Folder
   for file in files:
     expectKind(file, nnkInfix)
-    expectIdent(file[0], "->")
-    let
-      src = sourcePath / file[1].strVal
+    let 
+      op = file[0]
       dst = dataPath / file[2].strVal
-    # Copy Current Path
+    var src = sourcePath / file[1].strVal
+    # Check Copy Inside
+    if op.eqIdent("*="): 
+      src = src / "*"
+    else: expectIdent(op, ":=")
+    # Copy File Contents
     eorge file, ["cp -r", src, dst]
 
 # ---------------------
@@ -83,17 +87,22 @@ func icon(item: NimNode): NimNode =
   # Step Current Icon
   inc mcIconsCount
 
-macro icons*(dir: string, list: untyped) =
+macro icons*(dir: string, size: int, list: untyped) =
   result = nnkConstSection.newTree()
   # Create data folder if not exists
   let 
     dataPath = prepareIcons(list)
     dataList = dataPath / "icons.list"
     dataSubdir = dir.strVal
+    dataSize = $size.intVal
   # Define Each Icon
   for item in list:
     expectKind(item, nnkInfix)
     let filename = dataSubdir / item[2].strVal
-    eorge item, ["echo", filename, ">>", dataList]
+    eorge item, ["echo", filename, ":", dataSize, ">>", dataList]
     # Add New Fresh Constant
     result.add icon(item)
+
+# TODO: Move to nogui.nim
+folders:
+  "../data" *= "./"
