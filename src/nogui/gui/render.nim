@@ -5,7 +5,7 @@ from ../values import
   guiProjection
 # Assets and Metrics
 from config import metrics
-from ../data import newShader
+from ../loader import newShader
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
@@ -69,7 +69,7 @@ type
 # GUI PRIMITIVE CREATION PROCS
 # ----------------------------
 
-proc rgba*(r, g, b, a: uint8): GUIColor {.inline.} =
+proc rgba*(r, g, b, a: uint8): GUIColor {.compileTime.} =
   result = r or (g shl 8) or (b shl 16) or (a shl 24)
 
 proc rect*(x, y, w, h: int32): CTXRect {.inline.} =
@@ -586,6 +586,7 @@ proc text*(ctx: ptr CTXRender, x,y: int32, clip: CTXRect, str: string) =
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
+#[
 proc icon*(ctx: ptr CTXRender, x,y: int32, id: uint16) =
   ctx.addVerts(4, 6)
   let # Icon Rect
@@ -603,3 +604,4 @@ proc icon*(ctx: ptr CTXRender, x,y: int32, id: uint16) =
   # Elements Definition
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)
+]#

@@ -322,7 +322,7 @@ proc renderOnDemand(atlas: CTXAtlas, code: uint16): ptr TEXGlyph =
 
 proc batchAtlas(atlas: CTXAtlas) =
   let icons = newIcons("icons.dat")
-  # Hardcode Size, wait soon
+  # Load Font Face
   const hardsize = 9
   let face = newFont("font.ttf", hardsize)
   metrics.fontSize = hardsize
@@ -336,11 +336,10 @@ proc batchAtlas(atlas: CTXAtlas) =
   # TODO: use freetype handle instead
   opaque.atlas = cast[pointer](atlas)
   # Batch Icons and Charset
+  atlas.face = face
   renderIcons(atlas, icons)
   renderFallback(atlas)
   renderCharset(atlas, csLatin)
-  # Set Current Face
-  atlas.face = face
 
 proc arrangeAtlas(atlas: CTXAtlas) =
   # Allocate Temporal
@@ -374,7 +373,7 @@ proc arrangeAtlas(atlas: CTXAtlas) =
     copy(addr src[idx], dst, p.x, p.y, w, h, stride)
     # Store UV Locations
     o.x1 = p.x; o.x2 = p.x + w
-    o.y1 = p.x; o.y2 = p.y + h
+    o.y1 = p.y; o.y2 = p.y + h
     # Step Source
     idx += w * h
   # Arrange Icons to Atlas
@@ -502,3 +501,9 @@ proc index*(str: string, w: int32): int32 =
       if w + (advance shr 1) > 0:
         result = i
       break
+
+proc atlastex*(): tuple[tex: GLuint, w, h: int32] =
+  let atlas = # Get Atlas from Global
+    cast[CTXAtlas](opaque.atlas)
+  # Return Atlas and Dimensions
+  (atlas.texID, atlas.w, atlas.h)
