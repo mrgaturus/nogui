@@ -5,7 +5,8 @@ from ../values import
   guiProjection
 # Assets and Metrics
 from config import metrics
-from ../data import newShader
+from ../loader import 
+  newShader, GUIGlyphIcon
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
@@ -69,7 +70,7 @@ type
 # GUI PRIMITIVE CREATION PROCS
 # ----------------------------
 
-proc rgba*(r, g, b, a: uint8): GUIColor {.inline.} =
+proc rgba*(r, g, b, a: uint8): GUIColor {.compileTime.} =
   result = r or (g shl 8) or (b shl 16) or (a shl 24)
 
 proc rect*(x, y, w, h: int32): CTXRect {.inline.} =
@@ -586,15 +587,17 @@ proc text*(ctx: ptr CTXRender, x,y: int32, clip: CTXRect, str: string) =
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
-proc icon*(ctx: ptr CTXRender, x,y: int32, id: uint16) =
-  ctx.addVerts(4, 6)
-  let # Icon Rect
+proc icon*(ctx: ptr CTXRender, x, y: int32, id: GUIGlyphIcon) =
+  let
+    # Lookup Icon
+    icon = ctx.atlas.icon(uint16 id)
+    # Icon Rect
     x = float32 x
     y = float32 y
-    xw = x + float32 metrics.iconSize
-    yh = y + float32 metrics.iconSize
-    # Lookup Icon from Atlas
-    icon = ctx.atlas.icon(id)
+    xw = x + float32 icon.w
+    yh = y + float32 icon.h
+  # Reserve Vertex
+  ctx.addVerts(4, 6)
   # Icon Vertex Definition
   ctx.vertexUV(0, x, y, icon.x1, icon.y1)
   ctx.vertexUV(1, xw, y, icon.x2, icon.y1)

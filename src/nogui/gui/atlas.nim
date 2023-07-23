@@ -3,7 +3,7 @@ from config import metrics, opaque
 
 import ../libs/gl
 import ../libs/ft2
-import ../data
+import ../loader
 # Import UTF8
 from ../utf8 import
   rune16, runes16
@@ -13,10 +13,14 @@ type # Atlas Objects
     x, y, w: int16
   TEXIcon = object
     x1*, x2*, y1*, y2*: int16
+    # Bitmap Dimensions
+    w*, h*, fit*: int16
   TEXGlyph = object
     x1*, x2*, y1*, y2*: int16 # UV Coords
     xo*, yo*, advance*: int16 # Positioning
-    w*, h*: int16 # Bitmap Dimensions
+    # Bitmap Dimensions
+    w*, h*: int16
+  BUFMapping = ptr UncheckedArray[byte]
   BUFStatus = enum # Bitmap Buffer Status
     bufNormal, bufDirty, bufResize
   CTXAtlas* = ref object
@@ -38,6 +42,10 @@ type # Atlas Objects
     texID*: uint32 # Texture
     whiteU*, whiteV*: int16
     rw*, rh*: float32 # Normalized
+
+# -----------------------------
+# Charsets Range for Preloading
+# -----------------------------
 
 let # Charset Common Ranges for Preloading
   csLatin* = # English, Spanish, etc.
@@ -139,9 +147,70 @@ proc pack*(atlas: CTXAtlas, w, h: int16): tuple[x, y: int16] =
     result.x = bestX; result.y = bestY
   else: result.x = -1; result.y = -1
 
+# -----------------------
+# ATLAS BUFFER COPY PROCS
+# -----------------------
+
+proc copy(src, dst: pointer, x, y, w, h, stride: int) =
+  let 
+    src = cast[BUFMapping](src)
+    dst = cast[BUFMapping](dst)
+    bytes = w * h
+  var
+    loc0: int
+    loc1 = y * stride + x
+  while loc0 < bytes:
+    copyMem(addr dst[loc1], addr src[loc0], w)
+    # Step Stride
+    loc1 += stride
+    loc0 += w
+
+proc batch(atlas: CTXAtlas, src: pointer, w, h: int) =
+  let 
+    src = cast[BUFMapping](src)
+    l = len(atlas.buffer)
+    bytes = w * h
+  # Extend Buffer
+  if bytes > 0:
+    setLen(atlas.buffer, l + bytes)
+    copyMem(addr atlas.buffer[l], src, bytes)
+
+proc expand(atlas: CTXAtlas) =
+  let stride = atlas.w
+  # Expand Atlas To Next Power Of Two
+  if atlas.w == atlas.h:
+    atlas.w *= 2; atlas.rw *= 0.5
+    atlas.nodes.add SKYNode(
+      x: int16 stride, y: 0, 
+      w: int16 atlas.w - stride)
+  else: atlas.h *= 2; atlas.rh *= 0.5
+  # Move Buffer to New Seq
+  var 
+    dest: seq[byte]
+    i, k: int32
+  dest.setLen(atlas.w * atlas.h)
+  # Copy Atlas to New Location
+  while i < len(atlas.buffer):
+    copyMem(addr dest[k], addr atlas.buffer[i], stride)
+    i += stride; k += atlas.w
+  # Replace Buffer With New One
+  atlas.buffer = move dest
+
 # ---------------------------
 # ATLAS GLYPH RENDERING PROCS
 # ---------------------------
+
+proc renderIcons(atlas: CTXAtlas, pack: GUIPackedIcons) =
+  # Iterate Each Icon
+  for icon in icons(pack):
+    let info = icon.info
+    # Copy Icon to Temporal Batch
+    atlas.batch(icon.buffer, info.w, info.h)
+    atlas.icons.add TEXIcon(
+      w: info.w, 
+      h: info.h, 
+      fit: info.fit
+    )
 
 proc renderFallback(atlas: CTXAtlas) =
   let # Fallback Metrics
@@ -173,14 +242,9 @@ proc renderCharcode(atlas: CTXAtlas, code: uint16) =
       yo: cast[int16](slot.bitmap_top), # yBearing
       advance: cast[int16](slot.advance.x shr 6)
     ) # End Add Glyph to Glyph Cache
-    # -- Copy Bitmap to temporal buffer
-    # Expand Temporal Buffer for Copy Bitmap
-    let i = len(atlas.buffer) # Pivot Pixel Index before Expand
-    atlas.buffer.setLen(i + int slot.bitmap.width * slot.bitmap.rows)
-    # Copy Bitmap To Temporal Buffer
-    if i < len(atlas.buffer): # Is Really Allocated?
-      copyMem(addr atlas.buffer[i], slot.bitmap.buffer, 
-        slot.bitmap.width * slot.bitmap.rows)
+    # --    Copy Bitmap to Temporal buffer
+    let bm = addr slot.bitmap
+    atlas.batch(bm.buffer, int bm.width, int bm.rows)
     # -- Save Glyph Index at Lookup
     atlas.lookup[code] = uint16(high atlas.glyphs)
   else: atlas.lookup[code] = 0xFFFF
@@ -225,25 +289,8 @@ proc renderOnDemand(atlas: CTXAtlas, code: uint16): ptr TEXGlyph =
       buffer = slot.bitmap.buffer
     block: # -- Arrange Glyph To Atlas
       var point = pack(atlas, glyph.w, glyph.h)
-      if point.x == -1 or point.y == -1:
-        let stride = atlas.w # Prev W
-        # Expand Atlas To Next Power Of Two
-        if atlas.w == atlas.h:
-          atlas.w *= 2; atlas.rw *= 0.5
-          atlas.nodes.add SKYNode(
-            x: int16 stride, y: 0, 
-            w: int16 atlas.w - stride)
-        else: atlas.h *= 2; atlas.rh *= 0.5
-        # Move Buffer to a new Seq
-        var # Copy Rows
-          dest: seq[byte]
-          i, k: int32
-        dest.setLen(atlas.w * atlas.h)
-        while i < len(atlas.buffer):
-          copyMem(addr dest[k], addr atlas.buffer[i], stride)
-          i += stride; k += atlas.w
-        # Replace Buffer With New One
-        atlas.buffer = move dest
+      if point.x < 0 or point.y < 0:
+        atlas.expand()
         # Try Pack Again, Guaranted
         point = pack(atlas, glyph.w, glyph.h)
         # Mark as Invalid
@@ -260,13 +307,10 @@ proc renderOnDemand(atlas: CTXAtlas, code: uint16): ptr TEXGlyph =
         atlas.x2 = max(atlas.x2, glyph.x2)
         atlas.y2 = max(atlas.y2, glyph.y2)
     # -- Copy New Glyph To Atlas Buffer
-    var # Copy Rows Iterator
-      pixel = atlas.w * glyph.y1 + glyph.x1
-      i: int16 # Pixel Row
-    while i < glyph.h:
-      copyMem(addr atlas.buffer[pixel], 
-        addr buffer[glyph.w * i], glyph.w)
-      pixel += atlas.w; inc(i)
+    let 
+      dst = addr atlas.buffer[0]
+      stride = atlas.w
+    copy(buffer, dst, glyph.x1, glyph.y1, glyph.w, glyph.h, stride)
     # -- Save Glyph Index at Lookup
     atlas.lookup[code] = uint16(high atlas.glyphs)
     glyph # Return Recently Created Glyph
@@ -276,76 +320,80 @@ proc renderOnDemand(atlas: CTXAtlas, code: uint16): ptr TEXGlyph =
 # ATLAS CREATION PROC
 # -------------------
 
-proc newCTXAtlas*(): CTXAtlas =
-  new result # Create Object
-  # 1 -- Load Icons
-  let icons = newIcons()
-  result.icons.setLen(icons.count)
-  # 1.5 -- Load Font and Metrics
-  result.face = newFont(); block:
-    let m = addr result.face.size.metrics
-    # Set Font Metrics in pixel units
-    metrics.fontSize = cast[int16](m.height shr 6)
-    metrics.ascender = cast[int16](m.ascender shr 6)
-    metrics.descender = cast[int16](m.descender shr 6)
-    metrics.baseline = cast[int16](
-      (m.ascender + m.descender) shr 6)
-    # Set Icon Metric side*side
-    metrics.iconSize = icons.size
-    # Set Opaque For Text Metric Calc
-    opaque.atlas = cast[pointer](result)
-  # 2 -- Render Selected Charset
-  renderFallback(result)
-  renderCharset(result, csLatin)
-  # 3 -- Alloc True Atlas Buffer
-  var dest: seq[byte]; block:
-    var side = icons.len + len(result.buffer)
+proc batchAtlas(atlas: CTXAtlas) =
+  let icons = newIcons("icons.dat")
+  # Load Font Face
+  const hardsize = 9
+  let face = newFont("font.ttf", hardsize)
+  metrics.fontSize = hardsize
+  # Set Font Metrics in pixel units
+  let m = addr face.size.metrics
+  metrics.fontHeight = cast[int16](m.height shr 6)
+  metrics.ascender = cast[int16](m.ascender shr 6)
+  metrics.descender = cast[int16](m.descender shr 6)
+  metrics.baseline = cast[int16](
+    (m.ascender + m.descender) shr 6)
+  # TODO: use freetype handle instead
+  opaque.atlas = cast[pointer](atlas)
+  # Batch Icons and Charset
+  atlas.face = face
+  renderIcons(atlas, icons)
+  renderFallback(atlas)
+  renderCharset(atlas, csLatin)
+
+proc arrangeAtlas(atlas: CTXAtlas) =
+  # Allocate Temporal
+  var img: seq[byte]; block:
+    var side = len(atlas.buffer)
     side = side.float32.sqrt().ceil().int.nextPowerOfTwo()
     # Set new Atlas Diemsions
-    result.w = cast[int32](side shl 1)
-    result.h = cast[int32](side)
+    atlas.w = cast[int32](side shl 1)
+    atlas.h = cast[int32](side)
     # Set Normalized Atlas Dimensions for get MAD
-    result.rw = 1 / result.w # vertex.u * uDim.w
-    result.rh = 1 / result.h # vertex.v * uDim.h
+    atlas.rw = 1 / atlas.w # vertex.u * uDim.w
+    atlas.rh = 1 / atlas.h # vertex.v * uDim.h
     # Add Initial Skyline Node
-    result.nodes.add SKYNode(w: int16 result.w)
+    atlas.nodes.add SKYNode(w: int16 atlas.w)
     # Alloc Buffer with new dimensions
-    dest.setLen(side*side shl 1)
-  # 4 -- Arrange Rects Using Skyline
-  var # Aux Pixel Vars
-    cursor: int32 # Buffer Cursor
-    point: tuple[x, y: int16] # Arranged
-  # -- Arrange Icons from Global
-  for icon in mitems(result.icons):
-    point = pack(result, icons.size, icons.size)
-    var # Copy Icon Bitmap to New Position
-      pixel = result.w * point.y + point.x
-      i: int16 # Bitmap Row Iterator
-    while i < icons.size: # Copy Icon Pixel Rows
-      copyMem(addr dest[pixel], addr icons.buffer[cursor], icons.size)
-      cursor += icons.size; pixel += result.w; inc(i) # Next Pixel Row
-    # Save Texture UV Coordinates
-    icon.x1 = point.x; icon.x2 = point.x + icons.size
-    icon.y1 = point.y; icon.y2 = point.y + icons.size
-  # -- Arrange Font Charset Glyphs
-  cursor = 0 # Reset Cursor
-  for glyph in mitems(result.glyphs):
-    point = pack(result, glyph.w, glyph.h)
-    var # Copy Glyph Bitmap To New Position
-      pixel = result.w * point.y + point.x
-      i: int16 # Bitmap Row Iterator
-    while i < glyph.h: # Copy Glyph Pixel Rows
-      copyMem(addr dest[pixel], addr result.buffer[cursor], glyph.w)
-      cursor += glyph.w; pixel += result.w; inc(i) # Next Pixel Row
-    # Save Texture UV Coordinates Box
-    glyph.x1 = point.x; glyph.x2 = point.x + glyph.w
-    glyph.y1 = point.y; glyph.y2 = point.y + glyph.h
+    img.setLen(side * side shl 1)
+  # Auxiliar Pointers
+  let
+    dst = addr img[0]
+    stride = atlas.w
+    # Current Buffer Mapping
+    src = cast[BUFMapping](addr atlas.buffer[0])
+  var idx: int
+  # Unredundant Template
+  template arrange(o: typed) =
+    let
+      w = o.w
+      h = o.h
+      p = atlas.pack(w, h)
+    # Copy current Glyph to Arranged
+    copy(addr src[idx], dst, p.x, p.y, w, h, stride)
+    # Store UV Locations
+    o.x1 = p.x; o.x2 = p.x + w
+    o.y1 = p.y; o.y2 = p.y + h
+    # Step Source
+    idx += w * h
+  # Arrange Icons to Atlas
+  for icon in mitems(atlas.icons):
+    arrange(icon)
+  # Arrange Glyphs to Atlas
+  for glyph in mitems(atlas.glyphs):
+    arrange(glyph)
   # Use Fallback for Locate White Pixel
-  result.whiteU = result.glyphs[0].x1
-  result.whiteV = result.glyphs[0].y1
-  # Replace Current Buffer
-  result.buffer = move dest
-  # 5 -- Copy Buffer to a New Texture
+  atlas.whiteU = atlas.glyphs[0].x1
+  atlas.whiteV = atlas.glyphs[0].y1
+  # Replace Buffer Atlas
+  atlas.buffer = move img
+
+proc newCTXAtlas*(): CTXAtlas =
+  new result
+  # Batch Intitial Resources
+  result.batchAtlas()
+  result.arrangeAtlas()
+  # Copy Buffer to a New Texture
   glGenTextures(1, addr result.texID)
   glBindTexture(GL_TEXTURE_2D, result.texID)
   # Clamp Atlas to Edge
@@ -453,3 +501,9 @@ proc index*(str: string, w: int32): int32 =
       if w + (advance shr 1) > 0:
         result = i
       break
+
+proc atlastex*(): tuple[tex: GLuint, w, h: int32] =
+  let atlas = # Get Atlas from Global
+    cast[CTXAtlas](opaque.atlas)
+  # Return Atlas and Dimensions
+  (atlas.texID, atlas.w, atlas.h)

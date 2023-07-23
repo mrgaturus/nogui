@@ -4,3 +4,6 @@ pack/nopack
 tests/*
 !tests/*.*
 !tests/**/
+# Ignore Test Data
+tests/data
+tests/icons/icons.list
