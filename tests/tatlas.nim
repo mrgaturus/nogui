@@ -43,6 +43,10 @@ widget DebugAtlas:
     # White Color
     ctx.color 0xFFFFFFFF'u32
     ctx.texture(rect, texID)
+    # Write some text and icons
+    ctx.text(x + w div 2, y + h + 8, "Hello World Nim")
+    ctx.icon(x + w div 2, y + h + 32, iconBrush)
+    ctx.icon(x + w div 2 + 32, y + h + 32, iconClear32)
 
   method event(state: ptr GUIState) =
     case state.kind

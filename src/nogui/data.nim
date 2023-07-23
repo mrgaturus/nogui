@@ -6,8 +6,8 @@ from os import parentDir, `/`
 # Used for Execute a Command
 when not defined(skipdata):
   from strutils import join
-
-type GUIRasterIcon* = distinct int32
+# Icon Glyph Counter
+from loader import GUIGlyphIcon
 const mcIconsCount = CacheCounter"nogui:icon"
 
 # ---------------------------
@@ -69,7 +69,7 @@ macro folders*(files: untyped) =
 func icon(item: NimNode): NimNode =
   let 
     value = newIntLitNode(mcIconsCount.value)
-    ty = bindSym"GUIRasterIcon"
+    ty = bindSym"GUIGlyphIcon"
     # Icon Name and Visibility
     op = item[0]
     name = item[1]
