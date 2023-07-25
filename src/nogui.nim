@@ -1,5 +1,7 @@
 from nogui/data import folders
 from nogui/loader import newFont
+from nogui/gui/widget import GUIWidget
+from nogui/gui/timer import loop
 from nogui/gui/signal import 
   GUIQueue, newGUIQueue, dispose
 
@@ -9,7 +11,13 @@ import nogui/[logger, utf8]
 
 type
   GUIColors = object
-    text: uint32
+    text*: uint32
+    # Widget Controls
+    item*: uint32
+    focus*, clicked*: uint32
+    # Widget Panels
+    panel*, tab*, darker*: uint32
+    background*: uint32
   GUIFont = object
     face: FT2Face
     # Glyph Metrics
@@ -23,7 +31,7 @@ type
     # Text Layout
     ft2*: FT2Library
     atlas*: CTXAtlas
-    # Atlas Font Metrics    
+    # Atlas Font Metrics
     font*: GUIFont
     colors*: GUIColors
 # Global Application Handle
@@ -92,18 +100,23 @@ proc getApp*(): GUIApplication =
   # Return Current App
   result = app
 
+template executeApp*(root: GUIWidget, body: untyped) =
+  let win {.cursor.} = getApp().win
+  if win.open(root):
+    # TODO: allow configure ms
+    loop(16):
+      win.handleEvents()
+      if win.handleSignals(): break
+      win.handleTimers()
+      # Execute Body
+      body; win.render()
+
 proc closeApp*() =
   # Close Window and Queue
   close(app.window)
   dispose(app.queue)
   # Dealloc Freetype 2
   discard ft2_done(app.ft2)
-
-# --------------
-# Window Manager
-# --------------
-
-
 
 # ------------
 # Font Metrics
