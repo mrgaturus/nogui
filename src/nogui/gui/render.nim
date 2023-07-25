@@ -4,7 +4,6 @@ from ../values import
   fastSqrt, invSqrt,
   guiProjection
 # Assets and Metrics
-from config import metrics
 from ../loader import 
   newShader, GUIGlyphIcon
 from ../utf8 import runes16
@@ -515,13 +514,14 @@ proc circle*(ctx: ptr CTXRender, p: CTXPoint, r: float32) =
 # TEXT & ICONS RENDERING PROCS
 # ----------------------------
 
-proc text*(ctx: ptr CTXRender, x,y: int32, str: string) =
+proc text*(ctx: ptr CTXRender, x, y: int32, str: string) =
+  let atlas {.cursor.} = ctx.atlas
   # Offset Y to Atlas Font Y Offset Metric
-  unsafeAddr(y)[] += metrics.baseline
+  unsafeAddr(y)[] += atlas.baseline
   # Render Text Top to Bottom
   for rune in runes16(str):
     let glyph = # Load Glyph
-      ctx.atlas.glyph(rune)
+      atlas.glyph(rune)
     # Reserve Vertex and Elements
     ctx.addVerts(4, 6); block:
       let # Quad Coordinates
@@ -540,13 +540,14 @@ proc text*(ctx: ptr CTXRender, x,y: int32, str: string) =
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
-proc text*(ctx: ptr CTXRender, x,y: int32, clip: CTXRect, str: string) =
+proc text*(ctx: ptr CTXRender, x, y: int32, clip: CTXRect, str: string) =
+  let atlas {.cursor.} = ctx.atlas
   # Offset Y to Atlas Font Y Offset Metric
-  unsafeAddr(y)[] += metrics.baseline
+  unsafeAddr(y)[] += atlas.baseline
   # Render Text Top to Bottom
   for rune in runes16(str):
     let glyph = # Load Glyph
-      ctx.atlas.glyph(rune)
+      atlas.glyph(rune)
     var # Vertex Information
       xo = float32 x + glyph.xo
       xw = xo + float32 glyph.w

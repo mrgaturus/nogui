@@ -1,6 +1,5 @@
 from math import sqrt, ceil, nextPowerOfTwo
-from config import metrics, opaque
-
+# Import Libs
 import ../libs/gl
 import ../libs/ft2
 import ../loader
@@ -42,6 +41,8 @@ type
     texID*: uint32 # Texture
     whiteU*, whiteV*: int16
     rw*, rh*: float32 # Normalized
+    # TODO: create a font manager
+    baseline*: int16
 
 # -----------------------------
 # Charsets Range for Preloading
@@ -214,7 +215,7 @@ proc renderIcons(atlas: CTXAtlas, pack: GUIPackedIcons) =
 
 proc renderFallback(atlas: CTXAtlas) =
   let # Fallback Metrics
-    size = metrics.baseline
+    size = atlas.baseline
     half = size shr 1
   # Add A Glyph for a white rectangle
   atlas.glyphs.add TEXGlyph(
@@ -372,6 +373,12 @@ proc newCTXAtlas*(face: FT2Face): CTXAtlas =
   # Prepare Handles
   result.face = face
   let icons = newIcons("icons.dat")
+  # TODO: create a font manager
+  block:
+    let
+      m = face.size.metrics
+      baseline = m.ascender + m.descender
+    result.baseline = cast[int16](baseline shr 6)
   # Batch Intitial Resources
   result.renderIcons(icons)
   result.renderFallback()

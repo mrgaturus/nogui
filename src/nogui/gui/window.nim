@@ -7,7 +7,6 @@ from atlas import CTXAtlas, createTexture
 import widget, event, signal, render
 # Import Somes
 from timer import walkTimers
-from config import metrics
 from ../libs/gl import gladLoadGL
 # TODO: Split EGL and native platform from window
 
@@ -38,6 +37,7 @@ type
     # X11 Display & Window
     display: PDisplay
     xID: Window
+    w*, h*: int32
     # X11 Input Method
     xim: XIM
     xic: XIC
@@ -141,8 +141,10 @@ proc newGUIWindow*(w, h: int32, queue: GUIQueue, atlas: CTXAtlas): GUIWindow =
   if isNil(result.display):
     log(lvError, "failed opening X11 display")
   # Create a X11 Window
-  result.xID = # With Initial Dimensions
-    createXWindow(result.display, uint32 w, uint32 h)
+  result.xID = createXWindow(result.display, uint32 w, uint32 h)
+  # Set Current Dimensions
+  result.w = w
+  result.h = h
   # Create X11 Input Method
   result.createXIM()
   # Create GUI Event State
@@ -168,13 +170,13 @@ proc open*(win: var GUIWindow, root: GUIWidget): bool =
   root.kind = wgFrame
   root.flags.set(wVisible)
   # Set to Global Dimensions
-  root.rect.w = metrics.width
-  root.rect.h = metrics.height
+  root.rect.w = win.w
+  root.rect.h = win.h
   # Shows the Window on the screen
   result = XMapWindow(win.display, win.xID) != BadWindow
   discard XSync(win.display, 0) # Wait for show it
   # Set Renderer Viewport Dimensions
-  viewport(win.ctx, metrics.width, metrics.height)
+  viewport(win.ctx, win.w, win.h)
   # Mark root as Dirty
   set(win.root, wDirty)
 
@@ -479,9 +481,9 @@ proc handleEvents*(win: var GUIWindow) =
           event.xconfigure.height != rect.h):
         rect.w = event.xconfigure.width
         rect.h = event.xconfigure.height
-        # Set Global Metrics
-        metrics.width = rect.w
-        metrics.height = rect.h
+        # Set Window Metrics
+        win.w = rect.w
+        win.h = rect.h
         # Set Renderer Viewport
         viewport(win.ctx, rect.w, rect.h)
         # Relayout Root Widget

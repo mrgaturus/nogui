@@ -45,12 +45,13 @@ proc createFont(ft2: FT2Library): GUIFont =
     m = addr face.size.metrics
     asc = m.ascender
     desc = m.descender
+    baseline = asc + desc
   # Initialize Metrics
   result.size = hardsize
   result.height = cast[int16](m.height shr 6)
   result.asc = cast[int16](asc shr 6)
   result.desc = cast[int16](desc shr 6)
-  result.baseline = cast[int16]((asc + desc) shr 6)
+  result.baseline = cast[int16](baseline shr 6)
   # Set Current Face
   result.face = face
 
