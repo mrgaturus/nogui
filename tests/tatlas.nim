@@ -1,6 +1,5 @@
 from nogui/libs/gl import glClear, glClearColor, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT
 from nogui/gui/signal import GUICallback, push
-from nogui/gui/atlas import atlastex
 import nogui/gui/[event, widget, window, render, timer]
 import nogui/[builder, data]
 
