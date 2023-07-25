@@ -4,13 +4,11 @@ from config import metrics, opaque
 import ../libs/gl
 import ../libs/ft2
 import ../loader
-# Import UTF8
-from ../utf8 import
-  rune16, runes16
 
-type # Atlas Objects
+type
   SKYNode = object
     x, y, w: int16
+  # Atlas Objects
   TEXIcon = object
     x1*, x2*, y1*, y2*: int16
     # Bitmap Dimensions
@@ -20,9 +18,11 @@ type # Atlas Objects
     xo*, yo*, advance*: int16 # Positioning
     # Bitmap Dimensions
     w*, h*: int16
+  # Buffer Mapping
   BUFMapping = ptr UncheckedArray[byte]
   BUFStatus = enum # Bitmap Buffer Status
     bufNormal, bufDirty, bufResize
+  # Atlas Object
   CTXAtlas* = ref object
     # FT2 FONT FACE
     face: FT2Face
@@ -121,7 +121,7 @@ proc addSkylineNode(atlas: CTXAtlas, idx: int32, x,y,w,h: int16) =
       dec(i) # Reverse i-th
     inc(i) # Next Node
 
-proc pack*(atlas: CTXAtlas, w, h: int16): tuple[x, y: int16] =
+proc pack(atlas: CTXAtlas, w, h: int16): tuple[x, y: int16] =
   var # Initial Best Fits
     bestIDX = -1'i32
     bestX, bestY = -1'i16
@@ -320,27 +320,6 @@ proc renderOnDemand(atlas: CTXAtlas, code: uint16): ptr TEXGlyph =
 # ATLAS CREATION PROC
 # -------------------
 
-proc batchAtlas(atlas: CTXAtlas) =
-  let icons = newIcons("icons.dat")
-  # Load Font Face
-  const hardsize = 9
-  let face = newFont("font.ttf", hardsize)
-  metrics.fontSize = hardsize
-  # Set Font Metrics in pixel units
-  let m = addr face.size.metrics
-  metrics.fontHeight = cast[int16](m.height shr 6)
-  metrics.ascender = cast[int16](m.ascender shr 6)
-  metrics.descender = cast[int16](m.descender shr 6)
-  metrics.baseline = cast[int16](
-    (m.ascender + m.descender) shr 6)
-  # TODO: use freetype handle instead
-  opaque.atlas = cast[pointer](atlas)
-  # Batch Icons and Charset
-  atlas.face = face
-  renderIcons(atlas, icons)
-  renderFallback(atlas)
-  renderCharset(atlas, csLatin)
-
 proc arrangeAtlas(atlas: CTXAtlas) =
   # Allocate Temporal
   var img: seq[byte]; block:
@@ -388,14 +367,27 @@ proc arrangeAtlas(atlas: CTXAtlas) =
   # Replace Buffer Atlas
   atlas.buffer = move img
 
-proc newCTXAtlas*(): CTXAtlas =
+proc newCTXAtlas*(face: FT2Face): CTXAtlas =
   new result
+  # Prepare Handles
+  result.face = face
+  let icons = newIcons("icons.dat")
   # Batch Intitial Resources
-  result.batchAtlas()
+  result.renderIcons(icons)
+  result.renderFallback()
+  result.renderCharset(csLatin)
+  # Arrange Attlas Elements
   result.arrangeAtlas()
+
+# ---------------------------
+# ATLAS TEXTURE UPDATING PROC
+# ---------------------------
+
+proc createTexture*(atlas: CTXAtlas) =
+  # TODO: move to newCTXAtlas
   # Copy Buffer to a New Texture
-  glGenTextures(1, addr result.texID)
-  glBindTexture(GL_TEXTURE_2D, result.texID)
+  glGenTextures(1, addr atlas.texID)
+  glBindTexture(GL_TEXTURE_2D, atlas.texID)
   # Clamp Atlas to Edge
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, cast[GLint](GL_CLAMP_TO_EDGE))
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, cast[GLint](GL_CLAMP_TO_EDGE))
@@ -408,14 +400,10 @@ proc newCTXAtlas*(): CTXAtlas =
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, cast[GLint](GL_RED))
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, cast[GLint](GL_RED))
   # Copy Arranged Bitmap Buffer to Texture
-  glTexImage2D(GL_TEXTURE_2D, 0, cast[int32](GL_R8), result.w, result.h, 0, GL_RED,
-      GL_UNSIGNED_BYTE, addr result.buffer[0])
+  glTexImage2D(GL_TEXTURE_2D, 0, cast[int32](GL_R8), atlas.w, atlas.h,
+    0, GL_RED, GL_UNSIGNED_BYTE, addr atlas.buffer[0])
   # Unbind New Atlas Texture
   glBindTexture(GL_TEXTURE_2D, 0)
-
-# ---------------------------
-# ATLAS TEXTURE UPDATING PROC
-# ---------------------------
 
 proc checkTexture*(atlas: CTXAtlas): bool =
   case atlas.status:
@@ -464,46 +452,6 @@ proc glyph*(atlas: CTXAtlas, charcode: uint16): ptr TEXGlyph =
 proc icon*(atlas: CTXAtlas, id: uint16): ptr TEXIcon =
   result = addr atlas.icons[id] # Get Icon UV Coords
 
-# --------------------------
-# ATLAS GLOBAL METRICS PROCS
-# --------------------------
-
-proc width*(str: string): int32 =
-  let atlas = # Get Atlas from Global
-    cast[CTXAtlas](opaque.atlas)
-  for rune in runes16(str):
-    result += atlas.glyph(rune).advance
-
-proc width*(str: string, e: int32): int32 =
-  let atlas = # Get Atlas from Global
-    cast[CTXAtlas](opaque.atlas)
-  var # Iterator
-    i: int32
-    rune: uint16
-  while i < e:
-    rune16(str, i, rune) # Decode Rune
-    result += atlas.glyph(rune).advance
-
-proc index*(str: string, w: int32): int32 =
-  let atlas = # Get Atlas from Global
-    cast[CTXAtlas](opaque.atlas)
-  var # Iterator
-    i: int32
-    rune: uint16
-    advance: int16
-  while result < len(str):
-    rune16(str, i, rune) # Decode Rune
-    advance = atlas.glyph(rune).advance
-    # Substract expected Width
-    unsafeAddr(w)[] -= advance
-    if w > 0: result = i
-    else: # Check Half Advance
-      if w + (advance shr 1) > 0:
-        result = i
-      break
-
-proc atlastex*(): tuple[tex: GLuint, w, h: int32] =
-  let atlas = # Get Atlas from Global
-    cast[CTXAtlas](opaque.atlas)
-  # Return Atlas and Dimensions
+proc info*(atlas: CTXAtlas): tuple[tex: GLuint, w, h: int32] =
+  # Return Debug Info
   (atlas.texID, atlas.w, atlas.h)

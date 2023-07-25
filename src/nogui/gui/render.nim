@@ -106,9 +106,9 @@ proc normal*(a, b: CTXPoint): CTXPoint =
 # GUI CANVAS CREATION PROCS
 # -------------------------
 
-proc newCTXRender*(): CTXRender =
+proc newCTXRender*(atlas: CTXAtlas): CTXRender =
   # -- Set Texture Atlas
-  result.atlas = newCTXAtlas()
+  result.atlas = atlas
   # -- Create new Program
   result.program = newShader("gui.vert", "gui.frag")
   # Use Program for Define Uniforms

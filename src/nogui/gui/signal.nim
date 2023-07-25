@@ -1,5 +1,4 @@
-# GUI Signal/Callback Queue
-from config import opaque
+# TODO: unify with event
 
 type
   # GUI Signal Private
@@ -49,14 +48,20 @@ type
     distinct GUICallback
   # GUI Signal and Queue
   GUISignal* = ptr Signal
-  GUIQueue* = ref object
+  Queue = ptr object
+    state: pointer
+    # Queue Endpoints
     back, front: GUISignal
+  GUIQueue* = ptr Queue
+# Global GUI Queue
+var opaque: GUIQueue
 
-proc newGUIQueue*(global: pointer): GUIQueue =
-  new result # Create Object
-  opaque.queue = cast[pointer](result)
-  # Define User Global Pointer
-  opaque.user = global
+proc newGUIQueue*(state: pointer): GUIQueue =
+  result = create(Queue)
+  # Set Global State
+  result.state = state
+  # GUI Queue Global
+  opaque = result
 
 proc newSignal(size: Natural = 0): GUISignal {.inline.} =
   result = cast[GUISignal](alloc0(Signal.sizeof + size))
@@ -95,6 +100,8 @@ proc dispose*(queue: GUIQueue) =
     signal = signal.next
     # dealloc prev
     dealloc(queue.back)
+  # Dealloc Queue
+  dealloc(queue)
 
 # ---------------------------
 # SIGNAL UNSAFE PUSHING PROCS
@@ -103,8 +110,9 @@ proc dispose*(queue: GUIQueue) =
 proc pushSignal*(id: GUITarget, msg: WidgetSignal) =
   assert(not cast[pointer](id).isNil)
   # Get Queue Pointer from Global
-  var queue = cast[GUIQueue](opaque.queue)
-  let signal = newSignal()
+  let 
+    queue = opaque
+    signal = newSignal()
   # Widget Signal Kind
   signal.kind = sWidget
   signal.id = id
@@ -114,8 +122,9 @@ proc pushSignal*(id: GUITarget, msg: WidgetSignal) =
 
 proc pushSignal(msg: WindowSignal, data: pointer, size: Natural) =
   # Get Queue Pointer from Global
-  var queue = cast[GUIQueue](opaque.queue)
-  let signal = newSignal(size)
+  let
+    queue = opaque
+    signal = newSignal(size)
   # Window Signal Kind
   signal.kind = sWindow
   signal.wsg = msg
@@ -128,8 +137,9 @@ proc pushSignal(msg: WindowSignal, data: pointer, size: Natural) =
 proc pushCallback(cb: GUICallback) =
   assert(not cb.fn.isNil)
   # Get Queue Pointer from Global
-  var queue = cast[GUIQueue](opaque.queue)
-  let signal = newSignal()
+  let 
+    queue = opaque
+    signal = newSignal()
   # Assign Callback
   signal.kind = sCallback
   signal.cb = cb
@@ -140,8 +150,9 @@ proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
   assert(not isNil cb.fn)
   assert(not isNil data)
   # Get Queue Pointer from Global
-  var queue = cast[GUIQueue](opaque.queue)
-  let signal = newSignal(size)
+  let
+    queue = opaque
+    signal = newSignal(size)
   # Assign Callback
   signal.kind = sCallbackEX
   signal.cb = cb
@@ -198,15 +209,13 @@ proc call*(sig: GUISignal) =
   let
     kind = sig.kind
     cb = sig.cb
+    state = opaque.state
   # Select Callback kind
   case kind
   of sCallback:
     let fn = cast[GUICallbackProc](cb.fn)
-    fn(cb.sender, opaque.user)
+    fn(cb.sender, state)
   of sCallbackEX:
     let fn = cast[GUICallbackProcEX](cb.fn)
-    fn(cb.sender, opaque.user, addr sig.data)
+    fn(cb.sender, state, addr sig.data)
   else: discard
-
-template convert*(data: GUIOpaque, t: type): ptr t =
-  cast[ptr t](addr data)

@@ -13,11 +13,6 @@ from libs/ft2 import
   ft2_newFace,
   ft2_setCharSize
 
-# TODO: move this to a global app object
-var freetype: FT2Library
-if ft2_init(addr freetype) != 0:
-  log(lvError, "failed initialize FreeType2")
-
 # ------------------
 # Data Path Location
 # ------------------
@@ -99,18 +94,22 @@ iterator icons*(pack: GUIPackedIcons): GUIChunkIcon =
   # Free Temporal Buffer
   dealloc(pack.buffer)
 
-# -----------------------
-# Misc Data Loading Procs
-# -----------------------
+# -----------------------------
+# Freetype 2 Face Creation Proc
+# -----------------------------
 
-proc newFont*(font: string, size: cint): FT2Face =
+proc newFont*(ft2: FT2Library, font: string, size: cint): FT2Face =
   let path = toDataPath(font)
   # Load Default Font File using FT2 Loader
-  if ft2_newFace(freetype, cstring path, 0, addr result) != 0:
+  if ft2_newFace(ft2, cstring path, 0, addr result) != 0:
     log(lvError, "failed loading font file: ", path)
   # Set Size With 96 of DPI, DPI Awareness is confusing
   if ft2_setCharSize(result, 0, size shl 6, 96, 96) != 0:
     log(lvWarning, "font size was setted not properly")
+
+# --------------------
+# Shader Creation Proc
+# --------------------
 
 proc newShader*(vert, frag: string): GLuint =
   let path = toDataPath("glsl")

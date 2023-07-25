@@ -94,6 +94,7 @@ type # Trimmed Types for basic usage
 const # FT2 CONSTANTS
   FT_LOAD_DEFAULT* = 0
   FT_LOAD_RENDER* = 1 shl 2
+  # Freetype 2 Kerning
   FT_KERNING_DEFAULT* = 0'i32
 
 {.passL: "-lfreetype".} # FT2 PROCS
@@ -104,6 +105,3 @@ proc ft2_getCharIndex*(face: FT2Face, charcode: culong): uint32 {.importc: "FT_G
 proc ft2_loadGlyph*(face: FT2Face, glyphIndex: uint32, loadFlags: int32): int32 {.importc: "FT_Load_Glyph", cdecl.}
 proc ft2_getKerning*(face: FT2Face, left, right, mode: uint32, kvec: ptr FT2Vector): int32 {.importc: "FT_Get_Kerning", cdecl.}
 proc ft2_done*(lib: FT2Library): int32 {.importc: "FT_Done_FreeType", cdecl.}
-# FT2 Destructor
-proc `=destroy`(ft2: var FT2Library) =
-  discard ft2_done(ft2)

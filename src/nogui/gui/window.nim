@@ -3,11 +3,13 @@ import ../logger
 import ../libs/egl
 import x11/xlib, x11/x
 # Import Modules
+from atlas import CTXAtlas, createTexture
 import widget, event, signal, render
 # Import Somes
 from timer import walkTimers
 from config import metrics
 from ../libs/gl import gladLoadGL
+# TODO: Split EGL and native platform from window
 
 let
   # NPainter EGL Configurations
@@ -133,7 +135,7 @@ proc createEGL(win: var GUIWindow) =
   win.eglCtx = eglCtx
   win.eglSur = eglSur
 
-proc newGUIWindow*(w, h: int32, global: pointer): GUIWindow =
+proc newGUIWindow*(w, h: int32, queue: GUIQueue, atlas: CTXAtlas): GUIWindow =
   # Create new X11 Display
   result.display = XOpenDisplay(nil)
   if isNil(result.display):
@@ -141,7 +143,6 @@ proc newGUIWindow*(w, h: int32, global: pointer): GUIWindow =
   # Create a X11 Window
   result.xID = # With Initial Dimensions
     createXWindow(result.display, uint32 w, uint32 h)
-  metrics.width = w; metrics.height = h
   # Create X11 Input Method
   result.createXIM()
   # Create GUI Event State
@@ -150,10 +151,11 @@ proc newGUIWindow*(w, h: int32, global: pointer): GUIWindow =
   # Create EGL Context
   result.createEGL() # Disable VSync
   discard eglSwapInterval(result.eglDsp, 0)
+  # Set Current Queue
+  result.queue = queue
   # Create CTX Renderer
-  result.ctx = newCTXRender()
-  # Alloc GUI Signal Queue
-  result.queue = newGUIQueue(global)
+  atlas.createTexture()
+  result.ctx = newCTXRender(atlas)
 
 # -----------------------
 # WINDOW OPEN/CLOSE PROCS
@@ -177,8 +179,6 @@ proc open*(win: var GUIWindow, root: GUIWidget): bool =
   set(win.root, wDirty)
 
 proc close*(win: var GUIWindow) =
-  # Dispose Queue
-  dispose(win.queue)
   # Dispose UTF8Buffer
   dealloc(win.state.utf8str)
   # Dispose EGL
