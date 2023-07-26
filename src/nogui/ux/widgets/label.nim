@@ -1,7 +1,4 @@
-import ../widget, ../render
-from ../config import metrics, theme
-from ../atlas import width
-from ../../builder import widget
+import ../prelude
 
 type
   VeAlign* = enum # Vertical
@@ -19,6 +16,7 @@ widget GUILabel:
     [cx, cy]: int32
 
   new label(text: string, ho: HoAlign, ve: VeAlign):
+    let metrics = addr getApp().font
     # Set New Text
     result.text = text
     # Set Alignment
@@ -26,7 +24,7 @@ widget GUILabel:
     result.v_align = ve
     # Set Size Hints
     result.minimum(text.width, 
-      metrics.fontSize - metrics.descender)
+      metrics.height - metrics.desc)
 
   method layout =
     block: # X Position Align
@@ -47,19 +45,20 @@ widget GUILabel:
         y = self.rect.y
         h = self.rect.h
         # Text Height
+        metrics = addr getApp().font
         base = metrics.baseline
-        asc = metrics.ascender
-        des = metrics.descender
+        asc = metrics.asc
+        desc = metrics.desc
       self.cy =
         case self.v_align
         of veTop: y
         of veMiddle:
           y + (h - base) shr 1
         of veBottom:
-          y + h - asc - des
+          y + h - asc - desc
 
   method draw(ctx: ptr CTXRender) =
-    ctx.color(theme.text)
+    ctx.color getApp().colors.text
     # Draw Text Using Cache
     ctx.text(self.cx, self.cy, 
       rect(self.rect), self.text)

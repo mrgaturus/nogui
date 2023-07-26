@@ -3,11 +3,12 @@ import ../logger
 import ../libs/egl
 import x11/xlib, x11/x
 # Import Modules
+from atlas import CTXAtlas, createTexture
 import widget, event, signal, render
 # Import Somes
 from timer import walkTimers
-from config import metrics
 from ../libs/gl import gladLoadGL
+# TODO: Split EGL and native platform from window
 
 let
   # NPainter EGL Configurations
@@ -32,10 +33,11 @@ let
   ]
 
 type
-  GUIWindow* = object
+  GUIWindow* = ref object
     # X11 Display & Window
     display: PDisplay
     xID: Window
+    w*, h*: int32
     # X11 Input Method
     xim: XIM
     xic: XIC
@@ -66,7 +68,7 @@ proc setlocale(category: cint, locale: cstring): cstring
 # X11/EGL WINDOW CREATION PROCS
 # -----------------------------
 
-proc createXIM(win: var GUIWindow) =
+proc createXIM(win: GUIWindow) =
   if setlocale(LC_ALL, "").isNil or XSetLocaleModifiers("").isNil:
     log(lvWarning, "proper C locale not found")
   win.xim = XOpenIM(win.display, nil, nil, nil)
@@ -90,7 +92,7 @@ proc createXWindow(x11: PDisplay, w, h: uint32): Window =
   if result == 0: # Check if Window was created properly
     log(lvError, "failed creating X11 window")
 
-proc createEGL(win: var GUIWindow) =
+proc createEGL(win: GUIWindow) =
   var
     # New EGL Instance
     eglDsp: EGLDisplay
@@ -133,15 +135,17 @@ proc createEGL(win: var GUIWindow) =
   win.eglCtx = eglCtx
   win.eglSur = eglSur
 
-proc newGUIWindow*(w, h: int32, global: pointer): GUIWindow =
+proc newGUIWindow*(w, h: int32, queue: GUIQueue, atlas: CTXAtlas): GUIWindow =
+  new result
   # Create new X11 Display
   result.display = XOpenDisplay(nil)
   if isNil(result.display):
     log(lvError, "failed opening X11 display")
   # Create a X11 Window
-  result.xID = # With Initial Dimensions
-    createXWindow(result.display, uint32 w, uint32 h)
-  metrics.width = w; metrics.height = h
+  result.xID = createXWindow(result.display, uint32 w, uint32 h)
+  # Set Current Dimensions
+  result.w = w
+  result.h = h
   # Create X11 Input Method
   result.createXIM()
   # Create GUI Event State
@@ -150,35 +154,34 @@ proc newGUIWindow*(w, h: int32, global: pointer): GUIWindow =
   # Create EGL Context
   result.createEGL() # Disable VSync
   discard eglSwapInterval(result.eglDsp, 0)
+  # Set Current Queue
+  result.queue = queue
   # Create CTX Renderer
-  result.ctx = newCTXRender()
-  # Alloc GUI Signal Queue
-  result.queue = newGUIQueue(global)
+  atlas.createTexture()
+  result.ctx = newCTXRender(atlas)
 
 # -----------------------
 # WINDOW OPEN/CLOSE PROCS
 # -----------------------
 
-proc open*(win: var GUIWindow, root: GUIWidget): bool =
+proc open*(win: GUIWindow, root: GUIWidget): bool =
   # Set First Widget and Last Frame
   win.root = root; win.frame = root
   # Set as Frame Kind
   root.kind = wgFrame
   root.flags.set(wVisible)
   # Set to Global Dimensions
-  root.rect.w = metrics.width
-  root.rect.h = metrics.height
+  root.rect.w = win.w
+  root.rect.h = win.h
   # Shows the Window on the screen
   result = XMapWindow(win.display, win.xID) != BadWindow
   discard XSync(win.display, 0) # Wait for show it
   # Set Renderer Viewport Dimensions
-  viewport(win.ctx, metrics.width, metrics.height)
+  viewport(win.ctx, win.w, win.h)
   # Mark root as Dirty
   set(win.root, wDirty)
 
-proc close*(win: var GUIWindow) =
-  # Dispose Queue
-  dispose(win.queue)
+proc close*(win: GUIWindow) =
   # Dispose UTF8Buffer
   dealloc(win.state.utf8str)
   # Dispose EGL
@@ -217,7 +220,7 @@ proc delete(widget: GUIWidget) =
   widget.prev = nil
 
 # --- Mark As Top Level ---
-proc elevate(win: var GUIWindow, widget: GUIWidget) =
+proc elevate(win: GUIWindow, widget: GUIWidget) =
   if widget != win.root and widget != win.frame:
     # Remove frame from it's position
     widget.prev.next = widget.next
@@ -237,7 +240,7 @@ proc elevate(win: var GUIWindow, widget: GUIWidget) =
 # ---------------------------------
 
 # -- Find Widget by State
-proc find(win: var GUIWindow, state: ptr GUIState): GUIWidget =
+proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
   case state.kind
   of evCursorMove, evCursorClick, evCursorRelease:
     if not isNil(win.hover) and test(win.hover, wGrab):
@@ -299,7 +302,7 @@ proc find(win: var GUIWindow, state: ptr GUIState): GUIWidget =
       else: win.focus # Use Focus
 
 # -- Prepare Widget before event
-proc prepare(win: var GUIWindow, widget: GUIWidget, kind: GUIEvent): bool =
+proc prepare(win: GUIWindow, widget: GUIWidget, kind: GUIEvent): bool =
   case kind
   of evCursorMove:
     widget.test(wMouse)
@@ -321,7 +324,7 @@ proc prepare(win: var GUIWindow, widget: GUIWidget, kind: GUIEvent): bool =
     widget.test(wKeyboard)
 
 # -- Step Focus
-proc step(win: var GUIWindow, back: bool) =
+proc step(win: GUIWindow, back: bool) =
   var widget = win.focus
   if not isNil(widget.parent):
     widget = step(widget, back)
@@ -336,7 +339,7 @@ proc step(win: var GUIWindow, back: bool) =
       win.focus = widget
 
 # -- Relayout Widget
-proc dirty(win: var GUIWindow, widget: GUIWidget) =
+proc dirty(win: GUIWindow, widget: GUIWidget) =
   if widget.test(wVisible):
     widget.dirty()
     # Check Focus Visibility
@@ -349,7 +352,7 @@ proc dirty(win: var GUIWindow, widget: GUIWidget) =
   widget.flags.clear(wDirty)
 
 # -- Focus Handling
-proc focus(win: var GUIWindow, widget: GUIWidget) =
+proc focus(win: GUIWindow, widget: GUIWidget) =
   if widget != win.root and
   widget.test(wFocusCheck) and
   widget != win.focus:
@@ -362,7 +365,7 @@ proc focus(win: var GUIWindow, widget: GUIWidget) =
     # Replace Focus
     win.focus = widget
 
-proc check(win: var GUIWindow, widget: GUIWidget) =
+proc check(win: GUIWindow, widget: GUIWidget) =
   # Check if is still focused
   if widget == win.focus and
   not widget.test(wFocusCheck or wFocus):
@@ -372,7 +375,7 @@ proc check(win: var GUIWindow, widget: GUIWidget) =
     win.focus = nil
 
 # -- Close any Frame/Popup/Tooltip
-proc close(win: var GUIWindow, widget: GUIWidget) =
+proc close(win: GUIWindow, widget: GUIWidget) =
   if widget.test(wVisible) and
   widget.kind > wgChild and
   widget != win.root: # Avoid Root
@@ -414,7 +417,7 @@ proc close(win: var GUIWindow, widget: GUIWidget) =
       win.hover = nil
 
 # -- Open as Frame/Popup/Tooltip
-proc frame(win: var GUIWindow, widget: GUIWidget) =
+proc frame(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
   not widget.test(wVisible):
     insert(win.frame, widget)
@@ -425,7 +428,7 @@ proc frame(win: var GUIWindow, widget: GUIWidget) =
     widget.flags.set(wVisible)
     widget.set(wDirty)
 
-proc popup(win: var GUIWindow, widget: GUIWidget) =
+proc popup(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
   not widget.test(wVisible):
     # Insert Widget to List
@@ -441,7 +444,7 @@ proc popup(win: var GUIWindow, widget: GUIWidget) =
     widget.flags.set(wVisible)
     widget.set(wDirty)
 
-proc tooltip(win: var GUIWindow, widget: GUIWidget) =
+proc tooltip(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
   not widget.test(wVisible):
     # Inset Widget To List
@@ -463,7 +466,7 @@ proc tooltip(win: var GUIWindow, widget: GUIWidget) =
 # GUI WINDOW MAIN LOOP PROCS
 # --------------------------
 
-proc handleEvents*(win: var GUIWindow) =
+proc handleEvents*(win: GUIWindow) =
   var event: XEvent
   # Input Event Handing
   while XPending(win.display) != 0:
@@ -479,9 +482,9 @@ proc handleEvents*(win: var GUIWindow) =
           event.xconfigure.height != rect.h):
         rect.w = event.xconfigure.width
         rect.h = event.xconfigure.height
-        # Set Global Metrics
-        metrics.width = rect.w
-        metrics.height = rect.h
+        # Set Window Metrics
+        win.w = rect.w
+        win.h = rect.h
         # Set Renderer Viewport
         viewport(win.ctx, rect.w, rect.h)
         # Relayout Root Widget
@@ -502,7 +505,7 @@ proc handleEvents*(win: var GUIWindow) =
           win.prepare(found, state.kind):
             event(found, state)
 
-proc handleSignals*(win: var GUIWindow): bool =
+proc handleSignals*(win: GUIWindow): bool =
   for signal in poll(win.queue):
     case signal.kind
     of sCallback, sCallbackEX:
@@ -537,11 +540,11 @@ proc handleSignals*(win: var GUIWindow): bool =
       of msgTerminate: 
         return true
 
-proc handleTimers*(win: var GUIWindow) =
+proc handleTimers*(win: GUIWindow) =
   for widget in walkTimers():
     widget.update()
 
-proc render*(win: var GUIWindow) =
+proc render*(win: GUIWindow) =
   begin(win.ctx) # -- Begin GUI Rendering
   for widget in forward(win.root):
     widget.draw(addr win.ctx)

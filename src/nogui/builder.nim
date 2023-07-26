@@ -520,23 +520,15 @@ macro controller*(declare, body: untyped) =
   #echo result.repr
 
 macro child(self: GUIWidget, body: untyped) =
-  let 
-    fresh = genSym(nskLet, "temp")
-    hook = bindSym"add"
-  # Declare Temporal Variable
-  result = nnkStmtList.newTree(
-    nnkLetSection.newTree(
-      nnkIdentDefs.newTree(
-          fresh, newEmptyNode(), self
-        )
-      )
-    )
+  let hook = bindSym"add"
+  # Declare Statement List
+  result = nnkStmtList.newTree()
   # Warp Each Widget
   for node in body:
     # Only Expect Any Valuable or Asign Item
     expectKind(node, {nnkIdent, nnkCall, nnkAsgn})
     let warp = nnkCommand.newTree(
-      nnkDotExpr.newTree(fresh, hook), node)
+      nnkDotExpr.newTree(self, hook), node)
     # Assing and Then Add
     if node.kind == nnkAsgn:
       warp[1] = node[0]
@@ -545,5 +537,6 @@ macro child(self: GUIWidget, body: untyped) =
     result.add warp
 
 template child*[T: GUIWidget](self: T, body: untyped): T =
-  # Warp Each Children and Return
-  child(self, body); self
+  # Warp Childrens
+  let tmp = self
+  child(tmp, body); tmp

@@ -102,7 +102,3 @@ macro icons*(dir: string, size: int, list: untyped) =
     eorge item, ["echo", filename, ":", dataSize, ">>", dataList]
     # Add New Fresh Constant
     result.add icon(item)
-
-# TODO: Move to nogui.nim
-folders:
-  "../data" *= "./"
