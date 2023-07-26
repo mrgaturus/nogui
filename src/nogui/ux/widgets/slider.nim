@@ -9,7 +9,7 @@ widget GUISlider:
     value: ptr Value
     decimals: int8
 
-  new slider(value: ptr Value, decimals: int8):
+  new slider(value: ptr Value, decimals = 0'i8):
     let height = getApp().font.height
     # Widget Standard Flag
     result.flags = wMouse

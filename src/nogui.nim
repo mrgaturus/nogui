@@ -57,8 +57,21 @@ var app: Application
 # -----------------------
 
 proc createColors(): GUIColors =
-  # TODO: allow load from a config file
-  discard
+  # TODO: create a module for colors and allow config file
+  proc rgba(r, g, b, a: uint32): uint32 {.compileTime.} =
+    result = r or (g shl 8) or (b shl 16) or (a shl 24)  
+  # Text Colors
+  result.text = rgba(224, 224, 224, 255)
+  # Widget Controls
+  result.item = rgba(44, 48, 48, 255)
+  result.focus = rgba(64, 71, 71, 255)
+  result.clicked = rgba(87, 95, 95, 255)
+  # Widget Panels
+  result.panel = rgba(14, 15, 15, 255)
+  result.tab = rgba(19, 21, 21, 255)
+  result.darker = rgba(0, 0, 0, 255)
+  result.background = rgba(23, 26, 26, 255)
+  echo result.repr
 
 proc createFont(ft2: FT2Library): GUIFont =
   const hardsize = 9

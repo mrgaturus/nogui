@@ -58,7 +58,7 @@ widget GUITextBox:
       else: # Hover Outline Color
         ctx.color(colors.focus)
       # Draw Outline Status
-      ctx.line rect(self.rect), 1
+      ctx.line rect(self.rect), -1
     # Set Color To White
     ctx.color(colors.text)
     # Draw Current Text
