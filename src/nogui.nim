@@ -24,7 +24,7 @@ type
     size*, height*: int16
     asc*, desc*, baseline*: int16
   # Global Application Handle
-  GUIApplication = ref object
+  Application = object
     window: GUIWindow
     queue: GUIQueue
     state: pointer
@@ -34,8 +34,23 @@ type
     # Atlas Font Metrics
     font*: GUIFont
     colors*: GUIColors
+  GUIApplication = ptr Application
+
+# -----------------------
+# Application Destruction
+# -----------------------
+
+proc `=destroy`(app: var Application) =
+  log(lvInfo, "closing application...")
+  # Close Window and Queue
+  close(app.window)
+  dispose(app.queue)
+  # Dealloc Freetype 2
+  if ft2_done(app.ft2) != 0:
+    log(lvError, "failed closing FreeType2")
+
 # Global Application Handle
-var app: GUIApplication
+var app: Application
 
 # -----------------------
 # Private Common Creation
@@ -68,11 +83,8 @@ proc createFont(ft2: FT2Library): GUIFont =
 # --------------------
 
 proc createApp*(w, h: int32, state: pointer) =
-  var 
-    result: GUIApplication
-    ft2: FT2Library
-  # Create Application
-  new result
+  var ft2: FT2Library
+  let result = addr app
   # Create Freetype
   if ft2_init(addr ft2) != 0:
     log(lvError, "failed initialize FreeType2")
@@ -87,21 +99,19 @@ proc createApp*(w, h: int32, state: pointer) =
   result.window = newGUIWindow(w, h, queue, atlas)
   result.queue = queue
   result.atlas = atlas
-  # Set New Application
-  app = result
   # Copy Default Data
   static: folders: "data" *= "./"
 
 proc getApp*(): GUIApplication =
   # Check App Initialize
   when defined(debug):
-    if isNil(app):
+    if isNil(app.queue):
       log(lvError, "app is not initialized")
   # Return Current App
-  result = app
+  result = addr app
 
 template executeApp*(root: GUIWidget, body: untyped) =
-  let win {.cursor.} = getApp().win
+  let win {.cursor.} = app.win
   if win.open(root):
     # TODO: allow configure ms
     loop(16):
@@ -110,13 +120,6 @@ template executeApp*(root: GUIWidget, body: untyped) =
       win.handleTimers()
       # Execute Body
       body; win.render()
-
-proc closeApp*() =
-  # Close Window and Queue
-  close(app.window)
-  dispose(app.queue)
-  # Dealloc Freetype 2
-  discard ft2_done(app.ft2)
 
 # ------------
 # Font Metrics

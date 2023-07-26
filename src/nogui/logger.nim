@@ -4,9 +4,9 @@
 
 type
   LOGKind* = enum
-    lvInfo
     lvError
     lvWarning
+    lvInfo    
 
 proc log*(kind: LOGKind, x: varargs[string, `$`]) =
   const headers = [
