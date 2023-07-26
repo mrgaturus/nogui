@@ -1,7 +1,13 @@
-from nogui/libs/gl import glClear, glClearColor, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT
-from nogui/gui/signal import GUICallback, push
-import nogui/gui/[event, widget, window, render, timer]
-import nogui/[builder, data]
+from nogui/libs/gl import 
+  glClear, 
+  glClearColor, 
+  GL_COLOR_BUFFER_BIT, 
+  GL_DEPTH_BUFFER_BIT
+# Import nogui stuff
+import nogui/ux/prelude
+from nogui/data import icons
+from nogui/builder import controller
+from nogui import createApp, executeApp
 
 icons "tatlas", 16:
   brush := "brush.svg"
@@ -31,7 +37,7 @@ widget DebugAtlas:
 
   method draw(ctx: ptr CTXRender) =
     let 
-      (texID, w, h) = atlastex()
+      (texID, w, h) = getApp().atlas.info
       metrics = addr self.metrics
       x = metrics.x
       y = metrics.y
@@ -79,19 +85,12 @@ controller TestController:
 # -------------------
 
 proc main() =
-  var win = newGUIWindow(1024, 600, nil)
+  createApp(1024, 600, nil)
   let test = testcontroller(10, 20)
   # Open Window
-  if win.open(test.widget):
-    loop(16):
-      win.handleEvents() # Input
-      if win.handleSignals(): break
-      win.handleTimers() # Timers
-      # Render Main Program
-      glClearColor(0.5, 0.5, 0.5, 1.0)
-      glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
-      # Render GUI
-      win.render()
-
+  executeApp(test.widget):
+    glClearColor(0.5, 0.5, 0.5, 1.0)
+    glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
+  
 when isMainModule:
   main()

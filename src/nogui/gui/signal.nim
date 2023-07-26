@@ -48,7 +48,7 @@ type
     distinct GUICallback
   # GUI Signal and Queue
   GUISignal* = ptr Signal
-  Queue = ptr object
+  Queue = object
     state: pointer
     # Queue Endpoints
     back, front: GUISignal
@@ -209,6 +209,7 @@ proc call*(sig: GUISignal) =
   let
     kind = sig.kind
     cb = sig.cb
+    # Current Global State
     state = opaque.state
   # Select Callback kind
   case kind

@@ -111,15 +111,16 @@ proc getApp*(): GUIApplication =
   result = addr app
 
 template executeApp*(root: GUIWidget, body: untyped) =
-  let win {.cursor.} = app.win
+  let win {.cursor.} = app.window
   if win.open(root):
     # TODO: allow configure ms
     loop(16):
-      win.handleEvents()
-      if win.handleSignals(): break
-      win.handleTimers()
+      # TODO: unify all into one queue
+      handleEvents(win)
+      if handleSignals(win): break
+      handleTimers(win)
       # Execute Body
-      body; win.render()
+      body; render(win)
 
 # ------------
 # Font Metrics
