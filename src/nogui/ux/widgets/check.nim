@@ -1,9 +1,4 @@
-import ../widget, ../render
-from ../event import
-  GUIState, GUIEvent
-from ../config import 
-  metrics, theme
-from ../../builder import widget
+import ../prelude
 
 widget GUICheckBox:
   attributes:
@@ -11,35 +6,41 @@ widget GUICheckBox:
     check: ptr bool
 
   new checkbox(label: string, check: ptr bool):
+    let app = getApp()
     # Set to Font Size Metrics
-    result.minimum(0, metrics.fontSize)
+    result.minimum(0, app.font.height)
     # Button Attributes
     result.flags = wMouse
     result.label = label
     result.check = check
 
   method draw(ctx: ptr CTXRender) =
-    ctx.color: # Select Color State
+    let 
+      app = getApp()
+      rect = addr self.rect
+      colors = addr app.colors
+    # Select Color State
+    ctx.color: 
       if not self.any(wHoverGrab):
-        theme.bgWidget
+        colors.item
       elif self.test(wHoverGrab):
-        theme.grabWidget
-      else: theme.hoverWidget
+        colors.clicked
+      else: colors.focus
     # Fill Checkbox Background
     ctx.fill rect(
-      self.rect.x, self.rect.y,
-      self.rect.h, self.rect.h)
+      rect.x, rect.y,
+      rect.h, rect.h)
     # If Checked, Draw Mark
     if self.check[]:
-      ctx.color(theme.mark)
+      ctx.color(colors.text)
       ctx.fill rect(
-        self.rect.x + 4, self.rect.y + 4,
-        self.rect.h - 8, self.rect.h - 8)
+        rect.x + 4, rect.y + 4,
+        rect.h - 8, rect.h - 8)
     # Draw Text Next to Checkbox
-    ctx.color(theme.text)
+    ctx.color(colors.text)
     ctx.text( # Centered Vertically
-      self.rect.x + self.rect.h + 4, 
-      self.rect.y - metrics.descender,
+      rect.x + rect.h + 4, 
+      rect.y - app.font.desc,
       self.label)
 
   method event(state: ptr GUIState) =

@@ -1,12 +1,6 @@
 # TODO: Replace by a color wheel
-
-import ../widget, ../render
-from ../../values import
-  RGBColor, toRGB, toPacked,
-  HSVColor, toHSV
-from ../event import 
-  GUIState, GUIEvent
-from ../../builder import widget
+import ../prelude
+import ../../values
 
 type
   GRABColorBar = enum

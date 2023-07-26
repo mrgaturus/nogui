@@ -1,12 +1,7 @@
-import ../widget, ../render
+import ../prelude
 from ../../values import
   Value, toRaw, lerp,
   distance, toFloat, toInt
-from ../event import 
-  GUIState, GUIEvent
-from ../config import 
-  metrics, theme
-from ../../builder import widget
 
 widget GUIScroll:
   attributes:
@@ -15,20 +10,22 @@ widget GUIScroll:
     vertical: bool
 
   new scrollbar(value: ptr Value, vertical: bool):
+    let height = getApp().font.height
     # Widget Standard Flag
     result.flags = wMouse
     # Set Minimun Size
-    result.minimum( # The Same as Font Size
-      metrics.fontSize, metrics.fontSize)
+    result.minimum(height, height)
     # Set Widget Attributes
     result.value = value
     result.vertical = vertical
 
   method draw(ctx: ptr CTXRender) =
-    let value = self.value
+    let 
+      colors = addr getApp().colors
+      value = self.value
     var rect = rect(self.rect)
     # Fill Background
-    ctx.color(theme.bgScroll)
+    ctx.color(colors.darker)
     ctx.fill(rect)
     block: # Fill Scroll Bar
       var side, scroll: float32
@@ -51,10 +48,10 @@ widget GUIScroll:
     # Draw Scroll Bar
     ctx.color:
       if not self.any(wHoverGrab):
-        theme.barScroll
+        colors.item
       elif self.test(wGrab):
-        theme.grabScroll
-      else: theme.hoverScroll
+        colors.clicked
+      else: colors.focus
     ctx.fill(rect)
 
   method event(state: ptr GUIState) =

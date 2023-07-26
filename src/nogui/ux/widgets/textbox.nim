@@ -1,18 +1,15 @@
+import ../prelude
+# --------------------
 from x11/keysym import
   XK_Backspace, XK_Left, XK_Right,
   XK_Return, XK_Escape,
   XK_Delete, XK_Home, XK_End
 # -----------------------
-import ../widget, ../render, ../../utf8
-from ../config import metrics, theme
-from ../atlas import width, index
-from ../event import
-  GUIState, GUIEvent,
+import ../../utf8
+from ../../gui/event import 
   UTF8Nothing, UTF8Keysym
-from ../signal import
-  pushSignal, WindowSignal,
-  msgOpenIM, msgCloseIM
-from ../../builder import widget
+from ../../gui/signal import 
+  WindowSignal, msgOpenIM, msgCloseIM
 
 widget GUITextBox:
   attributes:
@@ -20,47 +17,54 @@ widget GUITextBox:
     [wi, wo]: int32
 
   new textbox(input: ptr UTF8Input):
+    let metrics = addr getApp().font
     # Widget Standard Flags
     result.flags = wMouse or wKeyboard
     # Set Minimun Size Like a Button
     result.minimum(0, 
-      metrics.fontSize - metrics.descender)
+      metrics.height - metrics.desc)
     # Widget Attributes
     result.input = input
 
   method draw(ctx: ptr CTXRender) =
-    if self.input.changed: # Recalculate Text Scroll and Cursor
+    let 
+      app = getApp()
+      rect = addr self.rect
+      metrics = addr app.font
+      colors = addr app.colors
+    # Recalculate Text Scroll and Cursor
+    if self.input.changed: 
       self.wi = width(self.input.text, self.input.cursor)
-      if self.wi - self.wo > self.rect.w - 8: # Multiple of 24
-        self.wo = (self.wi - self.rect.w + 32) div 24 * 24
+      if self.wi - self.wo > rect.w - 8: # Multiple of 24
+        self.wo = (self.wi - rect.w + 32) div 24 * 24
       elif self.wi < self.wo: # Multiple of 24
         self.wo = self.wi div 24 * 24
       self.wi -= self.wo
       # Unmark Input as Changed
       self.input.changed = false
     # Fill TextBox Background
-    ctx.color(theme.bgWidget)
+    ctx.color(colors.darker)
     ctx.fill rect(self.rect)
     # Draw Textbox Status
     if self.any(wHover or wFocus):
       if self.test(wFocus):
         # Focused Outline Color
-        ctx.color(theme.text)
+        ctx.color(colors.text)
         # Draw Cursor
         ctx.fill rect(
-          self.rect.x + self.wi + 4,
-          self.rect.y - metrics.descender,
-          1, metrics.ascender)
+          rect.x + self.wi + 4,
+          rect.y - metrics.desc,
+          1, metrics.asc)
       else: # Hover Outline Color
-        ctx.color(theme.hoverWidget)
+        ctx.color(colors.focus)
       # Draw Outline Status
       ctx.line rect(self.rect), 1
     # Set Color To White
-    ctx.color(theme.text)
+    ctx.color(colors.text)
     # Draw Current Text
     ctx.text( # Offset X and Clip
-      self.rect.x - self.wo + 4,
-      self.rect.y + metrics.ascender shr 1,
+      rect.x - self.wo + 4,
+      rect.y + metrics.asc shr 1,
       rect(self.rect), self.input.text)
 
   method event(state: ptr GUIState) =

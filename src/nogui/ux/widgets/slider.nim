@@ -1,13 +1,8 @@
-import ../widget, ../render
+import ../prelude
 from strutils import 
   formatFloat, ffDecimal
 from ../../values import
   Value, toRaw, lerp, discrete, toFloat, toInt
-from ../event import GUIState
-from ../config import 
-  metrics, theme
-from ../atlas import width
-from ../../builder import widget
 
 widget GUISlider:
   attributes:
@@ -15,29 +10,33 @@ widget GUISlider:
     decimals: int8
 
   new slider(value: ptr Value, decimals: int8):
+    let height = getApp().font.height
     # Widget Standard Flag
     result.flags = wMouse
     # Set Minimun Size
-    result.minimum(0, metrics.fontSize)
+    result.minimum(0, height)
     # Set Widget Attributes
     result.value = value
     result.decimals = decimals
 
   method draw(ctx: ptr CTXRender) =
+    let
+      app = getApp()
+      colors = addr app.colors
     block: # Draw Slider
       var rect = rect(self.rect)
       # Fill Slider Background
-      ctx.color(theme.bgWidget)
+      ctx.color(colors.darker)
       ctx.fill(rect)
       # Fill Slider Bar
       rect.xw = # Get Slider Width
         rect.x + float32(self.rect.w) * self.value[].toRaw
       ctx.color: # Status Color
         if not self.any(wHoverGrab):
-          theme.barScroll
+          colors.item
         elif self.test(wGrab):
-          theme.grabScroll
-        else: theme.hoverScroll
+          colors.clicked
+        else: colors.focus
       ctx.fill(rect)
     # Draw Text Information
     let text = 
@@ -45,10 +44,10 @@ widget GUISlider:
         formatFloat(self.value[].toFloat, 
           ffDecimal, self.decimals)
       else: $self.value[].toInt
-    ctx.color(theme.text)
+    ctx.color(colors.text)
     ctx.text( # On The Right Side
       self.rect.x + self.rect.w - text.width - 4, 
-      self.rect.y - metrics.descender, text)
+      self.rect.y - app.font.desc, text)
 
   method event(state: ptr GUIState) =
     if self.test(wGrab):

@@ -1,9 +1,4 @@
-import ../widget, ../render
-from ../event import 
-  GUIState, GUIEvent
-from ../config import 
-  metrics, theme
-from ../../builder import widget
+import ../prelude
 
 widget GUIRadio:
   attributes:
@@ -12,8 +7,9 @@ widget GUIRadio:
     check: ptr byte
 
   new radio(label: string, expected: byte, check: ptr byte):
+    let metrics = addr getApp().font
     # Set to Font Size Metrics
-    result.minimum(0, metrics.fontSize)
+    result.minimum(0, metrics.height)
     # Widget Standard Flag
     result.flags = wMouse
     # Radio Button Attributes
@@ -22,27 +18,32 @@ widget GUIRadio:
     result.check = check
 
   method draw(ctx: ptr CTXRender) =
-    ctx.color: # Select Color State
+    let 
+      app = getApp()
+      rect = addr self.rect
+      colors = addr app.colors
+    # Select Color State
+    ctx.color: 
       if not self.any(wHoverGrab):
-        theme.bgWidget
+        colors.item
       elif self.test(wHoverGrab):
-        theme.grabWidget
-      else: theme.hoverWidget
+        colors.clicked
+      else: colors.focus
     # Fill Radio Background
     ctx.circle point(
-      self.rect.x, self.rect.y),
-      float32(self.rect.h shr 1)
+      rect.x, rect.y),
+      float32(rect.h shr 1)
     # If Checked Draw Circle Mark
     if self.check[] == self.expected:
-      ctx.color(theme.mark)
+      ctx.color(colors.text)
       ctx.circle point(
-        self.rect.x + 4, self.rect.y + 4),
-        float32(self.rect.h shr 1 - 4)
+        rect.x + 4, rect.y + 4),
+        float32(rect.h shr 1 - 4)
     # Draw Text Next To Circle
-    ctx.color(theme.text)
+    ctx.color(colors.text)
     ctx.text( # Centered Vertically
-      self.rect.x + self.rect.h + 4, 
-      self.rect.y - metrics.descender,
+      rect.x + rect.h + 4, 
+      rect.y - app.font.desc,
       self.label)
 
   method event(state: ptr GUIState) =
