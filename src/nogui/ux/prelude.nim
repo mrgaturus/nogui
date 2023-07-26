@@ -7,6 +7,18 @@ from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
 from ../../nogui import getApp, width, index
 
+# -----------------------
+# Standard Color Choosing
+# -----------------------
+
+proc itemColor*(self: GUIWidget): uint32 =
+  let colors = addr getApp().colors
+  if not self.any(wHoverGrab):
+    colors.item
+  elif self.test(wHoverGrab):
+    colors.clicked
+  else: colors.focus
+
 # -----------------
 # Exporting Prelude
 # -----------------

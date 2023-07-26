@@ -46,12 +46,7 @@ widget GUIScroll:
           (side - scroll) * t
         rect.xw = rect.x + scroll
     # Draw Scroll Bar
-    ctx.color:
-      if not self.any(wHoverGrab):
-        colors.item
-      elif self.test(wGrab):
-        colors.clicked
-      else: colors.focus
+    ctx.color self.itemColor()
     ctx.fill(rect)
 
   method event(state: ptr GUIState) =

@@ -23,21 +23,16 @@ widget GUISlider:
     let
       app = getApp()
       colors = addr app.colors
+      rect = addr self.rect
     block: # Draw Slider
-      var rect = rect(self.rect)
+      var r = rect(self.rect)
       # Fill Slider Background
       ctx.color(colors.darker)
-      ctx.fill(rect)
-      # Fill Slider Bar
-      rect.xw = # Get Slider Width
-        rect.x + float32(self.rect.w) * self.value[].toRaw
-      ctx.color: # Status Color
-        if not self.any(wHoverGrab):
-          colors.item
-        elif self.test(wGrab):
-          colors.clicked
-        else: colors.focus
-      ctx.fill(rect)
+      ctx.fill(r)
+      # Get Slider Width and Fill Slider Bar
+      r.xw = r.x + float32(rect.w) * self.value[].toRaw
+      ctx.color self.itemColor()
+      ctx.fill(r)
     # Draw Text Information
     let text = 
       if self.decimals > 0:
@@ -46,13 +41,14 @@ widget GUISlider:
       else: $self.value[].toInt
     ctx.color(colors.text)
     ctx.text( # On The Right Side
-      self.rect.x + self.rect.w - text.width - 4, 
-      self.rect.y - app.font.desc, text)
+      rect.x + rect.w - text.width - 4, 
+      rect.y - app.font.desc, text)
 
   method event(state: ptr GUIState) =
     if self.test(wGrab):
       let 
-        t = (state.mx - self.rect.x) / self.rect.w
+        rect = addr self.rect
+        t = (state.mx - rect.x) / rect.w
         value = self.value
       # Change Value
       if self.decimals > 0:

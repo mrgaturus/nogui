@@ -23,12 +23,7 @@ widget GUIButton:
       colors = addr app.colors
       metrics = addr app.font
     # Select Color State
-    ctx.color:
-      if not self.any(wHoverGrab):
-        colors.item
-      elif self.test(wHoverGrab):
-        colors.clicked
-      else: colors.focus
+    ctx.color self.itemColor()
     # Fill Button Background
     ctx.fill rect(self.rect)
     # Put Centered Text

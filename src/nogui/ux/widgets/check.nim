@@ -20,12 +20,7 @@ widget GUICheckBox:
       rect = addr self.rect
       colors = addr app.colors
     # Select Color State
-    ctx.color: 
-      if not self.any(wHoverGrab):
-        colors.item
-      elif self.test(wHoverGrab):
-        colors.clicked
-      else: colors.focus
+    ctx.color self.itemColor()
     # Fill Checkbox Background
     ctx.fill rect(
       rect.x, rect.y,
