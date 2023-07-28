@@ -24,7 +24,7 @@ widget GUIRadio:
       rect = addr self.rect
       colors = addr app.colors
     # Select Color State
-    ctx.color self.itemColor()
+    ctx.color self.optionColor()
     # Fill Radio Background
     ctx.circle point(
       rect.x, rect.y),

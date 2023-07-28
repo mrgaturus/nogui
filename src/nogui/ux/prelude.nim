@@ -11,6 +11,14 @@ from ../../nogui import getApp, width, index
 # Standard Color Choosing
 # -----------------------
 
+proc optionColor*(self: GUIWidget): uint32 =
+  let colors = addr getApp().colors
+  if not self.any(wHoverGrab):
+    colors.darker
+  elif self.test(wHoverGrab):
+    colors.clicked
+  else: colors.focus
+
 proc itemColor*(self: GUIWidget): uint32 =
   let colors = addr getApp().colors
   if not self.any(wHoverGrab):

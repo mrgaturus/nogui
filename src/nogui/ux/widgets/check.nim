@@ -20,7 +20,7 @@ widget GUICheckBox:
       rect = addr self.rect
       colors = addr app.colors
     # Select Color State
-    ctx.color self.itemColor()
+    ctx.color self.optionColor()
     # Fill Checkbox Background
     ctx.fill rect(
       rect.x, rect.y,
