@@ -137,8 +137,8 @@ controller CONPlayground:
     result.a = a
     result.b = b
     # Initialize Values
-    interval(result.v1, 0, 100)
-    interval(result.v2, 50, 20)
+    interval(result.v1, 20, 123)
+    interval(result.v2, 500, 268 * 8)
     # Create New Widget
     result.widget = result.createWidget()
 

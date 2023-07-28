@@ -26,6 +26,18 @@ proc toRaw*(value: Value): float32 {.inline.} =
 proc toInt*(value: Value): int32 {.inline.} =
   result = int32(value.toFloat)
 
+proc interval*(value: var Value, max: sink float32) =
+  # Clamp Max Value
+  if max < 0: max = 0
+  # Set Current Value
+  if max > 0:
+    let v = value.dist * value.t
+    value.t = clamp(v, 0.0, max) / max
+  # Set Current Interval
+  value.min = 0
+  value.max = max
+  value.dist = max
+
 proc interval*(value: var Value, min, max: sink float32) =
   # Set Min and Max Values
   if min > max:
