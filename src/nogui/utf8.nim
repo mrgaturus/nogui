@@ -58,7 +58,7 @@ iterator runes16*(str: string): uint16 =
 proc check*(input: ptr UTF8Input, user: pointer): bool =
   result = input.used == user
 
-proc current*(input: ptr UTF8Input, user: pointer) =
+proc focus*(input: ptr UTF8Input, user: pointer) =
   # Reset Cursor if not same
   if input.used != user:
     input.cursor = 0

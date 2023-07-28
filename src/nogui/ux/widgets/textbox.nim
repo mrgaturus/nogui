@@ -14,17 +14,37 @@ from ../../gui/signal import
 widget GUITextBox:
   attributes:
     input: ptr UTF8Input
-    [wi, wo]: int32
+    # Text Metric Cache
+    [wc, wo, wl]: int32
 
   new textbox(input: ptr UTF8Input):
     let metrics = addr getApp().font
     # Widget Standard Flags
     result.flags = wMouse or wKeyboard
     # Set Minimun Size Like a Button
-    result.minimum(0, 
-      metrics.height - metrics.desc)
+    result.minimum(0, metrics.height - metrics.desc)
     # Widget Attributes
     result.input = input
+
+  proc calculateOffsets() =
+    let
+      size = getApp().font.size
+      input = self.input
+      # Text Sizes
+      wr = self.rect.w - size
+      wc = width(input.text, input.index)
+    # Prev Offset
+    var wo = self.wo
+    # Check Offset Change
+    if wc < wo:
+      wo -= wo - wc
+    elif wc > wo + wr:
+      wo += wc - wo - wr
+    # Change Cursor Offset
+    self.wc = wc
+    self.wo = wo
+    # Caret Offset Cache
+    self.wl = wc - wo
 
   method draw(ctx: ptr CTXRender) =
     let 
@@ -32,15 +52,12 @@ widget GUITextBox:
       rect = addr self.rect
       metrics = addr app.font
       colors = addr app.colors
+      # Text Input
+      size = metrics.size shr 1
       input = self.input
-    # Recalculate Text Scroll and Cursor
-    if true: 
-      self.wi = width(self.input.text, input.index)
-      if self.wi - self.wo > rect.w - 8: # Multiple of 24
-        self.wo = (self.wi - rect.w + 32) div 24 * 24
-      elif self.wi < self.wo: # Multiple of 24
-        self.wo = self.wi div 24 * 24
-      self.wi -= self.wo
+    # Reset Cursor and Offset Cache
+    if not input.check cast[pointer](self):
+      self.wc = 0; self.wo = 0; self.wl = 0
     # Fill TextBox Background
     ctx.color(colors.darker)
     ctx.fill rect(self.rect)
@@ -51,7 +68,7 @@ widget GUITextBox:
         ctx.color(colors.text)
         # Draw Cursor
         ctx.fill rect(
-          rect.x + self.wi + 4,
+          rect.x + self.wl + size,
           rect.y - metrics.desc,
           1, metrics.asc)
       else: # Hover Outline Color
@@ -62,7 +79,7 @@ widget GUITextBox:
     ctx.color(colors.text)
     # Draw Current Text
     ctx.text( # Offset X and Clip
-      rect.x - self.wo + 4,
+      rect.x - self.wo + size,
       rect.y + metrics.asc shr 1,
       rect(self.rect), input.text)
 
@@ -82,18 +99,26 @@ widget GUITextBox:
         case state.utf8state
         of UTF8Nothing, UTF8Keysym: discard
         else: input.insert(state.utf8str, state.utf8size)
-    elif state.kind == evCursorClick:
+    elif self.test(wGrab):
+      input.focus cast[pointer](self)
       # Jump to Cursor Position
+      let size = getApp().font.size shr 1
       input.jump index(input.text, 
-        state.mx - self.rect.x + self.wo - 4)
+        state.mx - self.rect.x - size + self.wo)
       # Focus Textbox
-      self.set(wFocus)
+      if state.kind == evCursorClick:
+        self.set(wFocus)
     # Mark Text Input used By This Widget
-    if state.kind in {evKeyDown, evCursorClick}:
-      input.current cast[pointer](self)
+    if state.kind in {evKeyDown, evCursorClick, evCursorMove}:
+      self.calculateOffsets()
 
   method handle(kind: GUIHandle) =
-    case kind # Un/Focus X11 Input Method
-    of inFocus: pushSignal(msgOpenIM)
-    of outFocus: pushSignal(msgCloseIM)
+    # Prepare Input Focus
+    case kind 
+    of inFocus:
+      # Change Current Widget
+      self.input.focus cast[pointer](self)
+      pushSignal(msgOpenIM)
+    of outFocus: 
+      pushSignal(msgCloseIM)
     else: discard
