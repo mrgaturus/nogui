@@ -32,16 +32,15 @@ widget GUITextBox:
       rect = addr self.rect
       metrics = addr app.font
       colors = addr app.colors
+      input = self.input
     # Recalculate Text Scroll and Cursor
-    if self.input.changed: 
-      self.wi = width(self.input.text, self.input.cursor)
+    if true: 
+      self.wi = width(self.input.text, input.index)
       if self.wi - self.wo > rect.w - 8: # Multiple of 24
         self.wo = (self.wi - rect.w + 32) div 24 * 24
       elif self.wi < self.wo: # Multiple of 24
         self.wo = self.wi div 24 * 24
       self.wi -= self.wo
-      # Unmark Input as Changed
-      self.input.changed = false
     # Fill TextBox Background
     ctx.color(colors.darker)
     ctx.fill rect(self.rect)
@@ -65,36 +64,33 @@ widget GUITextBox:
     ctx.text( # Offset X and Clip
       rect.x - self.wo + 4,
       rect.y + metrics.asc shr 1,
-      rect(self.rect), self.input.text)
+      rect(self.rect), input.text)
 
   method event(state: ptr GUIState) =
+    let input = self.input
     if state.kind == evKeyDown:
       case state.key
-      of XK_BackSpace: backspace(self.input)
-      of XK_Delete: delete(self.input)
-      of XK_Right: forward(self.input)
-      of XK_Left: reverse(self.input)
-      of XK_Home: # Begin of Text
-        self.input.cursor = 0
-      of XK_End: # End of Text
-        self.input.cursor =
-          len(self.input.text).int32
+      of XK_BackSpace: input.backspace()
+      of XK_Delete: input.delete()
+      of XK_Right: input.next()
+      of XK_Left: input.prev()
+      of XK_Home: input.jump(low int32)
+      of XK_End: input.jump(high int32)
       of XK_Return, XK_Escape: 
         self.clear(wFocus)
       else: # Add UTF8 Char
         case state.utf8state
         of UTF8Nothing, UTF8Keysym: discard
-        else: insert(self.input, 
-          state.utf8str, state.utf8size)
+        else: input.insert(state.utf8str, state.utf8size)
     elif state.kind == evCursorClick:
-      # Get Cursor Position
-      self.input.cursor = index(self.input.text,
+      # Jump to Cursor Position
+      input.jump index(input.text, 
         state.mx - self.rect.x + self.wo - 4)
       # Focus Textbox
       self.set(wFocus)
-    # Mark Text Input as Dirty
+    # Mark Text Input used By This Widget
     if state.kind in {evKeyDown, evCursorClick}:
-      self.input.changed = true # TODO: use CRC32
+      input.current cast[pointer](self)
 
   method handle(kind: GUIHandle) =
     case kind # Un/Focus X11 Input Method

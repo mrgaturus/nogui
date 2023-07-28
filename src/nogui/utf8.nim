@@ -3,30 +3,44 @@
 type
   UTF8Input* = object
     str: string
-    cursor*: int32
-    changed*: bool
+    cursor: int32
+    # Last Widget Used
+    used: pointer
+  # Mapping Without Weirdness
+  UTF8Unsafe = ptr UncheckedArray[uint8]
+
+{.push boundChecks: off.}
+proc toUnsafe(input: ptr UTF8Input): ptr UncheckedArray[uint8] {.inline.} =
+  # Convert to Unsafe Array
+  cast[UTF8Unsafe](addr input.str[0])
+{.pop.}
 
 # -------------------
 # UINT16 RUNE DECODER
 # -------------------
 
 template rune16*(str: string, i: int32, rune: uint16) =
-  if str[i].uint8 <= 127:
-    rune = str[i].uint16
+  let char0 = uint16 str[i]
+  if char0 <= 127:
+    rune = char0
     inc(i, 1) # Move 1 Byte
-  elif str[i].uint8 shr 5 == 0b110:
+  elif char0 shr 5 == 0b110:
+    let char1 = uint16 str[i + 1]
     rune = # Use 2 bytes
-      (str[i].uint16 and 0x1f) shl 6 or
-      str[i+1].uint16 and 0x3f
+      (char0 and 0x1f) shl 6 or
+      (char1 and 0x3f)
     inc(i, 2) # Move 2 Bytes
-  elif str[i].uint8 shr 4 == 0b1110:
+  elif char0 shr 4 == 0b1110:
+    let 
+      char1 = uint16 str[i + 1]
+      char2 = uint16 str[i + 2]
     rune = # Use 3 bytes
-      (str[i].uint16 and 0xf) shl 12 or
-      (str[i+1].uint16 and 0x3f) shl 6 or
-      str[i+2].uint16 and 0x3f
+      (char0 and 0xf) shl 12 or
+      (char1 and 0x3f) shl 6 or
+      (char2 and 0x3f)
     inc(i, 3) # Move 3 bytes
   else: # Invalid UTF8
-    rune = str[i].uint16
+    rune = char0
     inc(i, 1) # Move 1 byte
 
 iterator runes16*(str: string): uint16 =
@@ -37,66 +51,111 @@ iterator runes16*(str: string): uint16 =
     rune16(str, i, result)
     yield result # Return Rune
 
+# ------------------------
+# UTF8 Current Manipulator
+# ------------------------
+
+proc check*(input: ptr UTF8Input, user: pointer): bool =
+  result = input.used == user
+
+proc current*(input: ptr UTF8Input, user: pointer) =
+  # Reset Cursor if not same
+  if input.used != user:
+    input.cursor = 0
+  # Change Input User
+  input.used = user
+
 # ------------------------------
 # UTF8 INPUT DIRECT MANIPULATION
 # ------------------------------
 
-proc `text=`*(input: var UTF8Input, str: string) =
-  input.str = str
-  # Set Cursor to Len
-  input.cursor = 
-    len(str).int32
-  input.changed = true
+template `index`*(input: ptr UTF8Input): int32 =
+  input.cursor
 
-template `text`*(input: ptr UTF8Input|UTF8Input): string =
+template `text`*(input: ptr UTF8Input | UTF8Input): string =
   input.str # Returns Current String
 
-# -----------------------
-# UTF8 INPUT CURSOR PROCS
-# -----------------------
+proc `text=`*(input: var UTF8Input, str: string) =
+  input.str = str
+  # Change Last Used
+  input.used = nil
+  input.cursor = 0
 
-proc forward*(input: ptr UTF8Input) =
-  var i = input.cursor; inc(i)
-  let l = len(input.str)
-  while i < l and # Not UTF8 Chunk
-      (input.str[i].uint8 and 0xC0) == 0x80:
-    inc(i) # Next String Char
-  if i <= l: input.cursor = i
+# ----------------------
+# Utf8 Cursor Step Procs
+# ----------------------
 
-proc reverse*(input: ptr UTF8Input) =
-  var i = input.cursor; dec(i)
-  while i > 0 and # Not UTF8 Chunk
-      (input.str[i].uint8 and 0xC0) == 0x80:
-    dec(i) # Prev String Char
-  if i >= 0: input.cursor = i
+proc jump*(input: ptr UTF8Input, idx: int32) =
+  let
+    l = int32 len(input.str)
+    c = clamp(idx, 0, l)
+  # Jump to Desired Position
+  input.cursor = c
+
+proc next*(input: ptr UTF8Input) =
+  let 
+    l = len(input.str)
+    str = input.toUnsafe()
+  # Iterate to Next UTF8 Character
+  var i = input.cursor + 1
+  while i < l and (str[i] and 0xC0) == 0x80:
+    # Next String Char
+    inc(i) 
+  if i <= l: 
+    input.cursor = i
+
+proc prev*(input: ptr UTF8Input) =
+  let str = input.toUnsafe()
+  # Iterate to Prev UTF8 Character
+  var i = input.cursor - 1
+  while i > 0 and (str[i] and 0xC0) == 0x80:
+    # Prev String Char
+    dec(i)
+  if i >= 0:
+    input.cursor = i
+
+# -------------------
+# Utf8 Deletion Procs
+# -------------------
 
 proc backspace*(input: ptr UTF8Input) =
-  var p = input.cursor; input.reverse()
-  let delta = p - input.cursor
-  if delta > 0: # Check Delta
-    if p < len(input.str):
-      copyMem(addr `[]`(input.str, input.cursor),
-        addr input.str[p], len(input.str) - p)
+  # Calculate Difference
+  let c0 = input.cursor
+  input.prev()
+  let c1 = input.cursor
+  # Check Difference
+  let
+    delta = c0 - c1
+    str = input.toUnsafe()
+  # Move String Content to Previous
+  if delta > 0:
+    let l = len(input.str)      
+    if c0 < l:
+      copyMem(addr str[c1], addr str[c0], l - c0)
     # Trim String Length
-    input.str.setLen(input.str.len - delta)
+    setLen(input.str, l - delta)
 
 proc delete*(input: ptr UTF8Input) =
   if input.cursor < len(input.str):
     # Delete Next Char
-    input.forward()
+    input.next()
     input.backspace()
+
+# --------------------
+# Utf8 Insertion Procs
+# --------------------
 
 proc insert*(input: ptr UTF8Input, str: cstring, l: int32) =
   let # Constants
     i = input.cursor
-    pl = len(input.str)
+    l0 = len(input.str)
+    l1 = l0 + l
   # Expand String
-  input.str.setLen(
-    len(input.str) + l)
-  if i < pl: # Somewhere
-    moveMem(addr input.str[i + l],
-      addr input.str[i], len(input.str) - i)
-  # Copy cString to String
-  copyMem(addr input.str[i], str, l)
+  setLen(input.str, l1)
+  let str0 = input.toUnsafe()
+  # Free space for new string
+  if i < l0:
+    moveMem(addr str0[i + l], addr str0[i], l1 - i)
+  copyMem(addr str0[i], str, l)
   # Forward Index
   input.cursor += l
