@@ -51,11 +51,11 @@ widget GUILabel:
         desc = metrics.desc
       self.cy =
         case self.v_align
-        of veTop: y
+        of veTop: y - desc
         of veMiddle:
           y + (h - base) shr 1
         of veBottom:
-          y + h - asc - desc
+          y + h - asc
 
   method draw(ctx: ptr CTXRender) =
     ctx.color getApp().colors.text

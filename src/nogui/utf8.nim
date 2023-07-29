@@ -55,7 +55,7 @@ iterator runes16*(str: string): uint16 =
 # UTF8 Current Manipulator
 # ------------------------
 
-proc check*(input: ptr UTF8Input, user: pointer): bool =
+proc check*(input: ptr UTF8Input, user: pointer): bool {.inline.} =
   result = input.used == user
 
 proc focus*(input: ptr UTF8Input, user: pointer) =

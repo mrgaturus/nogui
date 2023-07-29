@@ -120,6 +120,7 @@ controller CONPlayground:
       scrollbar(addr self.v1, false).locateW(160, 340, 268)
       scrollbar(addr self.v2, true).locateH(440, 60, 268)
       # Locate Top Labels
+      panel().locate(textRect)
       label("Top-Left", hoLeft, veTop).locate(textRect)
       label("Top-Middle", hoMiddle, veTop).locate(textRect)
       label("Top-Right", hoRight, veTop).locate(textRect)
