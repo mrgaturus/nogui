@@ -539,4 +539,6 @@ macro child(self: GUIWidget, body: untyped) =
 template child*[T: GUIWidget](self: T, body: untyped): T =
   # Warp Childrens
   let tmp = self
-  child(tmp, body); tmp
+  block: child(tmp, body)
+  # Return Widget
+  tmp
