@@ -130,6 +130,10 @@ proc toHSV*(rgb: RGBColor): HSVColor =
     result.h += 360
   result.h /= 360
 
+# -----------------------
+# RGB/Packed Color Values
+# -----------------------
+
 proc toPacked*(rgb: RGBColor): cuint =
   let
     r = cuint(rgb.r * 255.0)
@@ -137,6 +141,12 @@ proc toPacked*(rgb: RGBColor): cuint =
     b = cuint(rgb.b * 255.0)
   # Pack Color Channels to 32bit
   r or (g shl 8) or (b shl 16) or (0xFF shl 24)
+
+proc toRGB*(rgb: cuint): RGBColor =
+  const rcp = 1.0 / 0xFF
+  result.r = float32(rgb and 0xFF) * rcp
+  result.g = float32(rgb shr 8 and 0xFF) * rcp
+  result.b = float32(rgb shr 16 and 0xFF) * rcp
 
 # ---------------------
 # FAST MATH C-FUNCTIONS

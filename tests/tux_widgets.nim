@@ -19,6 +19,7 @@ import nogui/ux/widgets/[
   slider,
   textbox
 ]
+import nogui/ux/widgets/color/hue
 
 # -----------------------
 # Simple Widget Forwarder
@@ -78,6 +79,7 @@ controller CONPlayground:
     widget: GUIDummy
     text: UTF8Input
     color: RGBColor
+    hsv0: HSVColor
 
   callback cbHelloWorld:
     echo "hello world"
@@ -132,6 +134,7 @@ controller CONPlayground:
       label("Bottom-Left", hoLeft, veBottom).locate(textRect)
       label("Bottom-Middle", hoMiddle, veBottom).locate(textRect)
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
+      hue0bar(addr self.hsv0).locateH(400, 400, 128)
 
   new conplayground(a, b: cint):
     # Set New Values
