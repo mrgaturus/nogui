@@ -19,7 +19,7 @@ import nogui/ux/widgets/[
   slider,
   textbox
 ]
-import nogui/ux/widgets/color/hue
+import nogui/ux/widgets/color/[hue, saturate]
 
 # -----------------------
 # Simple Widget Forwarder
@@ -117,7 +117,7 @@ controller CONPlayground:
         textbox(addr self.text).locateW(10, 35, 100)
       # Locate Color Bar
       colorbar(addr self.color).locate(20, 200, 128, 128)
-      colorbar(addr self.color).locate(20, 340, 128, 128)
+      colorbar(addr self.color).locate(80, 400, 148, 128)
       # Locate Scrollbars
       scrollbar(addr self.v1, false).locateW(160, 340, 268)
       scrollbar(addr self.v2, true).locateH(440, 60, 268)
@@ -135,6 +135,7 @@ controller CONPlayground:
       label("Bottom-Middle", hoMiddle, veBottom).locate(textRect)
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
       hue0bar(addr self.hsv0).locateH(400, 400, 128)
+      color0square(addr self.hsv0).locate(265, 400, 128, 128)
 
   new conplayground(a, b: cint):
     # Set New Values
