@@ -477,9 +477,6 @@ proc line*(ctx: ptr CTXRender, a,b: CTXPoint) =
   ctx.triangle(9, 0,4,5)
 
 proc circle*(ctx: ptr CTXRender, p: CTXPoint, r: float32) =
-  # Move X & Y to Center
-  unsafeAddr(p.x)[] += r
-  unsafeAddr(p.y)[] += r
   let # Angle Constants
     n = int32 5 * fastSqrt(r)
     theta = 2 * PI / float32(n)

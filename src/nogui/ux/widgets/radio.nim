@@ -23,19 +23,19 @@ widget GUIRadio:
       app = getApp()
       rect = addr self.rect
       colors = addr app.colors
-    # Select Color State
-    ctx.color self.optionColor()
+      # Locate Point
+      r = rect.h shr 1
+      p = point(rect.x + r, rect.y + r)
+      # Circle Radious Size
+      radius = float32(r)
     # Fill Radio Background
-    ctx.circle point(
-      rect.x, rect.y),
-      float32(rect.h shr 1)
+    ctx.color self.optionColor()
+    ctx.circle(p, radius)
     # Set Text Color
     ctx.color(colors.text)
     # If Checked Draw Circle Mark
     if self.check[] == self.expected:
-      ctx.circle point(
-        rect.x + 4, rect.y + 4),
-        float32(rect.h shr 1 - 4)
+      ctx.circle(p, radius * 0.5)
     # Draw Text Next To Circle
     ctx.text( # Centered Vertically
       rect.x + rect.h + 4, 
