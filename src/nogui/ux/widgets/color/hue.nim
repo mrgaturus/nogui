@@ -1,3 +1,5 @@
+from math import 
+  sin, cos, arctan2, log2, PI
 import base
 
 # ----------------------
@@ -92,13 +94,128 @@ widget GUIHue0Bar of GUIColor0Base:
 # ----------------
 
 widget GUIHue0Circle of GUIColor0Base:
+  attributes:
+    clicked: bool
+
   new hue0circle(hsv: ptr HSVColor, slave = false):
     result.hsv = hsv
     result.slave = slave
     result.flags = wMouse
 
+  proc drawHue(ctx: ptr CTXRender) =
+    let
+      rect = addr self.rect
+      r = rect(self.rect)
+      # Calculate Aspect Ratio
+      ra0 = 0.5 * float32 min(rect.w, rect.h)
+      ra1 = ra0 * 0.75
+      # Locate Center Point
+      cx = (r.x + r.xw) * 0.5
+      cy = (r.y + r.yh) * 0.5
+      # Find Number or Sides
+      n = int32(1 shl ra0.log2.int) shr 1
+      rcp = 1.0 / float32(n)
+      theta = 2 * PI * rcp
+    var
+      hue = HSVColor(h: 0.0, s: 1.0, v: 1.0)
+      # Circle Position
+      x, y: float32
+      o, ox, oy: float32
+      # Elements
+      i, j, k: int32
+    # Reserve Points
+    ctx.addVerts(n shl 2, n * 18)
+    # Batch Circle Points
+    while i < n:
+      # Calculate Color
+      ctx.color(hue.toRGB.toPacked)
+      # Direction Normals
+      ox = cos(o); oy = sin(o)
+      # Point Position
+      block: # Outer Vertex
+        x = cx + ox * ra0
+        y = cy + oy * ra0
+        # Outer Vertex
+        ctx.vertex(j, x, y)
+        ctx.vertexAA(j + 1, x + ox, y + oy)
+      block: # Inner Vertex
+        x = cx + ox * ra1
+        y = cy + oy * ra1
+        ctx.vertex(j + 2, x, y)
+        ctx.vertexAA(j + 3, x - ox, y - oy)
+      # Triangle Elements
+      if i + 1 < n:
+        ctx.quad(k + 0, j, j + 4, j + 6, j + 2)
+        ctx.quad(k + 6, j, j + 1, j + 5, j + 4)
+        ctx.quad(k + 12, j + 2, j + 6, j + 7, j + 3)
+      else: # Last With First
+        ctx.quad(k + 0, j, 0, 2, j + 2)
+        ctx.quad(k + 6, j, j + 1, 1, 0)
+        ctx.quad(k + 12, j + 2, 2, 3, j + 3)
+      # Next Circle Triangle
+      i += 1; j += 4; k += 18
+      # Next Angle Hue
+      hue.h += rcp
+      o += theta
+
+  proc drawCursor(ctx: ptr CTXRender) =
+    let
+      rect = addr self.rect
+      r = rect(self.rect)
+      # Calculate Aspect Ratio
+      radius = float32 min(rect.w, rect.h)
+      ra0 = 0.4375 * radius
+      ra1 = 0.05 * radius
+      # Get Color
+      app = getApp()
+      h = self.hsv.h
+      hsv = HSVColor(h: h, s: 1.0, v: 1.0)
+      # Colors
+      rgb = hsv.toRGB
+      item = toRGB app.colors.item
+      color0 = contrast(item, rgb)
+      # Cursor Location
+      rad = 2 * PI * h
+      x = (r.x + r.xw) * 0.5 + cos(rad) * ra0
+      y = (r.y + r.yh) * 0.5 + sin(rad) * ra0
+      # Create Point
+      p = point(x, y)
+    # Render Color Circles
+    ctx.color color0.toPacked
+    ctx.circle(p, ra1)
+    ctx.color rgb.toPacked
+    ctx.circle(p, ra1 * 0.75)
+
   method draw(ctx: ptr CTXRender) =
-    discard
+    ctx.fill rect(self.rect)
+    self.drawHue(ctx)
+    self.drawCursor(ctx)
+    ctx.color 0xFFFFFFFF'u32
 
   method event(state: ptr GUIState) =
-    discard
+    let
+      rect = addr self.rect
+      radius = float32 min(rect.w, rect.h)
+      r = rect(self.rect)
+      # Radius Range
+      ra0 = 0.5 * radius
+      ra1 = 0.75 * ra0
+      # Check Distance
+      dx = float32(state.mx) - (r.x + r.xw) * 0.5
+      dy = float32(state.my) - (r.y + r.yh) * 0.5
+    # Clicked Test
+    var clicked = self.clicked
+    # Check if Inside Circle
+    if state.kind == evCursorClick:
+      let dist = dx * dx + dy * dy
+      clicked = dist >= ra1 * ra1 and dist <= ra0 * ra0
+    # Calculate Cursor Angle
+    elif self.test(wGrab) and clicked:
+      var angle = arctan2(dy, dx)
+      if angle < 0.0:
+        angle += 2 * PI
+      self.hsv.h = angle / PI * 0.5
+    else: clicked = false
+    # Replace Clicked
+    self.clicked = clicked
+

@@ -136,6 +136,7 @@ controller CONPlayground:
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
       hue0bar(addr self.hsv0).locateH(400, 400, 128)
       color0square(addr self.hsv0).locate(265, 400, 128, 128)
+      hue0circle(addr self.hsv0).locate(500, 400, 150, 150)
 
   new conplayground(a, b: cint):
     # Set New Values
