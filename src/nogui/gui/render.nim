@@ -277,7 +277,7 @@ proc addVerts*(ctx: ptr CTXRender, vSize, eSize: int32) =
 # ----------------------
 
 ## X,Y,WHITEU,WHITEV,COLOR
-proc vertex(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
+proc vertex*(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
   let vert = addr ctx.pVert[i]
   vert.x = x # Position X
   vert.y = y # Position Y
@@ -286,7 +286,7 @@ proc vertex(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
   vert.color = ctx.color # Color RGBA
 
 ## X,Y,WHITEU,WHITEV,COLORAA
-proc vertexAA(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
+proc vertexAA*(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
   let vert = addr ctx.pVert[i]
   vert.x = x # Position X
   vert.y = y # Position Y
@@ -295,7 +295,7 @@ proc vertexAA(ctx: ptr CTXRender; i: int32, x, y: float32) {.inline.} =
   vert.color = ctx.colorAA # Color Antialias
 
 # X,Y,U,V,COLOR
-proc vertexUV(ctx: ptr CTXRender; i: int32; x, y: float32; u, v: int16) {.inline.} =
+proc vertexUV*(ctx: ptr CTXRender; i: int32; x, y: float32; u, v: int16) {.inline.} =
   let vert = addr ctx.pVert[i]
   vert.x = x # Position X
   vert.y = y # Position Y
@@ -321,6 +321,19 @@ proc triangle*(ctx: ptr CTXRender; i: int32; a, b, c: int32) {.inline.} =
   element[0] = cursor + cast[uint16](a)
   element[1] = cursor + cast[uint16](b)
   element[2] = cursor + cast[uint16](c)
+
+proc quad*(ctx: ptr CTXRender; i: int32; a, b, c, d: int32) =
+  let 
+    element = cast[CTXElementMap](addr ctx.pElem[i])
+    cursor = ctx.cursor
+  # First Triangle
+  element[0] = cursor + cast[uint16](a)
+  element[1] = cursor + cast[uint16](b)
+  element[2] = cursor + cast[uint16](c)
+  # Second Triangle
+  element[3] = cursor + cast[uint16](c)
+  element[4] = cursor + cast[uint16](d)
+  element[5] = cursor + cast[uint16](a)
 
 # -----------------------
 # GUI CLIP/COLOR LEVELS PROCS
@@ -478,34 +491,35 @@ proc line*(ctx: ptr CTXRender, a,b: CTXPoint) =
 
 proc circle*(ctx: ptr CTXRender, p: CTXPoint, r: float32) =
   let # Angle Constants
-    n = int32 5 * fastSqrt(r)
+    n = int32 6 * fastSqrt(r)
     theta = 2 * PI / float32(n)
+  var
+    x, y: float32
+    o, ox, oy: float32
+    # Elements
+    i, j, k: int32
   # Circle Triangles and Elements
   ctx.addVerts(n shl 1, n * 9)
-  var # Iterator
-    o, ox, oy: float32
-    i, j, k: int32
+  # Batch Circle Points
   while i < n:
     # Direction Normals
     ox = cos(o); oy = sin(o)
-    # Vertex Information
-    ctx.vertex(j, # Solid
-      p.x + ox * r, 
-      p.y + oy * r)
-    ctx.vertexAA(j + 1, # AA
-      ctx.pVert[j].x + ox,
-      ctx.pVert[j].y + oy)
+    # Point Position
+    x = p.x + ox * r
+    y = p.y + oy * r
+    # Circle Vertex
+    ctx.vertex(j, x, y)
+    ctx.vertexAA(j + 1, x + ox, y + oy)
     if i + 1 < n:
       ctx.triangle(k, 0, j, j + 2)
-      ctx.triangle(k + 3, j, j + 1, j + 2)
-      ctx.triangle(k + 6, j + 1, j + 2, j + 3)
+      ctx.quad(k + 3, j, j + 1, j + 3, j + 2)
     else: # Connect Last With First
       ctx.triangle(k, 0, j, 0)
-      ctx.triangle(k + 3, j, 1, 0)
-      ctx.triangle(k + 6, j, j + 1, 1)
+      ctx.quad(k + 3, j, j + 1, 1, 0)
     # Next Circle Triangle
     i += 1; j += 2; k += 9
-    o += theta; # Next Angle
+    # Next Angle
+    o += theta
 
 # ----------------------------
 # TEXT & ICONS RENDERING PROCS
