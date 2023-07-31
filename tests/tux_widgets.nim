@@ -12,6 +12,7 @@ import nogui/utf8
 import nogui/ux/widgets/[
   button,
   check,
+  color_bad,
   color,
   label,
   radio,
@@ -134,14 +135,17 @@ controller CONPlayground:
       label("Bottom-Left", hoLeft, veBottom).locate(textRect)
       label("Bottom-Middle", hoMiddle, veBottom).locate(textRect)
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
-      hue0bar(addr self.hsv0).locateH(400, 400, 128)
-      color0square(addr self.hsv0).locate(265, 400, 128, 128)
-      hue0circle(addr self.hsv0).locate(500, 400, 150, 150)
+      colorcube(addr self.hsv0).locate(265, 400, 150, 150)
+      colorwheel(addr self.hsv0).locate(450, 400, 150, 150)
+      #hue0bar(addr self.hsv0).locateH(425, 400, 150)
+      #color0square(addr self.hsv0).locate(265, 400, 150, 150)
+      #hue0circle(addr self.hsv0).locate(500, 400, 150, 150)
 
   new conplayground(a, b: cint):
     # Set New Values
     result.a = a
     result.b = b
+    echo sizeof(result[])
     # Initialize Values
     interval(result.v1, 20, 123)
     interval(result.v2, 500, 268 * 8)

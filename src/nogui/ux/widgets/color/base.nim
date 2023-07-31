@@ -38,11 +38,5 @@ widget GUIColor0Base:
     slave: bool
     hsv: ptr HSVColor
 
-  proc supervisor*: GUIWidget =
-    # Decide which flags use
-    if self.slave:
-      self.parent
-    else: self
-
 # Export Relevant Modules
 export prelude, values, GUIColor0Base

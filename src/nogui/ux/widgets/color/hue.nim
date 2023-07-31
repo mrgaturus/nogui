@@ -100,7 +100,8 @@ widget GUIHue0Circle of GUIColor0Base:
   new hue0circle(hsv: ptr HSVColor, slave = false):
     result.hsv = hsv
     result.slave = slave
-    result.flags = wMouse
+    if not slave:
+      result.flags = wMouse
 
   proc drawHue(ctx: ptr CTXRender) =
     let
@@ -187,10 +188,8 @@ widget GUIHue0Circle of GUIColor0Base:
     ctx.circle(p, ra1 * 0.75)
 
   method draw(ctx: ptr CTXRender) =
-    ctx.fill rect(self.rect)
     self.drawHue(ctx)
     self.drawCursor(ctx)
-    ctx.color 0xFFFFFFFF'u32
 
   method event(state: ptr GUIState) =
     let
@@ -199,7 +198,6 @@ widget GUIHue0Circle of GUIColor0Base:
       r = rect(self.rect)
       # Radius Range
       ra0 = 0.5 * radius
-      ra1 = 0.75 * ra0
       # Check Distance
       dx = float32(state.mx) - (r.x + r.xw) * 0.5
       dy = float32(state.my) - (r.y + r.yh) * 0.5
@@ -208,7 +206,7 @@ widget GUIHue0Circle of GUIColor0Base:
     # Check if Inside Circle
     if state.kind == evCursorClick:
       let dist = dx * dx + dy * dy
-      clicked = dist >= ra1 * ra1 and dist <= ra0 * ra0
+      clicked = dist <= ra0 * ra0
     # Calculate Cursor Angle
     elif self.test(wGrab) and clicked:
       var angle = arctan2(dy, dx)
@@ -218,4 +216,3 @@ widget GUIHue0Circle of GUIColor0Base:
     else: clicked = false
     # Replace Clicked
     self.clicked = clicked
-

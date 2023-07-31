@@ -1,158 +1,100 @@
-# TODO: Replace by a color wheel
-import ../prelude
-import ../../values
+import ./color/[base, hue, saturate]
 
-type
-  GRABColorBar = enum
-    gNothing, gBar, gSquare
-const # Not Alpha Colors
-  CARET = uint32 0x88FFFFFF
-  BLACK = uint32 0xFF000000
-  WHITE = high uint32
-let hueSix = # Hue Six Breakpoints
-  [0xFF0000FF'u32, 0xFF00FFFF'u32, 
-   0xFF00FF00'u32, 0xFFFFFF00'u32,
-   0xFFFF0000'u32, 0xFFFF00FF'u32]
+# ----------------
+# Simple Color Bar
+# ----------------
 
-widget GUIColorBar:
-  attributes:
-    color: ptr RGBColor
-    # Cache Colors and Hue
-    pColor: RGBColor
-    hColor: GUIColor
-    pHSV: HSVColor
-    # Mouse Grab Status
-    status: GRABColorBar
-
-  new colorbar(color: ptr RGBColor):
+widget GUIColorCube:
+  new colorcube(hsv: ptr HSVColor):
+    result.add hue0bar(hsv)
+    result.add color0square(hsv)
     result.flags = wMouse
-    # 100x100 minimun size
-    result.minimum(100, 100)
-    # Widget Attributes
-    result.color = color
-    # Allways Invalidate Color
-    if color[] == result.pColor:
-      result.pColor.r = 1
+
+  method layout =
+    let 
+      asc = getApp().font.asc shr 1
+      bar = addr self.first.metrics
+      square = addr self.last.metrics
+      # Size metrics
+      h = self.metrics.h
+      w = self.metrics.w
+      # Bar Offset
+      o = w - bar.minW
+    # Arrange Hue Bar
+    bar.h = h
+    bar.w = bar.minW
+    bar.x = o
+    # Arrange Hue Square
+    square.h = h
+    square.w = o - asc
+
+# -------------------
+# Simple Color Wheels
+# -------------------
+
+widget GUIColorWheel:
+  attributes:
+    hold: GUIWidget
+
+  new colorwheel(hsv: ptr HSVColor):
+    let 
+      wheel = hue0circle(hsv)
+      square = color0square(hsv)
+    # Remove Widget Flags
+    wheel.flags = wHidden
+    square.flags = wHidden
+    # Add Widgets
+    result.add wheel
+    result.add square
+    result.flags = wMouse
 
   method draw(ctx: ptr CTXRender) =
-    var rect = rect(self.rect)
-    # 1 -- Check if HSV needs update
-    if self.color[] != self.pColor:
-      # Change Prev Color
-      self.pColor = self.color[]
-      # Change Prev HSV
-      var nHSV: HSVColor
-      nHSV = toHSV(self.pColor)
-      if nHSV.s == 0: # Hue
-        nHSV.h = self.pHSV.h
-      self.pHSV = nHSV
-      # Change Hue RGBA
-      nHSV.s = 1; nHSV.v = 1
-      self.hColor = block:
-        var hRGB: RGBColor
-        hRGB = nHSV.toRGB
-        hRGB.toPacked()
-    # 2 -- Draw Saturation / Hue Quad
-    ctx.addVerts(8, 12); rect.xw -= 25
-    # White/Color Gradient
-    ctx.vertexCOL(0, rect.x, rect.y, WHITE)
-    ctx.vertexCOL(1, rect.xw, rect.y, self.hColor)
-    ctx.vertexCOL(2, rect.x, rect.yh, WHITE)
-    ctx.vertexCOL(3, rect.xw, rect.yh, self.hColor)
-    # White/Color Elements
-    ctx.triangle(0, 0,1,2)
-    ctx.triangle(3, 1,2,3)
-    # Black/Color Gradient
-    ctx.vertexCOL(4, rect.x, rect.y, 0)
-    ctx.vertexCOL(5, rect.xw, rect.y, 0)
-    ctx.vertexCOL(6, rect.x, rect.yh, BLACK)
-    ctx.vertexCOL(7, rect.xw, rect.yh, BLACK)
-    # Black/Color Elements
-    ctx.triangle(6, 4,5,6)
-    ctx.triangle(9, 5,6,7)
-    # 3 -- Draw Color Bar
-    ctx.addVerts(14, 36)
-    # Move to X to Bar
-    rect.xw += 25
-    rect.x = rect.xw - 20
-    # Prepare Y coord
-    rect.yh = rect.y
-    block: # Draw Hue Gradient
-      let h = # Six Parts
-        self.rect.h / 6
-      var # Iterator
-        i, j, k: int32
-        hue: uint32
-      while i < 7:
-        if i + 1 < 7: # Quad Elements
-          ctx.triangle(k, j, j + 1, j + 2)
-          ctx.triangle(k + 3, j + 1, j + 2, j + 3)
-          # Hue Color
-          hue = hueSix[i]
-        else: hue = hueSix[0]
-        # Bar Vertexs Segment
-        ctx.vertexCOL(j, rect.x, rect.yh, hue)
-        ctx.vertexCOL(j + 1, rect.xw, rect.yh, hue)
-        rect.yh += h # Next Y
-        # Next Hue Quad
-        i += 1; j += 2; k += 6
-      rect.yh -= h
-    # 4 -- Draw Cursors
-    block: # Hue Cursor
-      let y = rect.y + 
-        (rect.yh - rect.y) * self.pHSV.h
-      # Clip Cursor Dimensions
-      if y - 3 > rect.y: rect.y = y - 3
-      if y + 3 < rect.yh: rect.yh = y + 3
-      # Draw Cursor
-      ctx.color(CARET); ctx.fill(rect)
-      ctx.color(BLACK); ctx.line(rect, 1)
-    # Saturation/Value Cursor
-    rect = rect(self.rect); block:
-      rect.xw -= 25
-      let # X/Y Position
-        x = rect.x + (rect.xw - rect.x) * self.pHSV.s
-        y = rect.y + (rect.yh - rect.y) * (1 - self.pHSV.v)
-      # Clip Cursor Dimensions
-      if x - 5 > rect.x: rect.x = x - 5
-      if x + 5 < rect.xw: rect.xw = x + 5
-      if y - 5 > rect.y: rect.y = y - 5
-      if y + 5 < rect.yh: rect.yh = y + 5
-      # Draw Cursor
-      ctx.color(CARET); ctx.fill(rect)
-      ctx.color(BLACK); ctx.line(rect, 1)
+    # Draw Two Widgets
+    self.first.draw(ctx)
+    self.last.draw(ctx)
+    discard
+
+  method layout =
+    let
+      wheel = addr self.first.metrics
+      square = addr self.last.metrics
+      # Calculate Center Point
+      metrics = addr self.metrics
+      w = metrics.w
+      h = metrics.h
+      cx = float32(w) * 0.5
+      cy = float32(h) * 0.5
+      # Calculate Radius
+    const cos45div2 = 0.3535533905932738 * 0.7
+    let radius = cos45div2 * float32 min(w, h)
+    # Arrange Wheel as size
+    wheel.w = w
+    wheel.h = h
+    # Locate Square Position
+    square.x = int16(cx - radius)
+    square.y = int16(cy - radius)
+    square.w = int16(radius) shl 1
+    square.h = int16(radius) shl 1
 
   method event(state: ptr GUIState) =
+    const wPropagate = wVisible or wMouse
+    # TODO: event propagation...
     if state.kind == evCursorClick:
-      let delta = state.mx - self.rect.x
-      self.status =
-        if delta < self.rect.w - 25: gSquare
-        elif delta > self.rect.w - 20: gBar
-        else: gNothing # Grab to Dead Zone
-    elif self.test(wGrab):
-      let h = clamp(
-        (state.my - self.rect.y) / 
-        self.rect.h, 0, 1)
-      case self.status:
-      of gSquare:
-        self.pHSV.s = clamp(
-          (state.mx - self.rect.x) / 
-          (self.rect.w - 25), 0, 1)
-        self.pHSV.v = 1 - h
-        # Change Color
-        self.pColor = toRGB(self.pHSV)
-        self.color[] = self.pColor
-      of gBar:
-        var nHSV = self.pHSV
-        nHSV.h = h
-        # Change Color
-        self.pHSV = nHSV
-        self.pColor = toRGB(self.pHSV)
-        self.color[] = self.pColor
-        # Change Hue Color
-        nHSV.s = 1; nHSV.v = 1
-        self.hColor = block:
-          var hRGB: RGBColor
-          hRGB = toRGB(nHSV)
-          hRGB.toPacked()
-      of gNothing: discard
+      var hold: GUIWidget
+      for widget in [self.first, self.last]:
+        # TODO: event propagation pls...
+        widget.flags = wPropagate
+        if widget.pointOnArea(state.mx, state.my):
+          hold = widget
+        widget.flags = wHidden
+      # Replace Hold
+      self.hold = hold
+    elif state.kind == evCursorRelease:
+      self.hold = nil
+    # TODO: event propagation pls x2...
+    if not isNil(self.hold):
+      let hold = self.hold
+      # Execute Event
+      hold.flags = self.flags
+      hold.event(state)
+      hold.flags = wHidden
