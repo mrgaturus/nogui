@@ -28,9 +28,9 @@ widget GUIColorCube:
     square.h = h
     square.w = o - asc
 
-# -------------------
-# Simple Color Wheels
-# -------------------
+# ------------------
+# Color Wheel Square
+# ------------------
 
 widget GUIColorWheel:
   attributes:
@@ -52,7 +52,6 @@ widget GUIColorWheel:
     # Draw Two Widgets
     self.first.draw(ctx)
     self.last.draw(ctx)
-    discard
 
   method layout =
     let
@@ -98,3 +97,23 @@ widget GUIColorWheel:
       hold.flags = self.flags
       hold.event(state)
       hold.flags = wHidden
+
+# --------------------
+# Color Wheel Triangle
+# --------------------
+
+widget GUIColorWheel3:
+  attributes:
+    hold: GUIWidget
+
+  new colorwheel3(hsv: ptr HSVColor):
+    let 
+      wheel = hue0circle(hsv)
+      square = color0square(hsv)
+    # Remove Widget Flags
+    wheel.flags = wHidden
+    square.flags = wHidden
+    # Add Widgets
+    result.add wheel
+    result.add square
+    result.flags = wMouse

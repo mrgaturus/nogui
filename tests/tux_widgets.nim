@@ -137,6 +137,7 @@ controller CONPlayground:
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
       colorcube(addr self.hsv0).locate(265, 400, 150, 150)
       colorwheel(addr self.hsv0).locate(450, 400, 150, 150)
+      sv0triangle(addr self.hsv0).locate(655, 400, 150, 150)
       #hue0bar(addr self.hsv0).locateH(425, 400, 150)
       #color0square(addr self.hsv0).locate(265, 400, 150, 150)
       #hue0circle(addr self.hsv0).locate(500, 400, 150, 150)
