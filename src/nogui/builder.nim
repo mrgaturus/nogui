@@ -401,6 +401,10 @@ func wConstructor(self, inject, fn: NimNode): NimNode =
     stmts = fn[2]
     # Translate Parameters
     params = wConstructorParams(self, declare)
+    body = quote do: 
+      new result
+      `inject`
+      `stmts`
   # Expect Statment List
   expectKind(stmts, nnkStmtList)
   # Create Proc Definition
@@ -411,8 +415,8 @@ func wConstructor(self, inject, fn: NimNode): NimNode =
     params,
     newEmptyNode(),
     newEmptyNode(),
-    # Inject -> Statements
-    inject.add(stmts)
+    # Injected
+    body
   )
 
 # -------------------------
@@ -484,17 +488,17 @@ macro widget*(declare, body: untyped) =
     # Unpack Idents
     name = idents[0]
     super = idents[1]
-    # Injector
+    # Method Injector
     v = ident"v"
     k = bindSym"GUIMethods"
     inject0 = vtableInject(name, v)
-    # Inject Initializer
-    inject = quote do:
-      new result
+    inject1 = quote do:
       block:
         var `v`: ptr `k`
         `inject0`
         result.vtable = `v`
+    # Inject Statements Intializer
+    inject = nnkStmtList.newTree(inject1)
   # Create Widget VTable and Structure
   let 
     methods = # Create new VTable
@@ -505,15 +509,13 @@ macro widget*(declare, body: untyped) =
   # Return Widget Structure
   mcMethods[name.strVal] = methods
   result = nnkStmtList.newTree(struct, magic)
+  #echo result.repr
 
 macro controller*(declare, body: untyped) =
   let
     dummy = newEmptyNode()
     idents = wDeclare(declare, dummy)
-    # Simple Injector
-    inject = quote do:
-      new result
-      discard
+    inject = nnkStmtList.newTree()
   # Return Controller Structure
   result = wStructure(idents, inject, dummy, body)
   #echo result.repr
