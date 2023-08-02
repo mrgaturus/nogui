@@ -1,8 +1,7 @@
 from ../builder import widget
 # Import Widget and Rendering
-import ../gui/[widget, render, atlas, signal]
+import ../gui/[widget, event, render, atlas, signal]
 # Import Event and Callback Stuff
-from ../gui/event import GUIState, GUIEvent
 from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
 from ../../nogui import getApp, width, index
@@ -45,7 +44,10 @@ export atlas except
   createTexture,
   checkTexture
 # Export Event and Callback Stuff
-export GUIState, GUIEvent
+export event except
+  newGUIState,
+  translateX11Event,
+  utf8state
 export signal except newGUIQueue
 export pushTimer, stopTimer
 # Export Relevant Global State
