@@ -504,8 +504,7 @@ macro widget*(declare, body: untyped) =
     magic = vtableMagic(name, methods)
   # Return Widget Structure
   mcMethods[name.strVal] = methods
-  result = nnkStmtList.newTree(magic, struct)
-  #echo result.repr
+  result = nnkStmtList.newTree(struct, magic)
 
 macro controller*(declare, body: untyped) =
   let

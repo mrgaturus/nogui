@@ -1,6 +1,7 @@
 # -------------------
 # SIMPLE LOGGER PROCS
 # -------------------
+from strutils import join
 
 type
   LOGKind* = enum
@@ -14,13 +15,8 @@ proc log*(kind: LOGKind, x: varargs[string, `$`]) =
     "\e[1;33m[WARNING]\e[00m ",
     "\e[1;32m[INFO]\e[00m "
   ]
-  
-  # Print Colored Header
-  write(stdout, headers[ord kind])
-  # Print Passed Data
-  for args in x:
-    write(stdout, args)
-  write(stdout, "\n")
+  # Show Log Message and it's data
+  echo headers[ord kind], x.join(" ")
 
 # -----------------------
 # SIMPLE DEBUGER TEMPLATE

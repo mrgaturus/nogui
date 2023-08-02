@@ -40,7 +40,7 @@ type
 # Application Destruction
 # -----------------------
 
-proc `=destroy`(app: var Application) =
+proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
   # Close Window and Queue
   close(app.window)
