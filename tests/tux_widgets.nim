@@ -19,7 +19,6 @@ import nogui/ux/widgets/[
   slider,
   textbox
 ]
-import nogui/ux/widgets/color/[hue, saturate]
 
 # -----------------------
 # Simple Widget Forwarder

@@ -9,7 +9,7 @@ widget GUIColor0Square:
   attributes:
     hsv: ptr HSVColor
     
-  new color0square(hsv: ptr HSVColor):
+  new sv0square(hsv: ptr HSVColor):
     result.hsv = hsv
     result.flags = wMouse
     # Minimun Width Size

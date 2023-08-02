@@ -1,4 +1,4 @@
-import ./color/[base, hue, saturate]
+import ./color/[base, hue, sv]
 
 # ----------------
 # Simple Color Bar
@@ -7,7 +7,7 @@ import ./color/[base, hue, saturate]
 widget GUIColorCube:
   new colorcube(hsv: ptr HSVColor):
     result.add hue0bar(hsv)
-    result.add color0square(hsv)
+    result.add sv0square(hsv)
     result.flags = wMouse
 
   new colorcube0triangle(hsv: ptr HSVColor):
@@ -44,7 +44,7 @@ widget GUIColorWheel:
   new colorwheel(hsv: ptr HSVColor):
     let 
       wheel = hue0circle(hsv)
-      square = color0square(hsv)
+      square = sv0square(hsv)
     # Remove Widget Flags
     wheel.flags = wHidden
     square.flags = wHidden
