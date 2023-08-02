@@ -5,10 +5,12 @@ import base
 # Saturate/Value Square
 # ---------------------
 
-widget GUIColor0Square of GUIColor0Base:
-  new color0square(hsv: ptr HSVColor, slave = false):
+widget GUIColor0Square:
+  attributes:
+    hsv: ptr HSVColor
+    
+  new color0square(hsv: ptr HSVColor):
     result.hsv = hsv
-    result.slave = slave
     result.flags = wMouse
     # Minimun Width Size
     let w = getApp().font.height
@@ -119,10 +121,12 @@ proc uvmap(tri: SV0Triangle, u, v: float32): CTXPoint =
 # Saturate/Value Triangle
 # -----------------------
 
-widget GUIColor0Triangle of GUIColor0Base:
-  new sv0triangle(hsv: ptr HSVColor, slave = false):
+widget GUIColor0Triangle:
+  attributes:
+    hsv: ptr HSVColor
+
+  new sv0triangle(hsv: ptr HSVColor):
     result.hsv = hsv
-    result.slave = slave
     result.flags = wMouse
     # Minimun Width Size
     let w = getApp().font.height

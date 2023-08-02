@@ -1,8 +1,12 @@
 import ../../prelude
-import ../../../values
+from ../../../values import
+  RGBColor,
+  HSVColor,
+  toRGB,
+  toPacked,
+  toHSV
 
-const # Not Alpha Colors
-  CARET* = uint32 0x88FFFFFF
+const # Gradient de-Banding
   BLACK* = uint32 0xFF000000
   WHITE* = high uint32
 let hueSix* = # Hue Six Breakpoints
@@ -29,14 +33,12 @@ proc contrast*(a, b: RGBColor): RGBColor =
     result.g = 1.0 - a.g
     result.b = 1.0 - a.b
 
-# ---------------
-# GUI Color Slave
-# ---------------
+# -----------
+# GUI Exports
+# -----------
 
-widget GUIColor0Base:
-  attributes: @public:
-    slave: bool
-    hsv: ptr HSVColor
-
-# Export Relevant Modules
-export prelude, values, GUIColor0Base
+# Export Widget
+export prelude
+# Export Color Values
+export RGBColor, HSVColor
+export toRGB, toPacked, toHSV

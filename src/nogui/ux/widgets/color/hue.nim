@@ -6,10 +6,12 @@ import base
 # Color Hue Vertical Bar
 # ----------------------
 
-widget GUIHue0Bar of GUIColor0Base:
-  new hue0bar(hsv: ptr HSVColor, slave = false):
+widget GUIHue0Bar:
+  attributes:
+    hsv: ptr HSVColor
+
+  new hue0bar(hsv: ptr HSVColor):
     result.hsv = hsv
-    result.slave = slave
     result.flags = wMouse
     # Minimun Width Size
     let w = getApp().font.height
@@ -93,15 +95,14 @@ widget GUIHue0Bar of GUIColor0Base:
 # Color Hue Circle
 # ----------------
 
-widget GUIHue0Circle of GUIColor0Base:
+widget GUIHue0Circle:
   attributes:
+    hsv: ptr HSVColor
     clicked: bool
 
-  new hue0circle(hsv: ptr HSVColor, slave = false):
+  new hue0circle(hsv: ptr HSVColor):
     result.hsv = hsv
-    result.slave = slave
-    if not slave:
-      result.flags = wMouse
+    result.flags = wMouse
 
   proc drawHue(ctx: ptr CTXRender) =
     let
