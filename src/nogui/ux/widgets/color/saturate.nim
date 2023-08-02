@@ -84,11 +84,6 @@ type
   SV0Triangle = array[3, CTXPoint]
   SV0TriangleEQ = array[3, float32]
 
-proc normalized*(p: CTXPoint): bool =
-  # Check inside normalized uv square
-  p.x >= 0.0 and p.y >= 0.0 and 
-  p.x <= 1.0 and p.y <= 1.0
-
 proc equation(a, b: CTXPoint): SV0TriangleEQ =
   result[0] = a.y - b.y
   result[1] = b.x - a.x
@@ -231,3 +226,5 @@ widget GUIColor0Triangle of GUIColor0Base:
       # Replace Saturation Value
       self.hsv.s = s
       self.hsv.v = v
+
+export GUIColor0Triangle

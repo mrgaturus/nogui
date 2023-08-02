@@ -118,7 +118,7 @@ controller CONPlayground:
         textbox(addr self.text).locateW(10, 35, 100)
       # Locate Color Bar
       colorbar(addr self.color).locate(20, 200, 128, 128)
-      colorbar(addr self.color).locate(80, 400, 148, 128)
+      #colorbar(addr self.color).locate(80, 400, 148, 128)
       # Locate Scrollbars
       scrollbar(addr self.v1, false).locateW(160, 340, 268)
       scrollbar(addr self.v2, true).locateH(440, 60, 268)
@@ -137,7 +137,9 @@ controller CONPlayground:
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
       colorcube(addr self.hsv0).locate(265, 400, 150, 150)
       colorwheel(addr self.hsv0).locate(450, 400, 150, 150)
-      sv0triangle(addr self.hsv0).locate(655, 400, 150, 150)
+      #sv0triangle(addr self.hsv0).locate(655, 400, 150, 150)
+      colorcube0triangle(addr self.hsv0).locate(100, 400, 150, 150)
+      colorwheel0triangle(addr self.hsv0).locate(655, 400, 150, 150)
       #hue0bar(addr self.hsv0).locateH(425, 400, 150)
       #color0square(addr self.hsv0).locate(265, 400, 150, 150)
       #hue0circle(addr self.hsv0).locate(500, 400, 150, 150)

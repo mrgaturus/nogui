@@ -10,6 +10,11 @@ widget GUIColorCube:
     result.add color0square(hsv)
     result.flags = wMouse
 
+  new colorcube0triangle(hsv: ptr HSVColor):
+    result.add hue0bar(hsv)
+    result.add sv0triangle(hsv)
+    result.flags = wMouse
+
   method layout =
     let 
       asc = getApp().font.asc shr 1
@@ -102,18 +107,85 @@ widget GUIColorWheel:
 # Color Wheel Triangle
 # --------------------
 
-widget GUIColorWheel3:
+widget GUIColorWheel0Triangle:
   attributes:
     hold: GUIWidget
 
-  new colorwheel3(hsv: ptr HSVColor):
+  new colorwheel0triangle(hsv: ptr HSVColor):
     let 
       wheel = hue0circle(hsv)
-      square = color0square(hsv)
+      triangle = sv0triangle(hsv)
     # Remove Widget Flags
     wheel.flags = wHidden
-    square.flags = wHidden
+    triangle.flags = wHidden
     # Add Widgets
     result.add wheel
-    result.add square
+    result.add triangle
     result.flags = wMouse
+
+  method layout =
+    let
+      wheel = addr self.first.metrics
+      triangle = addr self.last.metrics
+      # Calculate Center Point
+      metrics = addr self.metrics
+      w = metrics.w
+      h = metrics.h
+      cx = float32(w) * 0.5
+      cy = float32(h) * 0.5
+    # Calculate Radius
+    const cos45div2 = 0.3535533905932738
+    let radius = cos45div2 * float32 min(w, h)
+    # Arrange Wheel as size
+    wheel.w = w
+    wheel.h = h
+    # Arrangle Triangle
+    triangle.x = int16(cx - radius)
+    triangle.y = int16(cy - radius)
+    triangle.w = int16(radius) shl 1
+    triangle.h = int16(radius) shl 1
+
+  method draw(ctx: ptr CTXRender) = 
+    self.first.draw(ctx)
+    self.last.draw(ctx)
+
+  proc collide(x, y: float32): bool =
+    let 
+      sv = cast[GUIColor0Triangle](self.last)
+      # Calculate Center
+      rect = rect (sv.rect)
+      cx = (rect.x + rect.xw) * 0.5
+      cy = (rect.y + rect.yh) * 0.5
+      # Calculate Radius
+      w = rect.xw - rect.x
+      h = rect.yh - rect.y
+      radius = min(w, h) * 0.5
+      # Center Point
+      xx = x - cx
+      yy = y - cy
+      # Check if is inside
+      check0 = xx * xx + yy * yy < radius * radius
+      p = sv.triangle().xymap(xx * 0.6 + cx, yy * 0.6 + cy)
+      check1 = p.x >= 0.0 and p.y >= 0.0
+      check2 = p.x <= 1.0 and p.y <= 1.0
+    # Return Checks
+    check0 and check1 and check2
+
+  method event(state: ptr GUIState) =
+    # TODO: event propagation...
+    if state.kind == evCursorClick:
+      var hold = self.first
+      # Check Triangle
+      if self.collide(state.px, state.py):
+        hold = self.last
+      # Replace Hold
+      self.hold = hold
+    elif state.kind == evCursorRelease:
+      self.hold = nil
+    # TODO: event propagation pls x2...
+    if not isNil(self.hold):
+      let hold = self.hold
+      # Execute Event
+      hold.flags = self.flags
+      hold.event(state)
+      hold.flags = wHidden
