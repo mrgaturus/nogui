@@ -17,7 +17,8 @@ import nogui/ux/widgets/[
   radio,
   scroll,
   slider,
-  textbox
+  textbox,
+  menu,
 ]
 
 # -----------------------
@@ -90,6 +91,9 @@ controller CONPlayground:
         x: 500, y: 60,
         w: 400, h: 268
       )
+    let cube = colorcube(addr self.hsv0)
+    cube.metrics.minW = 128
+    cube.metrics.minH = 128
     # Arrange Each Widget
     dummy().child:
       button("Hello World", cb).locate(20, 10)
@@ -138,6 +142,20 @@ controller CONPlayground:
       #hue0bar(addr self.hsv0).locateH(425, 400, 150)
       #color0square(addr self.hsv0).locate(265, 400, 150, 150)
       #hue0circle(addr self.hsv0).locate(500, 400, 150, 150)
+
+      menu("File").child:
+        menuitem("New", cb)
+        menuitem("Open", cb)
+        menuseparator()
+        # Save Operations
+        menuitem("Save", cb)
+        menuitem("Save as", cb)
+        menuseparator("Color Wheel")
+        # Other Widget
+        cube
+        # Exit Operation
+        menuitem("About", cb)
+        menuitem("Exit", cb)
 
   new conplayground(a, b: cint):
     # Set New Values
