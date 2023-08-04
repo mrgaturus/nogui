@@ -27,10 +27,13 @@ widget GUICheckBox:
       rect.h, rect.h)
     # If Checked, Draw Mark
     if self.check[]:
+      let
+        size0 = rect.h shr 1
+        size1 = size0 shr 1
       ctx.color(colors.text)
       ctx.fill rect(
-        rect.x + 4, rect.y + 4,
-        rect.h - 8, rect.h - 8)
+        rect.x + size1, rect.y + size1,
+        rect.h - size0, rect.h - size0)
     # Draw Text Next to Checkbox
     ctx.color(colors.text)
     ctx.text( # Centered Vertically

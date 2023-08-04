@@ -22,6 +22,7 @@ widget GUISlider:
   method draw(ctx: ptr CTXRender) =
     let
       app = getApp()
+      font = addr app.font
       colors = addr app.colors
       rect = addr self.rect
     block: # Draw Slider
@@ -41,8 +42,8 @@ widget GUISlider:
       else: $self.value[].toInt
     ctx.color(colors.text)
     ctx.text( # On The Right Side
-      rect.x + rect.w - text.width - 4, 
-      rect.y - app.font.desc, text)
+      rect.x + rect.w - text.width - (font.size shr 1),
+      rect.y - font.desc, text)
 
   method event(state: ptr GUIState) =
     if self.test(wGrab):

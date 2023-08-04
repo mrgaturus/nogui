@@ -255,7 +255,7 @@ proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
       for widget in reverse(win.frame):
         if pointOnArea(widget, state.mx, state.my):
           result = widget; break # Frame Found
-    else: # Find Popups
+    else: # TODO: event propagation
       for widget in reverse(win.popup):
         if widget == win.frame: break # Not Found
         if widget.kind == wgPopup or pointOnArea(

@@ -8,7 +8,7 @@ widget GUIButton:
   new button(label: string, cb: GUICallback):
     let metrics = addr getApp().font
     # Set to Font Size Metrics
-    result.minimum(label.width, 
+    result.minimum(label.width + metrics.size,
       metrics.height - metrics.desc)
     # Widget Standard Flag
     result.flags = wMouse
@@ -22,6 +22,8 @@ widget GUIButton:
       rect = addr self.rect
       colors = addr app.colors
       metrics = addr app.font
+      # Text Center Offset
+      offset = self.metrics.minW - metrics.size
     # Select Color State
     ctx.color self.itemColor()
     # Fill Button Background
@@ -29,7 +31,7 @@ widget GUIButton:
     # Put Centered Text
     ctx.color(colors.text)
     ctx.text( # Draw Centered Text
-      rect.x + (rect.w - self.metrics.minW) shr 1, 
+      rect.x + (rect.w - offset) shr 1, 
       rect.y + metrics.asc shr 1, self.label)
 
   method event(state: ptr GUIState) =

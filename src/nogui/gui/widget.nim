@@ -17,6 +17,8 @@ const # Widget Bit-Flags
   wFocus* = uint8(1 shl 5) # C
   wHover* = uint8(1 shl 6) # A
   wGrab* = uint8(1 shl 7) # A
+  # -- Initializing Masks
+  wMouseKeyboard* = wMouse or wKeyboard
   # -- Status Checking Masks
   wHoverGrab* = wHover or wGrab
   wFocusCheck* = wVisible or wKeyboard
