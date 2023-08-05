@@ -77,13 +77,13 @@ widget GUIMenuItemCheck of GUIMenuItem:
 # GUI Menu Popover
 # ----------------
 
-widget GUIMenuItemPopover of GUIMenuItem:
-  attributes:
-    popover: GUIWidget
+widget GUIMenuItemPopup of GUIMenuItem:
+  attributes: @public:
+    popup: GUIWidget
 
-  new menuitem(label: string, popover: GUIWidget):
+  new menuitem(label: string, popup: GUIWidget):
     result.init0(label)
-    result.popover = popover
+    result.popup = popup
 
   method event(state: ptr GUIState) =
     if self.event0(state):
@@ -93,4 +93,17 @@ widget GUIMenuItemPopover of GUIMenuItem:
     # Draw Base
     self.draw0(ctx)
     # Draw Submenu Arrow
+    let
+      app = getApp()
+      rect = rect self.rect
+      desc = float32 app.font.desc
+      minH = float32 self.metrics.minH shr 1
+    # Fill Background
+    ctx.color(app.colors.text)
+    let
+      p0 = point(rect.xw - minH, rect.y - desc - desc)
+      p1 = point(rect.xw - minH, rect.yh + desc + desc)
+      p2 = point(rect.xw + desc * 1.5, (rect.y + rect.yh) * 0.5)
+    ctx.triangle(p0, p1, p2)
 
+export GUIMenuItemPopup

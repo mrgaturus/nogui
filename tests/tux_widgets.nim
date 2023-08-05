@@ -147,13 +147,15 @@ controller CONPlayground:
         menuitem("New", cb)
         menuitem("Open", cb)
         menuseparator()
-        # Save Operations
+
         menuitem("Save", cb)
         menuitem("Save as", cb)
         menuseparator("Color Wheel")
-        # Other Widget
         cube
-        # Exit Operation
+        
+        menu("Other Menu").child:
+          menuitem("Hello", cb)
+          menuitem("World", cb)
         menuitem("About", cb)
         menuitem("Exit", cb)
 
