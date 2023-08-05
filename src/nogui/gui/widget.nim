@@ -152,6 +152,30 @@ proc add*(self, widget: GUIWidget) =
   # Set Kind as Children
   widget.kind = wgChild
 
+proc replace*(self, widget: GUIWidget) =
+  var w {.cursor.}: GUIWidget
+  # Debug Check
+  assert self.kind == widget.kind
+  assert widget.kind == wgChild
+  # Replace Prev
+  if not isNil(self.prev):
+    w = self.prev
+    w.next = widget
+    widget.prev = w
+  # Replace Next
+  if not isNil(self.next):
+    w = self.next
+    w.prev = widget
+    widget.next = w
+  # Replace Parent
+  w = self.parent
+  widget.parent = w
+  if not isNil(self.parent):
+    if w.first == self:
+      w.first = widget
+    if w.last == self:
+      w.last = widget
+
 # --------------------------------------
 # WIDGET RECT PROCS layout & Mouse event
 # --------------------------------------
