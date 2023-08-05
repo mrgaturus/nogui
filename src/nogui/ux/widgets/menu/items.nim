@@ -77,33 +77,48 @@ widget GUIMenuItemCheck of GUIMenuItem:
 # GUI Menu Popover
 # ----------------
 
+type GUIMenuOpaque* = distinct GUIWidget
 widget GUIMenuItemPopup of GUIMenuItem:
   attributes: @public:
     popup: GUIWidget
 
-  new menuitem(label: string, popup: GUIWidget):
-    result.init0(label)
-    result.popup = popup
+  callback popupCB:
+    let 
+      popup = self.popup
+      rect = addr self.rect
+    if self.portal[] == self:
+      popup.open()
+      # Move Nearly to Menu
+      popup.move(rect.x + rect.w, rect.y - 2)
+    else: popup.close()
 
-  method event(state: ptr GUIState) =
-    if self.event0(state):
-      discard
+  new menuitem(label: string, popup: GUIMenuOpaque):
+    result.init0(label)
+    result.popup = GUIWidget(popup)
+    result.onportal = result.popupCB
 
   method draw(ctx: ptr CTXRender) =
-    # Draw Base
-    self.draw0(ctx)
-    # Draw Submenu Arrow
-    let
+    let 
       app = getApp()
       rect = rect self.rect
+      colors = addr app.colors
       desc = float32 app.font.desc
       minH = float32 self.metrics.minH shr 1
+    # Fill Selected Background
+    if not self.test(wHover) and self.portal[] == self:
+      ctx.color colors.item
+      ctx.fill rect
+    # Draw Menu Label
+    self.draw0(ctx)
     # Fill Background
-    ctx.color(app.colors.text)
+    ctx.color(colors.text)
     let
       p0 = point(rect.xw - minH, rect.y - desc - desc)
       p1 = point(rect.xw - minH, rect.yh + desc + desc)
       p2 = point(rect.xw + desc * 1.5, (rect.y + rect.yh) * 0.5)
     ctx.triangle(p0, p1, p2)
+
+  method event(state: ptr GUIState) =
+    discard
 
 export GUIMenuItemPopup

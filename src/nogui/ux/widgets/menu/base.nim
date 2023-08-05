@@ -65,13 +65,19 @@ widget GUIMenuItem:
   attributes:
     label: string
     @public:
-      [ondone, onchange]: GUICallback
+      [ondone, onportal]: GUICallback
       portal: ptr GUIMenuItem
 
-  proc select*() =
+  proc select() =
+    if isNil(self.portal):
+      return
+    # Notify Prev Portal
     let prev = self.portal[]
-    if not isNil(prev):
-      push(prev.onchange)
+    if not isNil(prev) and valid(prev.onportal):
+      push(prev.onportal)
+    # Notify Self Portal
+    if valid(self.onportal):
+      push(self.onportal)
     # Change Portal
     self.portal[] = self
 
@@ -97,7 +103,7 @@ widget GUIMenuItem:
       rect = addr self.rect
     # Fill Background
     if self.test(wHover):
-      ctx.color colors.item 
+      ctx.color colors.item
       ctx.fill rect rect[]
     # Draw Menu Item Text
     ctx.color(colors.text)
@@ -113,6 +119,10 @@ widget GUIMenuItem:
     result = state.kind == evCursorRelease and self.test(wHover)
     if result and valid(self.ondone):
       push(self.ondone)
+
+  method handle(kind: GUIHandle) =
+    if kind in {inHover, inFocus}:
+      self.select()
 
 # Export Widget Inheritable
 export GUIMenuItem, prelude

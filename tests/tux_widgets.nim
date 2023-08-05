@@ -147,16 +147,21 @@ controller CONPlayground:
         menuitem("New", cb)
         menuitem("Open", cb)
         menuseparator()
-
         menuitem("Save", cb)
         menuitem("Save as", cb)
-        menuseparator("Color Wheel")
+        # Custom Widget
+        menuseparator("Color Chooser")
         cube
-        
+        menuitem("About", cb)
+        menuitem("Settings", cb)
+        # More Menus
         menu("Other Menu").child:
           menuitem("Hello", cb)
           menuitem("World", cb)
-        menuitem("About", cb)
+          # More More Menus
+          menu("Menu Menu").child:
+            menuitem("World 2", cb)
+            menuitem("World 2", cb)
         menuitem("Exit", cb)
 
   new conplayground(a, b: cint):
@@ -185,7 +190,8 @@ proc main() =
     b = float32(bg shr 16 and 0xFF) / 255
   # Open Window
   executeApp(test.widget):
-    glClearColor(r, g, b, 1.0)
+    let rgb = test.hsv0.toRGB
+    glClearColor(rgb.r, rgb.g, rgb.b, 1.0)
     glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
 when isMainModule:

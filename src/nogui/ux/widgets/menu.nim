@@ -18,6 +18,8 @@ widget GUIMenu:
     let top = self.top
     if not isNil(top):
       push(top.cbClose)
+    # Remove Selected
+    self.selected = nil
 
   new menu(label: string):
     result.kind = wgMenu
@@ -62,13 +64,16 @@ widget GUIMenu:
       if widget.vtable == self.vtable:
         let 
           w0 = cast[GUIMenu](w)
-          item = menuitem(w0.label, w)
+          w1 = cast[GUIMenuOpaque](w)
+          item = menuitem(w0.label, w1)
+        # Change Top Level
+        w0.top = self
         # Warp into Item
         w.replace(item)
         w.kind = wgMenu
         w = item
       # Bind Menu With Item
-      if w is GUIMenuItem:
+      if w of GUIMenuItem:
         let item = cast[GUIMenuItem](w)
         item.ondone = self.cbClose
         item.portal = addr self.selected
@@ -89,9 +94,9 @@ widget GUIMenu:
     self.fit(width, y)
 
   method handle(kind: GUIHandle) =
-    let selected = self.selected
-    if kind == outFrame and not isNil(selected):
-      push(selected.onchange)
+    let s = self.selected
+    if kind == outFrame and not isNil(s):
+      push(s.onportal)
       # Remove Selected
       self.selected = nil
 
