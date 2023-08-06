@@ -43,23 +43,23 @@ widget GUIMenu:
     const border = 2
     # Calculate Max Width
     for widget in forward(first):
-      if widget.vtable != self.vtable:
-        width = max(widget.metrics.minW, width)
-    # Arrange Widgets by Min Size
-    for widget in forward(first):
       var w {.cursor.} = widget
       # Warp submenu into a menuitem
-      if widget.vtable == self.vtable:
+      if w.vtable == self.vtable:
         let 
           w0 = cast[GUIMenu](w)
-          w1 = cast[GUIMenuOpaque](w)
+          w1 = cast[GUIMenuOpaque](w0)
           item = menuitem(w0.label, w1)
         # Change Top Level
         w0.top = self
         # Warp into Item
-        w.replace(item)
-        w.kind = wgMenu
+        w0.replace(item)
+        w0.kind = wgMenu
         w = item
+      # Change Max Width
+      width = max(w.metrics.minW, width)
+    # Arrange Widgets by Min Size
+    for w in forward(first):
       # Bind Menu With Item
       if w of GUIMenuItem:
         let item = cast[GUIMenuItem](w)

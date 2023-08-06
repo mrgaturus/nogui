@@ -94,6 +94,12 @@ controller CONPlayground:
     let cube = colorcube(addr self.hsv0)
     cube.metrics.minW = 128
     cube.metrics.minH = 128
+    let circle = colorwheel(addr self.hsv0)
+    circle.metrics.minW = 128
+    circle.metrics.minH = 128
+    let triangle = colorcube0triangle(addr self.hsv0)
+    triangle.metrics.minW = 128
+    triangle.metrics.minH = 128
     # Arrange Each Widget
     dummy().child:
       button("Hello World", cb).locate(20, 30)
@@ -164,9 +170,11 @@ controller CONPlayground:
             menu("Menu Menu").child:
               menuitem("World 2", cb)
               menuitem("World 2", cb)
-          menu("Other Menu").child:
-            menuitem("Hello", cb)
-            menuitem("World", cb)
+          menu("Menu 2").child:
+            menuitem("The", cb)
+            menuitem("Game", cb)
+            menuseparator("Color Circle")
+            circle
             # More More Menus
             menu("Menu Menu").child:
               menuitem("World 2", cb)
@@ -174,12 +182,14 @@ controller CONPlayground:
           menuitem("Exit", cb)
 
         menu("Other Menu").child:
-          menuitem("Hello", cb)
-          menuitem("World", cb)
+          menuitem("The", cb)
+          menuitem("Game", cb)
           # More More Menus
-          menu("Menu Menu").child:
-            menuitem("World 2", cb)
-            menuitem("World 2", cb)
+          menu("Menu Other").child:
+            menuitem("World Inside", cb)
+            menuitem("World Inside", cb)
+          menuseparator("Color Triangle")
+          triangle
 
   new conplayground(a, b: cint):
     # Set New Values
