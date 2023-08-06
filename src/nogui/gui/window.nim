@@ -415,6 +415,8 @@ proc close(win: GUIWindow, widget: GUIWidget) =
       clear(win.hover.flags, wHoverGrab)
       # Remove Hover
       win.hover = nil
+    # Handle outFrame
+    widget.handle(outFrame)
 
 # -- Open as Frame/Popup/Tooltip
 proc frame(win: GUIWindow, widget: GUIWidget) =

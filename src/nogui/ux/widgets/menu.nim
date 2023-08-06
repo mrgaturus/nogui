@@ -7,7 +7,7 @@ export menuitem, menuseparator
 
 widget GUIMenu:
   attributes:
-    top: GUIMenu
+    top: GUIWidget
     label: string
     # Current Menu Handle
     selected: GUIMenuItem
@@ -16,8 +16,9 @@ widget GUIMenu:
     self.close()
     # Close Top Levels
     let top = self.top
-    if not isNil(top):
-      push(top.cbClose)
+    if not isNil(top) and top.vtable == self.vtable:
+      let m = cast[GUIMenu](top)
+      push(m.cbClose)
     # Remove Selected
     self.selected = nil
 
@@ -35,19 +36,6 @@ widget GUIMenu:
     ctx.fill(rect)
     ctx.color(colors.darker)
     ctx.line(rect, 2)
-
-  proc fit(w, h: int32) =
-    let 
-      m = addr self.metrics
-      r = addr self.rect
-    # Ajust Relative
-    m.minW = int16 w
-    m.minH = int16 h
-    m.w = m.minW
-    m.h = m.minH
-    # Ajust Absolute
-    r.w = w
-    r.h = h
 
   method layout =
     let first = self.first
@@ -93,23 +81,165 @@ widget GUIMenu:
     # Fit Window Size
     self.fit(width, y)
 
+  method event(state: ptr GUIState) =
+    let top = self.top
+    if not self.test(wHover) and 
+      not isNil(top) and 
+      self.vtable != top.vtable:
+        # TODO: event propagation
+        top.event(state)
+
   method handle(kind: GUIHandle) =
     let s = self.selected
     if kind == outFrame and not isNil(s):
-      push(s.onportal)
+      if valid(s.onportal):
+        push(s.onportal)
       # Remove Selected
       self.selected = nil
+
+# -----------------
+# GUI Menu Bar Item
+# -----------------
+
+widget GUIMenuBarItem:
+  attributes:
+    menu: GUIMenu
+    # Current Selected Handle
+    portal: ptr GUIMenuBarItem
+
+  proc onportal() =
+    let menu {.cursor.} = self.menu
+    # Open Menu or Close Menu
+    if self.portal[] == self:
+      let rect = addr self.rect
+      menu.open()
+      # Move Down Menu Item
+      menu.move(rect.x, rect.y + rect.h)
+    else: menu.close()
+
+  callback cbMenuClose:
+    self.portal[] = nil
+    # Close Menu
+    let m {.cursor.} = self.menu
+    m.selected = nil
+    m.close()
+
+  new menubar0(menu: GUIMenuOpaque):
+    result.flags = wMouse
+    let 
+      m = cast[GUIMenu](menu)
+      metrics = addr getApp().font
+      fontsize = metrics.size
+      # Minimun Size With Padding
+      height = metrics.height + fontsize
+      width = m.label.width + (fontsize shl 1)
+    # Ajust New Size
+    result.minimum(width, height)
+    # Set Current Menu
+    result.menu = m
+
+  method draw(ctx: ptr CTXRender) =
+    let
+      app = getApp()
+      metrics = addr app.font
+      colors = addr app.colors
+      # Font Size
+      fontsize = metrics.size
+      rect = addr self.rect
+    # Fill Background
+    if self.test(wHover) or self.portal[] == self:
+      ctx.color colors.item
+      ctx.fill rect rect[]
+    # Draw Menu Bar Item Text
+    ctx.color(colors.text)
+    ctx.text(
+      rect.x + fontsize,
+      rect.y + fontsize,
+      self.menu.label)
+
+  method event(state: ptr GUIState) =
+    if state.kind == evCursorClick:
+      let
+        portal = self.portal
+        select = portal[]
+      # Open or Close Menu
+      if isNil(select):
+        portal[] = self
+      elif select == self:
+        portal[] = nil
+      # Update Current Menu
+      self.onportal()
+
+  method handle(kind: GUIHandle) =
+    if kind == inHover:
+      let 
+        portal = self.portal
+        w = portal[]
+      if not isNil(w) and w != self:
+        portal[] = self
+        # React to Change
+        w.onportal()
+        self.onportal()
 
 # ------------
 # GUI Menu Bar
 # ------------
 
 widget GUIMenuBar:
+  attributes:
+    # Selected Menu Item
+    selected: GUIMenuBarItem
+
   new menubar():
     result.flags = wMouse
 
-  method draw(ctx: ptr CTXRender) =
-    discard
-
   method layout =
-    discard
+    var x, height: int16
+    let portal = addr self.selected
+    # Get Max Height and Warp Menus
+    for widget in forward(self.first):
+      var w {.cursor.} = widget
+      # Warp Into Menubar Item
+      if w of GUIMenu:
+        let
+          w0 = cast[GUIMenu](w)
+          item = menubar0 GUIMenuOpaque(w0)
+        # Warp Into Item
+        w0.replace(item)
+        w0.top = self
+        w0.kind = wgPopup
+        w0.cbClose = item.cbMenuClose
+        w = item
+      # Calculate Max Height
+      height = max(height, w.metrics.minH)
+    # Arrange Widgets by Horizontal
+    let y = self.metrics.y
+    for widget in forward(self.first):
+      # Bind Menu Bar Items
+      if widget of GUIMenuBarItem:
+        cast[GUIMenuBarItem](widget).portal = portal
+      # Arrange Current Widget
+      let
+        metrics = addr widget.metrics
+        w = metrics.minW
+      metrics.x = x
+      metrics.y = y
+      metrics.w = w
+      metrics.h = height
+      # Step Position
+      x += w
+    # Fit Menu Bar
+    self.fit(x, height)
+
+  method event(state: ptr GUIState) =
+    # Find Inner Widget
+    if not isNil(self.selected):
+      let w = self.find(state.mx, state.my)
+      if w.parent == self:
+        w.handle(inHover)
+        w.event(state)
+      # Close Cursor When Clicked Outside
+      elif state.kind == evCursorClick:
+        let prev {.cursor.} = self.selected
+        self.selected = nil
+        prev.onportal()

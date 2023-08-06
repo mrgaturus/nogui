@@ -88,7 +88,7 @@ controller CONPlayground:
     let 
       cb = self.cbHelloWorld
       textRect = GUIMetrics(
-        x: 500, y: 60,
+        x: 500, y: 80,
         w: 400, h: 268
       )
     let cube = colorcube(addr self.hsv0)
@@ -96,18 +96,18 @@ controller CONPlayground:
     cube.metrics.minH = 128
     # Arrange Each Widget
     dummy().child:
-      button("Hello World", cb).locate(20, 10)
-      button("Hello World 2", cb).locate(20, 35)
+      button("Hello World", cb).locate(20, 30)
+      button("Hello World 2", cb).locate(20, 55)
       # Locate Nested Buttons
-      panel().locate(20, 60, 128, 128).child:
+      panel().locate(20, 80, 128, 128).child:
         button("Nested World", cb).locate(20, 10)
         button("Nested World 2", cb).locate(20, 35)
       # Locate Nested Sliders
-      panel().locate(160, 60, 128, 128).child:
+      panel().locate(160, 80, 128, 128).child:
         slider(addr self.v1).locateW(20, 10, 100)
         slider(addr self.v2).locateW(20, 35, 100)
       # Locate Nested Radio Buttons / Checkbox
-      panel().locate(300, 60, 128, 268).child:
+      panel().locate(300, 80, 128, 268).child:
         radio("Option 1", 0, addr self.a).locateW(20, 10, 100)
         radio("Option 2", 1, addr self.a).locateW(20, 35, 100)
         # Checkboxes
@@ -115,12 +115,12 @@ controller CONPlayground:
         checkbox("Check 2", addr self.check).locateW(20, 95, 100)
         checkbox("Check 3", addr self.check1).locateW(20, 120, 100)
       # Locate Textbox
-      panel().locate(160, 200, 128, 128).child:
+      panel().locate(160, 220, 128, 128).child:
         textbox(addr self.text).locateW(10, 10, 100)
         textbox(addr self.text).locateW(10, 35, 100)
       # Locate Scrollbars
-      scrollbar(addr self.v1, false).locateW(160, 340, 268)
-      scrollbar(addr self.v2, true).locateH(440, 60, 268)
+      scrollbar(addr self.v1, false).locateW(160, 360, 268)
+      scrollbar(addr self.v2, true).locateH(440, 80, 268)
       # Locate Top Labels
       panel().locate(textRect)
       label("Top-Left", hoLeft, veTop).locate(textRect)
@@ -134,27 +134,45 @@ controller CONPlayground:
       label("Bottom-Left", hoLeft, veBottom).locate(textRect)
       label("Bottom-Middle", hoMiddle, veBottom).locate(textRect)
       label("Bottom-Right", hoRight, veBottom).locate(textRect)
-      colorcube(addr self.hsv0).locate(265, 400, 150, 150)
-      colorwheel(addr self.hsv0).locate(450, 400, 150, 150)
+      colorcube(addr self.hsv0).locate(265, 420, 150, 150)
+      colorwheel(addr self.hsv0).locate(450, 420, 150, 150)
       #sv0triangle(addr self.hsv0).locate(655, 400, 150, 150)
-      colorcube0triangle(addr self.hsv0).locate(40, 400, 200, 150)
-      colorwheel0triangle(addr self.hsv0).locate(640, 400, 150, 150)
+      colorcube0triangle(addr self.hsv0).locate(40, 420, 200, 150)
+      colorwheel0triangle(addr self.hsv0).locate(640, 420, 150, 150)
       #hue0bar(addr self.hsv0).locateH(425, 400, 150)
       #color0square(addr self.hsv0).locate(265, 400, 150, 150)
       #hue0circle(addr self.hsv0).locate(500, 400, 150, 150)
 
-      menu("File").child:
-        menuitem("New", cb)
-        menuitem("Open", cb)
-        menuseparator()
-        menuitem("Save", cb)
-        menuitem("Save as", cb)
-        # Custom Widget
-        menuseparator("Color Chooser")
-        cube
-        menuitem("About", cb)
-        menuitem("Settings", cb)
-        # More Menus
+      menubar().locate(0, 0).child:
+        # File Menu
+        menu("File").child:
+          menuitem("New", cb)
+          menuitem("Open", cb)
+          menuseparator()
+          menuitem("Save", cb)
+          menuitem("Save as", cb)
+          # Custom Widget
+          menuseparator("Color Chooser")
+          cube
+          menuitem("About", cb)
+          menuitem("Settings", cb)
+          # More Menus
+          menu("Other Menu").child:
+            menuitem("Hello", cb)
+            menuitem("World", cb)
+            # More More Menus
+            menu("Menu Menu").child:
+              menuitem("World 2", cb)
+              menuitem("World 2", cb)
+          menu("Other Menu").child:
+            menuitem("Hello", cb)
+            menuitem("World", cb)
+            # More More Menus
+            menu("Menu Menu").child:
+              menuitem("World 2", cb)
+              menuitem("World 2", cb)
+          menuitem("Exit", cb)
+
         menu("Other Menu").child:
           menuitem("Hello", cb)
           menuitem("World", cb)
@@ -162,7 +180,6 @@ controller CONPlayground:
           menu("Menu Menu").child:
             menuitem("World 2", cb)
             menuitem("World 2", cb)
-        menuitem("Exit", cb)
 
   new conplayground(a, b: cint):
     # Set New Values

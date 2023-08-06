@@ -1,5 +1,23 @@
 import ../../prelude
 
+# --------------------------------
+# TODO: Move this to widget module
+# --------------------------------
+
+# TODO: Move to widget module
+proc fit*(self: GUIWidget, w, h: int32) =
+  let 
+    m = addr self.metrics
+    r = addr self.rect
+  # Ajust Relative
+  m.minW = int16 w
+  m.minH = int16 h
+  m.w = m.minW
+  m.h = m.minH
+  # Ajust Absolute
+  r.w = w
+  r.h = h
+
 # ------------------
 # GUI Menu Separator
 # ------------------

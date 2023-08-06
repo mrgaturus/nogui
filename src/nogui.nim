@@ -67,7 +67,7 @@ proc createColors(): GUIColors =
   result.focus = rgba(64, 71, 71, 255)
   result.clicked = rgba(87, 95, 95, 255)
   # Widget Panels
-  result.panel = rgba(14, 15, 15, 255)
+  result.panel = rgba(14, 15, 15, 247)
   result.tab = rgba(19, 21, 21, 255)
   result.darker = rgba(0, 0, 0, 255)
   result.background = rgba(23, 26, 26, 255)
