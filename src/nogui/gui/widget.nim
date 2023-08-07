@@ -176,6 +176,22 @@ proc replace*(self, widget: GUIWidget) =
     if w.last == self:
       w.last = widget
 
+proc detach*(self: GUIWidget) =
+  assert self.kind == wgChild
+  # Replace Prev
+  if not isNil(self.prev):
+    self.prev.next = self.next
+  # Replace Next
+  if not isNil(self.next):
+    self.next.prev = self.prev
+  # Replace Parent Extremuns
+  let w {.cursor.} = self.parent
+  if not isNil(self.parent):
+    if w.first == self:
+      w.first = self.next
+    if w.last == self:
+      w.last = self.prev
+
 # --------------------------------------
 # WIDGET RECT PROCS layout & Mouse event
 # --------------------------------------
