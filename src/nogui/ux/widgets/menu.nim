@@ -42,6 +42,7 @@ widget GUIMenu:
     var y, width: int16
     const border = 2
     # Calculate Max Width
+    width = self.metrics.w
     for widget in forward(first):
       var w {.cursor.} = widget
       # Warp submenu into a menuitem
@@ -158,6 +159,9 @@ widget GUIMenuBarItem:
       self.menu.label)
 
   method event(state: ptr GUIState) =
+    # Remove Grab Flags
+    self.flags.clear(wGrab)
+    # Open or Close Menu with Click
     if state.kind == evCursorClick:
       let
         portal = self.portal
@@ -243,3 +247,10 @@ widget GUIMenuBar:
         let prev {.cursor.} = self.selected
         self.selected = nil
         prev.onportal()
+
+# ---------------
+# GUI Menu Export
+# ---------------
+
+# TODO: allow do export on builder
+export GUIMenu

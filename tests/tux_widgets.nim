@@ -19,6 +19,7 @@ import nogui/ux/widgets/[
   slider,
   textbox,
   menu,
+  combo
 ]
 
 # -----------------------
@@ -80,6 +81,7 @@ controller CONPlayground:
     text: UTF8Input
     color: RGBColor
     hsv0: HSVColor
+    selected: ComboModel
 
   callback cbHelloWorld:
     echo "hello world"
@@ -100,9 +102,19 @@ controller CONPlayground:
     let triangle = colorcube0triangle(addr self.hsv0)
     triangle.metrics.minW = 128
     triangle.metrics.minH = 128
+    # Selection Items
+    self.selected = 
+      combomodel(): menu("").child:
+          comboitem("Hello 0", 0)
+          comboitem("Hello 1", 1)
+          comboitem("Hello 2", 2)
+          menu("More Options").child:
+            comboitem("Hello Inside 1", 0)
+            comboitem("Hello Inside 2", 1)
+
     # Arrange Each Widget
     dummy().child:
-      button("Hello World", cb).locate(20, 30)
+      combobox(self.selected).locateW(20, 30, 100)
       button("Hello World 2", cb).locate(20, 55)
       # Locate Nested Buttons
       panel().locate(20, 80, 128, 128).child:
