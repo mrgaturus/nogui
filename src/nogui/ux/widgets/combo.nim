@@ -1,8 +1,6 @@
 import menu, menu/base
 import std/importutils
 from ../../builder import controller
-# TODO: export type also
-import button {.all.}
 
 # -------------
 # Combobox Item
@@ -89,7 +87,7 @@ controller ComboModel:
 # GUI Combobox
 # ------------
 
-widget GUIComboBox of GUIButton:
+widget GUIComboBox:
   attributes:
     model: ComboModel
 
@@ -97,7 +95,7 @@ widget GUIComboBox of GUIButton:
     let 
       rect = addr self.rect
       menu {.cursor.} = self.model.menu
-    # Re-Open Menu
+    # Close Menu if Visible
     if menu.test(wVisible):
       menu.close()
     menu.open()
@@ -106,14 +104,12 @@ widget GUIComboBox of GUIButton:
     menu.metrics.w = int16 rect.w
 
   new combobox(model: ComboModel):
-    privateAccess(GUIButton)
     # Configure Combobox Metrics
     let metrics = addr getApp().font
     result.minimum(0, metrics.height - metrics.desc)
     # Configure Button
     result.flags = wMouse
     result.model = model
-    result.cb = result.cbOpenMenu
 
   method draw(ctx: ptr CTXRender) =
     let 
@@ -146,5 +142,10 @@ widget GUIComboBox of GUIButton:
       point(r.xw, r.y),
       point(r.x, r.y),      
     )
+
+  method event(state: ptr GUIState) =
+    if state.kind == evCursorClick:
+      self.flags.clear(wGrab)
+      push(self.cbOpenMenu)
 
 export ComboModel
