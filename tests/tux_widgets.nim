@@ -105,16 +105,40 @@ controller CONPlayground:
     # Selection Items
     self.selected = 
       combomodel(): menu("").child:
-          comboitem("Hello 0", 0)
-          comboitem("Hello 1", 1)
-          comboitem("Hello 2", 2)
-          menu("More Options").child:
-            comboitem("Hello Inside 1", 0)
-            comboitem("Hello Inside 2", 1)
+          comboitem("Normal", 0)
+          menuseparator("Dark")
+          comboitem("Multiply", 0)
+          comboitem("Darken", 0)
+          comboitem("Color Burn", 0)
+          comboitem("Linear Burn", 0)
+          comboitem("Darker Color", 0)
+          menuseparator("Light")
+          comboitem("Screen", 0)
+          comboitem("Lighten", 0)
+          comboitem("Color Dodge", 0)
+          comboitem("Linear Dodge", 0)
+          comboitem("Lighter Color", 0)
+          menuseparator("Contrast")
+          comboitem("Overlay", 0)
+          comboitem("Soft Light", 0)
+          comboitem("Hard Light", 0)
+          comboitem("Vivid Light", 0)
+          comboitem("Linear Light", 0)
+          comboitem("Pin Light", 0)
+          menuseparator("Comprare")
+          comboitem("Difference", 0)
+          comboitem("Exclusion", 0)
+          comboitem("Substract", 0)
+          comboitem("Divide", 0)
+          menuseparator("Composite")
+          comboitem("Hue", 0)
+          comboitem("Saturation", 0)
+          comboitem("Color", 0)
+          comboitem("Luminosity", 0)
 
     # Arrange Each Widget
     dummy().child:
-      combobox(self.selected).locateW(20, 30, 100)
+      combobox(self.selected).locateW(20, 30, 200)
       button("Hello World 2", cb).locate(20, 55)
       # Locate Nested Buttons
       panel().locate(20, 80, 128, 128).child:

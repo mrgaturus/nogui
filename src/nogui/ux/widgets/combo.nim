@@ -74,6 +74,7 @@ controller ComboModel:
     # Replace Menu Callback
     self.ondone = menu.cbClose
     menu.cbClose = self.cbMenuDone
+    menu.kind = wgPopup
     # Configure Menu
     self.flatten = newSeq[pointer](0)
     self.configure(menu)
@@ -101,7 +102,7 @@ widget GUIComboBox of GUIButton:
       menu.close()
     menu.open()
     # Open Menu to Combobox
-    menu.move(rect.x - 2, rect.y + rect.h + 2)
+    menu.move(rect.x, rect.y + rect.h + 2)
     menu.metrics.w = int16 rect.w
 
   new combobox(model: ComboModel):
@@ -122,15 +123,28 @@ widget GUIComboBox of GUIButton:
       metrics = addr app.font
       # Text Center Offset
       s {.cursor.} = self.model.selected
+    # Region Cursor
+    var r = rect(self.rect)
     # Allow Private of MenuItem
     privateAccess(GUIMenuItem)
     # Select Color State
     ctx.color self.itemColor()
-    ctx.fill rect(self.rect)
+    ctx.fill r
     # Put Combobox Text
     ctx.color(colors.text)
     ctx.text( # Draw Centered Text
       rect.x + metrics.size, 
       rect.y + metrics.asc shr 1, s.label)
+    # Draw Triangle
+    r.xw -= float32 metrics.asc shr 1
+    r.yh -= float32 metrics.asc shr 1
+    r.x = r.xw - float32 metrics.size
+    r.y = r.yh - float32 metrics.size - metrics.asc shr 2
+    # Triangle
+    ctx.triangle(
+      point((r.x + r.xw) * 0.5, r.yh),
+      point(r.xw, r.y),
+      point(r.x, r.y),      
+    )
 
 export ComboModel

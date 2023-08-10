@@ -40,9 +40,11 @@ widget GUIMenu:
   method layout =
     let first = self.first
     var y, width: int16
-    const border = 2
+    const
+      border = 2
+      pad = 4
     # Calculate Max Width
-    width = self.metrics.w
+    width = self.metrics.w - pad
     for widget in forward(first):
       var w {.cursor.} = widget
       # Warp submenu into a menuitem
@@ -77,18 +79,21 @@ widget GUIMenu:
       # Step Height
       y += h
     # Offset Border
-    width += border shl 1
-    y += border shl 1
+    width += pad
+    y += pad
     # Fit Window Size
     self.fit(width, y)
 
   method event(state: ptr GUIState) =
     let top = self.top
-    if not self.test(wHover) and 
-      not isNil(top) and 
-      self.vtable != top.vtable:
-        # TODO: event propagation
-        top.event(state)
+    if not self.test(wHover):
+      if not isNil(top) and 
+        self.vtable != top.vtable:
+          # TODO: event propagation
+          top.event(state)
+      elif isNil(top) and state.kind == evCursorClick:
+        # This is Top Level
+        self.close()
 
   method handle(kind: GUIHandle) =
     let s = self.selected
