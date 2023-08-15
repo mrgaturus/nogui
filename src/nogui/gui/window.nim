@@ -171,8 +171,8 @@ proc open*(win: GUIWindow, root: GUIWidget): bool =
   root.kind = wgFrame
   root.flags.set(wVisible)
   # Set to Global Dimensions
-  root.rect.w = win.w
-  root.rect.h = win.h
+  root.metrics.w = int16 win.w
+  root.metrics.h = int16 win.h
   # Shows the Window on the screen
   result = XMapWindow(win.display, win.xID) != BadWindow
   discard XSync(win.display, 0) # Wait for show it
@@ -338,10 +338,10 @@ proc step(win: GUIWindow, back: bool) =
       # Change Focus
       win.focus = widget
 
-# -- Relayout Widget
+# -- Relayout Widget, TODO: change dirty
 proc dirty(win: GUIWindow, widget: GUIWidget) =
   if widget.test(wVisible):
-    widget.dirty()
+    widget.arrange()
     # Check Focus Visibility
     if not isNil(win.focus) and 
     not win.focus.visible:
@@ -478,12 +478,14 @@ proc handleEvents*(win: GUIWindow) =
     case event.theType:
     of Expose: discard
     of ConfigureNotify: # Resize
-      let rect = addr win.root.rect
-      if event.xconfigure.window == win.xID and
-          (event.xconfigure.width != rect.w or
-          event.xconfigure.height != rect.h):
-        rect.w = event.xconfigure.width
-        rect.h = event.xconfigure.height
+      let 
+        rect = addr win.root.metrics
+        config = addr event.xconfigure
+      if config.window == win.xID and
+          (config.width != rect.w or
+          config.height != rect.h):
+        rect.w = int16 config.width
+        rect.h = int16 config.height
         # Set Window Metrics
         win.w = rect.w
         win.h = rect.h

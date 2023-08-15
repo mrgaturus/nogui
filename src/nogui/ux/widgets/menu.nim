@@ -37,7 +37,7 @@ widget GUIMenu:
     ctx.color(colors.darker)
     ctx.line(rect, 2)
 
-  method layout =
+  method update =
     let first = self.first
     var y, width: int16
     const
