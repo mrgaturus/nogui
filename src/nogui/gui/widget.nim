@@ -413,38 +413,31 @@ proc arrange*(widget: GUIWidget) =
   # Layout Widgets
   w.organize()
 
-# ------------------------------
+# -----------------------------------
 # WIDGET RENDER CHILDRENS - MAIN LOOP
-# ------------------------------
+# Create a flag for check if needs clipping
+# -----------------------------------
 
 proc render*(widget: GUIWidget, ctx: ptr CTXRender) =
+  var w {.cursor.} = widget
   # Push Clipping
-  ctx.push(widget.rect)
-  # Start at Children
-  var cursor = widget.first
-  while true: # Render Each Visible Tree Widget
-    if (cursor.flags and wVisible) == wVisible:
-      cursor.draw(ctx)
-      # Check if has Childrens
-      if not isNil(cursor.first):
-        # Push Clipping
-        ctx.push(cursor.rect)
-        # Set Cursor Next Level
-        cursor = cursor.first
-        continue # Next Level
-    # Select Next Widget
-    if isNil(cursor.next):
-      cursor = cursor.parent
-      while cursor != widget:
-        # Pop Clipping
-        ctx.pop()
-        # Find Next Widget
-        if isNil(cursor.next):
-          cursor = cursor.parent
-        else: # Found Level
-          cursor = cursor.next
-          break # Prev Level
-      if cursor == widget: break
-    else: cursor = cursor.next
+  ctx.push(w.rect)
+  # Traverse Children
+  while true:
+    # Push Clipping, TODO: Change to Nim sets
+    if (w.flags and wVisible) == wVisible:
+      w.vtable.draw(w, ctx)
+      # Traverse Inside?
+      if not isNil(w.first):
+        ctx.push(w.rect)
+        w = w.first
+        continue
+    # Traverse Parents?
+    while isNil(w.next) and w != widget:
+      ctx.pop()
+      w = w.parent
+    # Traverse Slibings?
+    if w == widget: break
+    else: w = w.next
   # Pop Clipping
   ctx.pop()
