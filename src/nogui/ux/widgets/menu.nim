@@ -38,14 +38,12 @@ widget GUIMenu:
     ctx.line(rect, 2)
 
   method update =
-    let first = self.first
+    const pad = 4
+    # Initial Max Width
     var y, width: int16
-    const
-      border = 2
-      pad = 4
-    # Calculate Max Width
     width = self.metrics.w - pad
-    for widget in forward(first):
+    # Calculate Max Width
+    for widget in forward(self.first):
       var w {.cursor.} = widget
       # Warp submenu into a menuitem
       if w.vtable == self.vtable:
@@ -59,16 +57,29 @@ widget GUIMenu:
         w0.replace(item)
         w0.kind = wgMenu
         w = item
-      # Change Max Width
-      width = max(w.metrics.minW, width)
-    # Arrange Widgets by Min Size
-    for w in forward(first):
       # Bind Menu With Item
       if w of GUIMenuItem:
         let item = cast[GUIMenuItem](w)
         item.ondone = self.cbClose
         item.portal = addr self.selected
-      # Arrange Found Widget
+      # Calculate Max Width
+      width = max(w.metrics.minW, width)
+      y += w.metrics.minH
+    # Offset Border
+    width += pad
+    y += pad
+    # Fit Menu Size
+    self.fit(width, y)
+
+  method layout =
+    const 
+      border = 2
+      pad = 4
+    var y: int16
+    # Width for each widget
+    let width = self.metrics.minW - pad
+    # Arrange Each Widget
+    for w in forward(self.first):
       let 
         metrics = addr w.metrics
         h = metrics.minH
@@ -78,11 +89,6 @@ widget GUIMenu:
       metrics.h = h
       # Step Height
       y += h
-    # Offset Border
-    width += pad
-    y += pad
-    # Fit Window Size
-    self.fit(width, y)
 
   method event(state: ptr GUIState) =
     let top = self.top
@@ -202,7 +208,7 @@ widget GUIMenuBar:
   new menubar():
     result.flags = wMouse
 
-  method layout =
+  method update =
     var x, height: int16
     let portal = addr self.selected
     # Get Max Height and Warp Menus
@@ -219,14 +225,21 @@ widget GUIMenuBar:
         w0.kind = wgPopup
         w0.cbClose = item.cbMenuClose
         w = item
+      # Bind Portal to MenuBarItem
+      if w of GUIMenuBarItem:
+        cast[GUIMenuBarItem](w).portal = portal
       # Calculate Max Height
       height = max(height, w.metrics.minH)
-    # Arrange Widgets by Horizontal
-    let y = self.metrics.y
+      x += w.metrics.minW
+    # Fit Menu Bar
+    self.fit(x, height)
+
+  method layout =
+    var x: int16
+    let
+      y = self.metrics.y
+      height = self.metrics.minH
     for widget in forward(self.first):
-      # Bind Menu Bar Items
-      if widget of GUIMenuBarItem:
-        cast[GUIMenuBarItem](widget).portal = portal
       # Arrange Current Widget
       let
         metrics = addr widget.metrics
@@ -237,8 +250,6 @@ widget GUIMenuBar:
       metrics.h = height
       # Step Position
       x += w
-    # Fit Menu Bar
-    self.fit(x, height)
 
   method event(state: ptr GUIState) =
     # Find Inner Widget
