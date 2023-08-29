@@ -8,6 +8,9 @@ type
   GridLane = object
     shrink: bool
     size, offset: int16
+  GridLoc = object
+    pos, size: int16
+  # Horizontal and Vertical
   GridBand = object
     growCount: int16
     minSize, fitSize: int16
@@ -22,9 +25,9 @@ proc band(count: int32): GridBand =
   # Allocate Band Size
   setLen(result.cells, count)
 
-# -----------------------
-# Grid Layout Lane Config
-# -----------------------
+# ------------------------
+# Grid Layout Lane Prepare
+# ------------------------
 
 proc clear(band: var GridBand) {.inline.} =
   # Reset Band Metrics
@@ -36,15 +39,11 @@ proc clear(band: var GridBand) {.inline.} =
     cell.size = 0
     cell.offset = 0
 
-proc record(band: var GridBand, idx, span: int32, size: int16) =
+proc register(band: var GridBand, idx, span: int32, size: int16) =
   for i in 0 ..< span:
     # Replace Cell Min Size
     let cell = addr band.cells[i]
     cell.size = max(cell.size, size)
-
-# -----------------------
-# Grid Layout Band Config
-# -----------------------
 
 proc prepare(band: var GridBand, margin: int16) =
   var min, fit, count: int16
@@ -65,7 +64,11 @@ proc prepare(band: var GridBand, margin: int16) =
   band.fitSize = fit + pad
   band.growCount = l - count
 
-proc offsets(band: var GridBand, size, margin: int16) =
+# -------------------------
+# Grid Layout Band Arranger
+# -------------------------
+
+proc arrange(band: var GridBand, size, margin: int16) =
   var cursor, grow: int16
   # Calculate Grow Size
   block:
@@ -75,15 +78,27 @@ proc offsets(band: var GridBand, size, margin: int16) =
   # Sum Each Offset
   for cell in mitems(band.cells):
     cell.offset = cursor
-    # Step Min Size or Grow
-    if cell.shrink:
+    # Step Grow Size
+    if not cell.shrink:
+      cursor += grow
+      cell.size = grow
+    else: # Step Min Size
       cursor += cell.size
-    else: cursor += grow
     # Step Margin
     cursor += margin
 
-proc locate(band: var GridBand, idx: int32): int16 =
-  discard
+proc locate(band: var GridBand, idx, span: int32): GridLoc =
+  let a = addr band.cells[idx]
+  var size = a.size
+  result.pos = a.offset
+  # Calculate Size
+  if span > 1:
+    let i = min(idx + span - 1, high band.cells)
+    # Calculate Acumulated Offset
+    let b = addr band.cells[i]
+    size = b.offset - a.offset + b.size
+  # Set New Size
+  result.size = size
 
 # ----------------
 # Grid Layout Cell
@@ -127,7 +142,48 @@ widget UXGridLayout:
     result.hBand = band(h)
 
   method update =
-    discard
+    # Clear Bands
+    clear(self.wBand)
+    clear(self.hBand)
+    # Register Widget Sizes
+    for w in forward(self.first):
+      if w of UXGridCell:
+        let 
+          c {.cursor.} = cast[UXGridCell](w)
+          m = addr c.metrics
+        register(self.wBand, c.x, c.w, m.minW)
+        register(self.hBand, c.y, c.h, m.minH)
+    # TODO: allow customize margin
+    let margin = getApp().font.size shr 1
+    # Prepare Grid Bands
+    prepare(self.wBand, margin)
+    prepare(self.hBand, margin)
+    # Configure Min Size
+    let m = addr self.metrics
+    m.minW = self.wBand.minSize
+    m.minH = self.hBand.minSize
 
   method layout =
-    discard
+    let
+      m = addr self.metrics
+      # TODO: allow customize margin
+      margin = getApp().font.size shr 1
+    # Arrange Cells with Current Size
+    arrange(self.wBand, m.w, margin)
+    arrange(self.hBand, m.h, margin)
+    # Locate Each Widget
+    for w in forward(self.first):
+      if w of UXGridCell:
+        let 
+          c {.cursor.} = cast[UXGridCell](w)
+          m = addr c.metrics
+        # Widget Location
+        var loc: GridLoc
+        # Apply Horizontal
+        loc = locate(self.wBand, c.x, c.w)
+        m.x = loc.pos
+        m.w = loc.size
+        # Apply Vertical
+        loc = locate(self.hBand, c.y, c.h)
+        m.y = loc.pos
+        m.h = loc.size
