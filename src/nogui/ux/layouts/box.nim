@@ -48,6 +48,8 @@ widget UXLayoutVBox:
       # Growable Widgets Size
       margin = getApp().font.size shr 1
       count = self.count
+      # Last Widget Adjust
+      last {.cursor.} = self.last
     # Calculate Grow Size
     var grow: int16
     if count > 0: 
@@ -62,7 +64,7 @@ widget UXLayoutVBox:
           metrics.minH
         else: grow
       # Adjust White Space
-      if y + size + margin >= h:
+      if widget == last:
         size = h - y
       # Set Metrics
       metrics.x = 0
@@ -118,6 +120,8 @@ widget UXLayoutHBox:
       # Growable Widgets Size
       margin = getApp().font.size shr 1
       count = self.count
+      # Last Widget Adjust
+      last {.cursor.} = self.last
     # Calculate Grow Size
     var grow: int16
     if count > 0: 
@@ -132,7 +136,7 @@ widget UXLayoutHBox:
           metrics.minW
         else: grow
       # Adjust White Space
-      if x + size + margin >= w:
+      if widget == last:
         size = w - x
       # Set Metrics
       metrics.x = x

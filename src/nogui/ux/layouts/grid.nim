@@ -85,6 +85,9 @@ proc arrange(band: var GridBand, size, margin: int16) =
       cursor += cell.size
     # Step Margin
     cursor += margin
+  # Adjust Last With Size
+  let last = addr band.cells[^1]
+  last.size = size - last.offset
 
 proc locate(band: var GridBand, idx, span: int32): GridLoc =
   let a = addr band.cells[idx]
