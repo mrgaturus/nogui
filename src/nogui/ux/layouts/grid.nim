@@ -42,7 +42,7 @@ proc clear(band: var GridBand) {.inline.} =
 proc register(band: var GridBand, idx, span: int32, size: int16) =
   for i in 0 ..< span:
     # Replace Cell Min Size
-    let cell = addr band.cells[i]
+    let cell = addr band.cells[idx + i]
     cell.size = max(cell.size, size)
 
 proc prepare(band: var GridBand, margin: int16) =
@@ -73,15 +73,14 @@ proc arrange(band: var GridBand, size, margin: int16) =
   # Calculate Grow Size
   block:
     let count = band.growCount
-    if count > 0:
-      grow = (size - band.fitSize) div count
+    if count > 0: grow = (size - band.fitSize) div count
   # Sum Each Offset
   for cell in mitems(band.cells):
     cell.offset = cursor
     # Step Grow Size
     if not cell.shrink:
-      cursor += grow
       cell.size = grow
+      cursor += grow
     else: # Step Min Size
       cursor += cell.size
     # Step Margin
@@ -141,6 +140,12 @@ widget UXGridLayout:
     result.wBand = band(w)
     result.hBand = band(h)
 
+  proc activeMinX*(pos: int32, active = true) =
+    self.wBand.cells[pos].shrink = active
+
+  proc activeMinY*(pos: int32, active = true) =
+    self.hBand.cells[pos].shrink = active
+
   method update =
     # Clear Bands
     clear(self.wBand)
@@ -187,3 +192,6 @@ widget UXGridLayout:
         loc = locate(self.hBand, c.y, c.h)
         m.y = loc.pos
         m.h = loc.size
+
+# TODO: export by default
+export UXGridLayout
