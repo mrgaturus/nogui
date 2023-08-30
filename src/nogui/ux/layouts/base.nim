@@ -39,6 +39,10 @@ widget UXLayoutCell:
 # Widget Layout Fit
 # -----------------
 
+widget UXDummy:
+  new dummy():
+    discard
+
 widget UXMinCell of UXLayoutCell:
   new min(w: GUIWidget):
     result.cell0(w)
