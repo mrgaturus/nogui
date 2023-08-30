@@ -58,14 +58,12 @@ widget UXLayoutVBox:
     var y: int16
     for widget in forward(self.first):
       let metrics = addr widget.metrics
-      # Calculate Width
-      var size =
+      # Calculate Height
+      let size =
         if widget of UXMinCell:
           metrics.minH
-        else: grow
-      # Adjust White Space
-      if widget == last:
-        size = h - y
+        elif widget != last: grow
+        else: h - y
       # Set Metrics
       metrics.x = 0
       metrics.y = y
@@ -131,13 +129,11 @@ widget UXLayoutHBox:
     for widget in forward(self.first):
       let metrics = addr widget.metrics
       # Calculate Width
-      var size =
+      let size =
         if widget of UXMinCell:
           metrics.minW
-        else: grow
-      # Adjust White Space
-      if widget == last:
-        size = w - x
+        elif widget != last: grow
+        else: w - x
       # Set Metrics
       metrics.x = x
       metrics.y = 0
