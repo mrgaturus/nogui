@@ -7,8 +7,8 @@ from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
-import nogui/ux/widgets/[slider, check, label]
-import nogui/ux/layouts/form
+import nogui/ux/widgets/[button, slider, check, label]
+import nogui/ux/layouts/[form, level]
 import nogui/values
 
 controller CONLayout:
@@ -21,7 +21,13 @@ controller CONLayout:
   callback cbHello:
     echo "hello world"
 
+  proc hl(name: string): GUIWidget =
+    level().child:
+      label(name, hoLeft, veMiddle)
+      tail(): checkbox("", addr self.check0)
+
   proc createWidget: GUIWidget =
+    let cbHello = self.cbHello
     # Create Layout
     form().child:
       field(): checkbox("Antialising", addr self.check0)
@@ -29,10 +35,14 @@ controller CONLayout:
       field("Opacity"): slider(addr self.valueB)
       field(): checkbox("Auto Flow", addr self.check1)
       
+      button("lol equisde", cbHello)
       label("", hoLeft, veMiddle)
       label("Color Mixing", hoLeft, veMiddle)
-      field("Blending"): slider(addr self.valueC)
-      field("Dilution"): slider(addr self.valueD)
+      field(self.hl"Blending"): slider(addr self.valueC)
+      field(self.hl"Dilution"): slider(addr self.valueD)
+      field("Persistence"): slider(addr self.valueA)
+      field(self.hl"Watering"): slider(addr self.valueD)
+
 
   new conlayout():
     # Create New Widget

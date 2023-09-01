@@ -6,9 +6,11 @@ widget GUICheckBox:
     check: ptr bool
 
   new checkbox(label: string, check: ptr bool):
-    let app = getApp()
+    let 
+      app = getApp()
+      height = app.font.height
     # Set to Font Size Metrics
-    result.minimum(0, app.font.height)
+    result.minimum(height, height)
     # Button Attributes
     result.flags = wMouse
     result.label = label
