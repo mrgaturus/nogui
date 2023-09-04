@@ -16,15 +16,14 @@ widget GUILabel:
     [cx, cy]: int32
 
   new label(text: string, ho: HoAlign, ve: VeAlign):
-    let metrics = addr getApp().font
+    let height = getApp().font.height
     # Set New Text
     result.text = text
     # Set Alignment
     result.h_align = ho
     result.v_align = ve
     # Set Size Hints
-    result.minimum(text.width, 
-      metrics.height - metrics.desc)
+    result.minimum(text.width, height)
 
   method layout =
     block: # X Position Align

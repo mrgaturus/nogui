@@ -246,11 +246,6 @@ proc main() =
   createApp(1024, 600, nil)
   let test = conplayground(10, 20)
   # Clear Color
-  let
-    bg = getApp().colors.background
-    r = float32(bg and 0xFF) / 255
-    g = float32(bg shr 8 and 0xFF) / 255
-    b = float32(bg shr 16 and 0xFF) / 255
   # Open Window
   executeApp(test.widget):
     let rgb = test.hsv0.toRGB

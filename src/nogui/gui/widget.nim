@@ -62,9 +62,9 @@ type
     rect*: GUIRect
     metrics*: GUIMetrics
 
-# ------------------------------------
-# WIDGET ABSTRACT METHODS - FORWARDERS
-# ------------------------------------
+# -----------------------------------------------
+# WIDGET ABSTRACT METHODS - TODO: GET RID OF THIS
+# -----------------------------------------------
 
 template handle*(w: GUIWidget, kind: GUIHandle) = w.vtable.handle(w, kind)
 template event*(w: GUIWidget, state: ptr GUIState) = w.vtable.event(w, state)
@@ -220,28 +220,6 @@ proc maximum*(widget: GUIWidget, w, h: int32) =
   metrics.maxW = cast[int16](w)
   metrics.maxH = cast[int16](h)
 
-# -- Used by Layout for Surface Visibility
-proc calcAbsolute(widget: GUIWidget, pivot: var GUIRect) =
-  let
-    rect = addr widget.rect
-    metrics = addr widget.metrics
-    flags = widget.flags
-  # Calcule Absolute Position
-  rect.x = pivot.x + metrics.x
-  rect.y = pivot.y + metrics.y
-  # Calculate Absolute Size
-  rect.w = metrics.w
-  rect.h = metrics.h
-  # Test Visibility Boundaries
-  let test = (flags and wHidden) == 0 and
-    rect.x <= pivot.x + pivot.w and
-    rect.y <= pivot.y + pivot.h and
-    rect.x + rect.w >= pivot.x and
-    rect.y + rect.h >= pivot.y
-  # Mark Visible if Passed Visibility Test
-  widget.flags = (flags and not wVisible) or 
-    (cast[uint8](test) shl 2) # See wVisible
-
 proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
   let rect = addr widget.rect
   # Check if is visible and point is on area
@@ -269,16 +247,16 @@ proc close*(widget: GUIWidget) {.inline.} =
 
 proc move*(widget: GUIWidget, x, y: int32) =
   if widget.kind > wgChild:
-    widget.rect.x = x
-    widget.rect.y = y
+    widget.metrics.x = int16 x
+    widget.metrics.y = int16 y
     # Mark Widget as Dirty
     widget.set(wDirty)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
     let metrics = addr widget.metrics
-    widget.rect.w = max(w, metrics.minW)
-    widget.rect.h = max(h, metrics.minH)
+    metrics.w = max(int16 w, metrics.minW)
+    metrics.h = max(int16 h, metrics.minH)
     # Mark Widget as Dirty
     widget.set(wDirty)
 
@@ -324,6 +302,17 @@ proc find*(widget: GUIWidget, x, y: int32): GUIWidget =
 # WIDGET STEP FOCUS - EVENT QUEUE
 # -------------------------------
 
+proc visible*(widget: GUIWidget): bool =
+  var cursor = widget
+  # Test Self Visibility
+  result = cursor.test(wVisible)
+  # Walk to Outermost Parent
+  while result:
+    cursor = cursor.parent
+    if isNil(cursor): break
+    else: # Test Parent Visibility
+      result = cursor.test(wVisible)
+
 proc step*(widget: GUIWidget, back: bool): GUIWidget =
   result = widget
   # Step Neightbords
@@ -342,76 +331,113 @@ proc step*(widget: GUIWidget, back: bool): GUIWidget =
 
 # --------------------------------
 # WIDGET LAYOUT TREE - EVENT QUEUE
+# TODO: use names freed by removing vtable templates alias
 # --------------------------------
 
-proc visible*(widget: GUIWidget): bool =
-  var cursor = widget
-  # Test Self Visibility
-  result = cursor.test(wVisible)
-  # Walk to Outermost Parent
-  while result:
-    cursor = cursor.parent
-    if isNil(cursor): break
-    else: # Test Parent Visibility
-      result = cursor.test(wVisible)
+proc absolute(widget: GUIWidget) =
+  let
+    rect = addr widget.rect
+    metrics = addr widget.metrics
+    flags = widget.flags
+  # Calcule Absolute Position
+  rect.x = metrics.x
+  rect.y = metrics.y
+  # Calculate Absolute Size
+  rect.w = metrics.w
+  rect.h = metrics.h
+  # Absolute is Relative when no parent
+  if isNil(widget.parent): return
+  # Move Absolute Position to Pivot
+  let pivot = addr widget.parent.rect
+  rect.x += pivot.x
+  rect.y += pivot.y
+  # Test Visibility Boundaries
+  let test = (flags and wHidden) == 0 and
+    rect.x <= pivot.x + pivot.w and
+    rect.y <= pivot.y + pivot.h and
+    rect.x + rect.w >= pivot.x and
+    rect.y + rect.h >= pivot.y
+  # Mark Visible if Passed Visibility Test
+  widget.flags = (flags and not wVisible) or 
+    (cast[uint8](test) shl 2) # See wVisible
 
-proc dirty*(widget: GUIWidget) =
-  widget.layout()
-  # Check if Has Children
-  if not isNil(widget.first):
-    var cursor = widget.first
-    while true: # Iterate Childrens
-      calcAbsolute(cursor, cursor.parent.rect)
-      # Do Layout and Check Inside
-      if cursor.test(wVisible):
-        cursor.layout()
-        if not isNil(cursor.first):
-          cursor = cursor.first
-          continue # Next Level
-      # Select Next Widget
-      if isNil(cursor.next):
-        cursor = cursor.parent
-        while cursor != widget:
-          if isNil(cursor.next):
-            cursor = cursor.parent
-          else: # Found Level
-            cursor = cursor.next
-            break # Prev Level
-        if cursor == widget: break
-      else: cursor = cursor.next
+proc prepare(widget: GUIWidget) =
+  var w {.cursor.} = widget
+  # Traverse Children
+  while true:
+    # Traverse Inside?
+    if isNil(w.first):
+      w.vtable.update(w)
+    else:
+      w = w.first
+      continue
+    # Traverse Parents?
+    while isNil(w.next) and w != widget:
+      w = w.parent
+      w.vtable.update(w)
+    # Traverse Slibings?
+    if w == widget: break
+    else: w = w.next
+    
+proc organize(widget: GUIWidget) =
+  var w {.cursor.} = widget
+  # Traverse Children
+  while true:
+    w.absolute()
+    # Is Visible?
+    if w.test(wVisible):
+      w.vtable.layout(w)
+      # Traverse Inside?
+      if not isNil(w.first):
+        w = w.first
+        continue
+    # Traverse Parents?
+    while isNil(w.next) and w != widget:
+      w = w.parent
+    # Traverse Slibings?
+    if w == widget: break
+    else: w = w.next
 
-# ------------------------------
+proc arrange*(widget: GUIWidget) =
+  var
+    w {.cursor.} = widget
+    m = w.metrics
+  # Prepare Widget
+  w.prepare()
+  # Propagate Metrics Changes to Parents
+  while w.metrics != m and not isNil(w.parent):
+    w = w.parent
+    # Prepare Widget
+    w.vtable.update(w)
+    m = w.metrics
+  # Layout Widgets
+  w.organize()
+
+# -----------------------------------
 # WIDGET RENDER CHILDRENS - MAIN LOOP
-# ------------------------------
+# Create a flag for check if needs clipping
+# -----------------------------------
 
 proc render*(widget: GUIWidget, ctx: ptr CTXRender) =
+  var w {.cursor.} = widget
   # Push Clipping
-  ctx.push(widget.rect)
-  # Start at Children
-  var cursor = widget.first
-  while true: # Render Each Visible Tree Widget
-    if (cursor.flags and wVisible) == wVisible:
-      cursor.draw(ctx)
-      # Check if has Childrens
-      if not isNil(cursor.first):
-        # Push Clipping
-        ctx.push(cursor.rect)
-        # Set Cursor Next Level
-        cursor = cursor.first
-        continue # Next Level
-    # Select Next Widget
-    if isNil(cursor.next):
-      cursor = cursor.parent
-      while cursor != widget:
-        # Pop Clipping
-        ctx.pop()
-        # Find Next Widget
-        if isNil(cursor.next):
-          cursor = cursor.parent
-        else: # Found Level
-          cursor = cursor.next
-          break # Prev Level
-      if cursor == widget: break
-    else: cursor = cursor.next
+  ctx.push(w.rect)
+  # Traverse Children
+  while true:
+    # Push Clipping, TODO: Change to Nim sets
+    if (w.flags and wVisible) == wVisible:
+      w.vtable.draw(w, ctx)
+      # Traverse Inside?
+      if not isNil(w.first):
+        ctx.push(w.rect)
+        w = w.first
+        continue
+    # Traverse Parents?
+    while isNil(w.next) and w != widget:
+      ctx.pop()
+      w = w.parent
+    # Traverse Slibings?
+    if w == widget: break
+    else: w = w.next
   # Pop Clipping
   ctx.pop()
