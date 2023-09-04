@@ -8,7 +8,7 @@ from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/widgets/[button, label, textbox]
-import nogui/ux/layouts/[grid, box]
+import nogui/ux/layouts/[grid, box, misc]
 import nogui/utf8
 
 controller CONLayout:
@@ -47,7 +47,7 @@ controller CONLayout:
 
   new conlayout():
     # Create New Widget
-    result.widget = result.createWidget()
+    result.widget = margin: result.createWidget()
 
 proc main() =
   createApp(1024, 600, nil)

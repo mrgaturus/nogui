@@ -22,6 +22,12 @@ proc calc(force, min, size: int16, scale: float32): int16 =
   # Scale Selected Dimension
   result = int16(scale * float32 result)
 
+proc offset(m: int16): int16 =
+  # TODO: allow customize global margin
+  # TODO: scale customized margin
+  if m >= 0: m
+  else: getApp().font.size shr 1
+
 # ----------------------
 # GUI Adjust Cell Layout
 # ----------------------
@@ -97,50 +103,50 @@ widget UXAdjustLayout:
 # -----------------
 
 widget UXMarginLayout:
-  attributes:
-    size: int16
+  attributes: @public:
+    [marginW, marginH]: int16
 
   new margin(w: GUIWidget):
-    # Use Default Margin
     result.add w
-    result.size = low int16
+    # Use Default Margin
+    result.marginW = low int16
+    result.marginH = low int16
 
   new margin(size: int16, w: GUIWidget):
-    # Use Custom Margin
     result.add w
-    result.size = size
-
-  proc offset: int16 =
-    result = self.size
-    # TODO: scale customized margin
-    if result < 0:
-      # TODO: allow customize margin
-      result = getApp().font.size shr 1
+    # Customized Margin
+    result.marginW = size
+    result.marginH = size
 
   method update =
     let 
       m0 = addr self.metrics
       m = addr self.first.metrics
-      pad = self.offset shl 1
+      # Padding Sizes
+      pw = offset(self.marginW) shl 1
+      ph = offset(self.marginH) shl 1
     # Ensure is one widget
     assert self.first == self.last
     # Mimic Min Size + Margin
-    m0.minW = m.minW + pad
-    m0.minH = m.minH + pad
+    m0.minW = m.minW + pw
+    m0.minH = m.minH + ph
 
   method layout =
     let 
       m0 = addr self.metrics
       m = addr self.first.metrics
       # Margin Metric
-      offset = self.offset
-      pad = offset shl 1
+      ow = offset(self.marginW)
+      oh = offset(self.marginH)
+      # Marging Padding
+      pw = ow shl 1
+      ph = oh shl 1
     # Apply Offset
-    m.x = offset
-    m.y = offset
+    m.x = ow
+    m.y = oh
     # Apply Padding
-    m.w = m0.w - pad
-    m.h = m0.h - pad
+    m.w = m0.w - pw
+    m.h = m0.h - ph
 
 # TODO: export by default
 export UXAdjustLayout, UXMarginLayout

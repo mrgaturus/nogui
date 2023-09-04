@@ -8,7 +8,7 @@ from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/widgets/button
-import nogui/ux/layouts/box
+import nogui/ux/layouts/[box, misc]
 
 controller CONLayout:
   attributes:
@@ -20,7 +20,7 @@ controller CONLayout:
   proc createWidget: GUIWidget =
     let cbHello = self.cbHello
     # Create Layout
-    horizontal().child:
+    margin: horizontal().child:
       min: button("Minimun Left", cbHello)
       # Sub Layout
       vertical().child:
@@ -44,7 +44,7 @@ proc main() =
   # Clear Color
   # Open Window
   executeApp(test.widget):
-    glClearColor(0.5, 0.5, 0.5, 1.0)
+    glClearColor(0.1019607843137255, 0.11196078431372549, 0.11196078431372549, 1.0)
     glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
 when isMainModule:
