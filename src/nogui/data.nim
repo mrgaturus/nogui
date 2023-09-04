@@ -1,104 +1,149 @@
-import macros, macrocache
 # Import Location Management
+from os import `/`, getAppDir, dirExists
 from std/compilesettings import 
   querySetting, SingleValueSetting
-from os import parentDir, `/`
-# Used for Execute a Command
-when not defined(skipdata):
-  from strutils import join
-# Icon Glyph Counter
-from loader import GUIGlyphIcon
-const mcIconsCount = CacheCounter"nogui:icon"
+# TODO: Use fontconfig for extra fonts
+# TODO: errors as exceptions with IOError
+import logger
+import libs/gl
+from libs/ft2 import
+  FT2Face,
+  FT2Library,
+  ft2_init,
+  ft2_newFace,
+  ft2_setCharSize
 
-# ---------------------------
-# gorge Executor with Checker
-# ---------------------------
+# ------------------
+# Data Path Location
+# ------------------
 
-func eorge(line: NimNode, args: openArray[string]) =
-  when not defined(skipdata):
-    let (output, code) = gorgeEx(args.join " ")
-    # Check if is succesfully
-    if code != 0:
-      error(output, line)
-  # Avoid Error
-  discard
-
-# ----------------------
-# Folder Preparing Procs
-# ----------------------
-
-func prepareFolder(line: NimNode, name: string): string =
-  result = querySetting(outDir) / name
-  # Create Data Folder if not exists
-  eorge line, ["test -d", result, "||", "mkdir", result]
-
-func prepareIcons(line: NimNode): string =
-  result = prepareFolder(line, "icons")
-  # Reset icon list if exists
-  if mcIconsCount.value == 0:
-    let file = result / "icons.list"
-    eorge line, ["rm -f", file]
+proc toDataPath(path: string): string =
+  let relativePath = getAppDir() / "data"
+  # Check if relative path exists
+  result = relativePath / path
+  when defined(posix):
+    const unixPath = "/usr/share" / querySetting(projectName)
+    # try find on /usr/share/<projectname>
+    if not dirExists(relativePath):
+      result = unixPath / path
 
 # -----------------------
-# Folder Definition Macro
+# Icon Data Loading Procs
 # -----------------------
 
-macro folders*(files: untyped) =
-  # Create data folder if not exists
-  let 
-    dataPath = prepareFolder(files, "data")
-    sourcePath = lineInfoObj(files).filename.parentDir()
-  # Copy Each Defined Folder
-  for file in files:
-    expectKind(file, nnkInfix)
+type
+  GUIHeaderIcon = object
+    bytes*: cuint
+    w*, h*, fit*: cshort
+    channels*: cshort
+    # Allocated Chunk
+    pad0: cuint
+  GUIBufferIcon = ptr UncheckedArray[byte]
+  GUIChunkIcon* = object
+    info*: ptr GUIHeaderIcon
+    buffer*: GUIBufferIcon
+  GUIPackedIcons* = ref object
+    handle: File
+    allocated: int
+    # Current Icon Buffer
+    header*: GUIHeaderIcon
+    buffer*: GUIBufferIcon
+  GUIGlyphIcon* = distinct int32
+
+proc newIcons*(filename: string): GUIPackedIcons =
+  new result
+  # Try Open File
+  let path = toDataPath(filename)
+  if not open(result.handle, path, fmRead):
+    raise newException(IOError, path & " cannot be open")
+  # Read File Signature
+  var signature: uint64
+  if readBuffer(result.handle, addr signature, 8) != 8 or 
+    signature != 0x4955474f4e'u64:
+      raise newException(IOError, path & " is not valid")
+
+proc bytesIcon(pack: GUIPackedIcons, bytes: int): GUIBufferIcon =
+  if bytes > pack.allocated:
+    pack.allocated = bytes
+    # We dont need prev data
+    let prev = pack.buffer
+    if not isNil(prev):
+      dealloc(prev)
+    pack.buffer = cast[GUIBufferIcon](alloc bytes)
+  # Return Current Buffer
+  pack.buffer
+
+iterator icons*(pack: GUIPackedIcons): GUIChunkIcon =
+  let
+    handle = pack.handle
+    info = addr pack.header
+  # Chunk Yiedler
+  var result: GUIChunkIcon
+  result.info = info
+  # Read Chunk and Write a PNG
+  const headSize = sizeof GUIHeaderIcon
+  while readBuffer(handle, info, headSize) == headSize:
     let 
-      op = file[0]
-      dst = dataPath / file[2].strVal
-    var src = sourcePath / file[1].strVal
-    # Check Copy Inside
-    if op.eqIdent("*="): 
-      src = src / "*"
-    else: expectIdent(op, ":=")
-    # Copy File Contents
-    eorge file, ["cp -r", src, dst]
+      bytes = int info.bytes
+      data = bytesIcon(pack, bytes)
+    if readBuffer(handle, addr data[0], bytes) == bytes:
+      result.buffer = data
+      yield result
+  # We Can Close File
+  close(pack.handle)
+  # Free Temporal Buffer
+  dealloc(pack.buffer)
 
-# ---------------------
-# Icon Definition Macro
-# ---------------------
+# -----------------------------
+# Freetype 2 Face Creation Proc
+# -----------------------------
 
-func icon(item: NimNode): NimNode =
-  let 
-    value = newIntLitNode(mcIconsCount.value)
-    ty = bindSym"GUIGlyphIcon"
-    # Icon Name and Visibility
-    op = item[0]
-    name = item[1]
-  # Add Name Prefix
-  var id = ident("icon" & name.strVal)
-  copyLineInfo(id, name)
-  # Check if is Public
-  if op.eqIdent("*="): 
-    id = postfix(id, "*")
-  else: expectIdent(op, ":=")
-  # Create New Definition
-  result = nnkConstDef.newTree(
-    id, ty, nnkCommand.newTree(ty, value)
-  )
-  # Step Current Icon
-  inc mcIconsCount
+proc newFont*(ft2: FT2Library, font: string, size: cint): FT2Face =
+  let path = toDataPath(font)
+  # Load Default Font File using FT2 Loader
+  if ft2_newFace(ft2, cstring path, 0, addr result) != 0:
+    log(lvError, "failed loading font file: ", path)
+  # Set Size With 96 of DPI, DPI Awareness is confusing
+  if ft2_setCharSize(result, 0, size shl 6, 96, 96) != 0:
+    log(lvWarning, "font size was setted not properly")
 
-macro icons*(dir: string, size: int, list: untyped) =
-  result = nnkConstSection.newTree()
-  # Create data folder if not exists
-  let 
-    dataPath = prepareIcons(list)
-    dataList = dataPath / "icons.list"
-    dataSubdir = dir.strVal
-    dataSize = $size.intVal
-  # Define Each Icon
-  for item in list:
-    expectKind(item, nnkInfix)
-    let filename = dataSubdir / item[2].strVal
-    eorge item, ["echo", filename, ":", dataSize, ">>", dataList]
-    # Add New Fresh Constant
-    result.add icon(item)
+# --------------------
+# Shader Creation Proc
+# --------------------
+
+proc newShader*(vert, frag: string): GLuint =
+  let path = toDataPath("glsl")
+  var # Prepare Vars
+    vertShader = glCreateShader(GL_VERTEX_SHADER)
+    fragShader = glCreateShader(GL_FRAGMENT_SHADER)
+    buffer: string
+    bAddr: cstring
+    success: GLint
+  try: # -- LOAD VERTEX SHADER
+    buffer = readFile(path / vert)
+    bAddr = cast[cstring](addr buffer[0])
+  except IOError: log(lvError, "failed loading shader: ", vert)
+  glShaderSource(vertShader, 1, cast[cstringArray](addr bAddr), nil)
+  try: # -- LOAD FRAGMENT SHADER
+    buffer = readFile(path / frag)
+    bAddr = cast[cstring](addr buffer[0])
+  except IOError: log(lvError, "failed loading shader: ", frag)
+  glShaderSource(fragShader, 1, cast[cstringArray](addr bAddr), nil)
+  # -- COMPILE SHADERS
+  glCompileShader(vertShader)
+  glCompileShader(fragShader)
+  # -- CHECK SHADER ERRORS
+  glGetShaderiv(vertShader, GL_COMPILE_STATUS, addr success)
+  if not success.bool:
+    log(lvError, "failed compiling: ", vert)
+  glGetShaderiv(fragShader, GL_COMPILE_STATUS, addr success)
+  if not success.bool:
+    log(lvError, "failed compiling: ", frag)
+  # -- CREATE PROGRAM
+  result = glCreateProgram()
+  glAttachShader(result, vertShader)
+  glAttachShader(result, fragShader)
+  glLinkProgram(result)
+  # -- CLEAN UP TEMPORALS
+  glDeleteShader(vertShader)
+  glDeleteShader(fragShader)
