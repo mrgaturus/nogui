@@ -7,7 +7,7 @@ from os import parentDir, `/`
 when not defined(skipdata):
   from strutils import join
 # Icon Glyph Counter
-from loader import GUIGlyphIcon
+from data import GUIGlyphIcon
 const mcIconsCount = CacheCounter"nogui:icon"
 
 # ---------------------------
