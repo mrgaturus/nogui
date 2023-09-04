@@ -2,12 +2,12 @@
 
 version       = "0.1.0"
 author        = "mrgaturus"
-description   = "yep, this is a nogui"
+description   = "fast and simple gui toolkit"
 license       = "MIT"
 srcDir        = "src"
 
-
 # Dependencies
-
-requires "nim >= 1.6.10"
+requires "nim >= 2.0.0"
+requires "https://github.com/mrgaturus/nopack"
+# native plaforms will be written on C
 requires "x11"
