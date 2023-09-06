@@ -6,4 +6,6 @@ tests/*
 !tests/**/
 # Ignore Test Data
 tests/data
-tests/icons/icons.list
+# Ignore Generated List
+icons.list
+paths.list

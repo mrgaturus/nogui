@@ -3,8 +3,8 @@ from math import sin, cos, PI
 from ../values import
   fastSqrt, invSqrt,
   guiProjection
-# Assets and Metrics
-from ../loader import 
+# Data Loader
+from ../data import 
   newShader, GUIGlyphIcon
 from ../utf8 import runes16
 # Texture Atlas

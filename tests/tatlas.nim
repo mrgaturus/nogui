@@ -5,7 +5,7 @@ from nogui/libs/gl import
   GL_DEPTH_BUFFER_BIT
 # Import nogui stuff
 import nogui/ux/prelude
-from nogui/data import icons
+from nogui/pack import icons, folders
 from nogui/builder import controller
 from nogui import createApp, executeApp
 
@@ -22,6 +22,9 @@ icons "tatlas", 32:
   #reset32 := "reset.svg"
   close32 := "close.svg"
   color32 := "color.png"
+
+folders:
+  "canvas" -> "glsl"
 
 # ------------------
 # Atlas Debug Widget

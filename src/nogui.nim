@@ -1,5 +1,5 @@
-from nogui/data import folders
-from nogui/loader import newFont
+from nogui/pack import folders
+from nogui/data import newFont
 from nogui/gui/widget import GUIWidget
 from nogui/gui/timer import loop
 from nogui/gui/signal import 
@@ -113,7 +113,7 @@ proc createApp*(w, h: int32, state: pointer) =
   result.queue = queue
   result.atlas = atlas
   # Copy Default Data
-  static: folders: "data" *= "./"
+  static: folders: "data" >> ""
 
 proc getApp*(): GUIApplication =
   # Check App Initialize

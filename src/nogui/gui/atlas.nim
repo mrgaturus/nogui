@@ -2,7 +2,8 @@ from math import sqrt, ceil, nextPowerOfTwo
 # Import Libs
 import ../libs/gl
 import ../libs/ft2
-import ../loader
+# Import Data Loader
+import ../data
 
 type
   SKYNode = object
