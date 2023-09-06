@@ -113,7 +113,7 @@ proc createApp*(w, h: int32, state: pointer) =
   result.queue = queue
   result.atlas = atlas
   # Copy Default Data
-  static: folders: "data" *= "./"
+  static: folders: "data" >> ""
 
 proc getApp*(): GUIApplication =
   # Check App Initialize
