@@ -6,7 +6,7 @@ type
   HoAlign* = enum # Horizontal
     hoLeft, hoMiddle, hoRight
   
-widget GUILabel:
+widget UXLabel:
   attributes:
     text: string
     # Align of Text

@@ -6,11 +6,11 @@ from ../../builder import controller
 # Combobox Item
 # -------------
 
-widget GUIComboItem of GUIMenuItem:
+widget UXComboItem of UXMenuItem:
   attributes:
     value: int
     # Portal to ComboModel
-    selected: ptr GUIComboItem
+    selected: ptr UXComboItem
 
   new comboitem(label: string, value: int):
     result.init0(label)
@@ -30,8 +30,8 @@ widget GUIComboItem of GUIMenuItem:
 
 controller ComboModel:
   attributes:
-    menu: GUIMenu
-    selected: GUIComboItem
+    menu: UXMenu
+    selected: UXComboItem
     flatten: seq[pointer]
     # User Defined Callback
     ondone: GUICallback
@@ -44,10 +44,10 @@ controller ComboModel:
       push(self.onchange)
 
   proc select*(value: int) =
-    var found: GUIComboItem
+    var found: UXComboItem
     # Find in Cache Captures
     for w in self.flatten:
-      let item {.cursor.} = cast[GUIComboItem](w)
+      let item {.cursor.} = cast[UXComboItem](w)
       if item.value == value:
         found = item
         break
@@ -55,20 +55,20 @@ controller ComboModel:
     assert not isNil(found)
     self.selected = found
 
-  proc configure(menu: GUIMenu) =
+  proc configure(menu: UXMenu) =
     let portal = addr self.selected
     # Configure Menu Items
     for w in forward(menu.first):
-      if w of GUIComboItem:
+      if w of UXComboItem:
         # Bind With Selected Model and Capture Cache
-        cast[GUIComboItem](w).selected = portal
+        cast[UXComboItem](w).selected = portal
         self.flatten.add cast[pointer](w)
-      elif w of GUIMenu:
+      elif w of UXMenu:
         # Recursive search
-        self.configure(w.GUIMenu)
+        self.configure(w.UXMenu)
 
-  proc `menu=`*(menu: GUIMenu) =
-    privateAccess(GUIMenu)
+  proc `menu=`*(menu: UXMenu) =
+    privateAccess(UXMenu)
     # Replace Menu Callback
     self.ondone = menu.cbClose
     menu.cbClose = self.cbMenuDone
@@ -77,10 +77,10 @@ controller ComboModel:
     self.flatten = newSeq[pointer](0)
     self.configure(menu)
     # Select First Item of Flatten Cache
-    self.selected = cast[GUIComboItem](self.flatten[0])
+    self.selected = cast[UXComboItem](self.flatten[0])
     self.menu = menu
 
-  new combomodel(menu: GUIMenu):
+  new combomodel(menu: UXMenu):
     `menu=`(result, menu)
 
 # ------------
@@ -122,7 +122,7 @@ widget GUIComboBox:
     # Region Cursor
     var r = rect(self.rect)
     # Allow Private of MenuItem
-    privateAccess(GUIMenuItem)
+    privateAccess(UXMenuItem)
     # Select Color State
     ctx.color self.itemColor()
     ctx.fill r

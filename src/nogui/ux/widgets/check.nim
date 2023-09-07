@@ -1,6 +1,6 @@
 import ../prelude
 
-widget GUICheckBox:
+widget UXCheckBox:
   attributes:
     label: string
     check: ptr bool

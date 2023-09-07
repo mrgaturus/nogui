@@ -4,7 +4,7 @@ from strutils import
 from ../../values import
   Value, toRaw, lerp, discrete, toFloat, toInt
 
-widget GUISlider:
+widget UXSlider:
   attributes:
     value: ptr Value
     decimals: int8

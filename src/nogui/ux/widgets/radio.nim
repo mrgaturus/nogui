@@ -1,6 +1,6 @@
 import ../prelude
 
-widget GUIRadio:
+widget UXRadio:
   attributes:
     label: string
     # Radio Check

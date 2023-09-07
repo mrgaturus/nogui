@@ -5,7 +5,7 @@ import base
 # Saturate/Value Square
 # ---------------------
 
-widget GUIColor0Square:
+widget UXColor0Square:
   attributes:
     hsv: ptr HSVColor
     
@@ -121,7 +121,7 @@ proc uvmap(tri: SV0Triangle, u, v: float32): CTXPoint =
 # Saturate/Value Triangle
 # -----------------------
 
-widget GUIColor0Triangle:
+widget UXColor0Triangle:
   attributes:
     hsv: ptr HSVColor
 
@@ -231,4 +231,4 @@ widget GUIColor0Triangle:
       self.hsv.s = s
       self.hsv.v = v
 
-export GUIColor0Triangle
+export UXColor0Triangle

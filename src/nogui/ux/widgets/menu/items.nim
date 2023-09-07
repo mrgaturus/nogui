@@ -4,7 +4,7 @@ import base
 # GUI Menu Callback
 # -----------------
 
-widget GUIMenuItemCB of GUIMenuItem:
+widget UXMenuItemCB of UXMenuItem:
   attributes:
     cb: GUICallback
 
@@ -24,7 +24,7 @@ widget GUIMenuItemCB of GUIMenuItem:
 # GUI Menu Option
 # ---------------
 
-widget GUIMenuItemOption of GUIMenuItem:
+widget UXMenuItemOption of UXMenuItem:
   attributes:
     option: ptr int32
     expected: int32
@@ -51,7 +51,7 @@ widget GUIMenuItemOption of GUIMenuItem:
 # GUI Menu Checkbox
 # -----------------
 
-widget GUIMenuItemCheck of GUIMenuItem:
+widget UXMenuItemCheck of UXMenuItem:
   attributes:
     check: ptr bool
     # Optional Callback
@@ -77,8 +77,8 @@ widget GUIMenuItemCheck of GUIMenuItem:
 # GUI Menu Popover
 # ----------------
 
-type GUIMenuOpaque* = distinct GUIWidget
-widget GUIMenuItemPopup of GUIMenuItem:
+type UXMenuOpaque* = distinct GUIWidget
+widget UXMenuItemPopup of UXMenuItem:
   attributes: @public:
     popup: GUIWidget
 
@@ -92,7 +92,7 @@ widget GUIMenuItemPopup of GUIMenuItem:
       popup.move(rect.x + rect.w, rect.y - 2)
     else: popup.close()
 
-  new menuitem(label: string, popup: GUIMenuOpaque):
+  new menuitem(label: string, popup: UXMenuOpaque):
     result.init0(label)
     result.popup = GUIWidget(popup)
     result.onportal = result.popupCB
@@ -121,4 +121,4 @@ widget GUIMenuItemPopup of GUIMenuItem:
   method event(state: ptr GUIState) =
     discard
 
-export GUIMenuItemPopup
+export UXMenuItemPopup

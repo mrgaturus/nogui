@@ -1,6 +1,6 @@
 import ../prelude
 
-widget GUIButton:
+widget UXButton:
   attributes:
     cb: GUICallback
     label: string
@@ -39,3 +39,10 @@ widget GUIButton:
     if state.kind == evCursorRelease and 
     self.test(wHover) and cb.valid: 
       cb.push()
+
+# ---------------
+# GUI Icon Button
+# ---------------
+
+widget UXIconButton of UXButton:
+  discard

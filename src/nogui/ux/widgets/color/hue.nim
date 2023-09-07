@@ -6,7 +6,7 @@ import base
 # Color Hue Vertical Bar
 # ----------------------
 
-widget GUIHue0Bar:
+widget UXHue0Bar:
   attributes:
     hsv: ptr HSVColor
 
@@ -95,7 +95,7 @@ widget GUIHue0Bar:
 # Color Hue Circle
 # ----------------
 
-widget GUIHue0Circle:
+widget UXHue0Circle:
   attributes:
     hsv: ptr HSVColor
     clicked: bool

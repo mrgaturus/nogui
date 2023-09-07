@@ -11,7 +11,7 @@ from ../../gui/event import
 from ../../gui/signal import 
   WindowSignal, msgOpenIM, msgCloseIM
 
-widget GUITextBox:
+widget UXTextBox:
   attributes:
     input: ptr UTF8Input
     # Text Metric Cache

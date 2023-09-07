@@ -3,7 +3,7 @@ from ../../values import
   Value, toRaw, lerp,
   distance, toFloat, toInt
 
-widget GUIScroll:
+widget UXScroll:
   attributes:
     value: ptr Value
     [pos, t]: float32

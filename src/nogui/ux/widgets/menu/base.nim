@@ -22,7 +22,7 @@ proc fit*(self: GUIWidget, w, h: int32) =
 # GUI Menu Separator
 # ------------------
 
-widget GUIMenuSeparator:
+widget UXMenuSeparator:
   new menuseparator():
     let
       metrics = addr getApp().font
@@ -40,7 +40,7 @@ widget GUIMenuSeparator:
     # Create Simple Line
     ctx.fill rect
 
-widget GUIMenuSeparatorLabel:
+widget UXMenuSeparatorLabel:
   attributes:
     label: string
 
@@ -79,12 +79,12 @@ widget GUIMenuSeparatorLabel:
 # GUI Menu Item Base
 # ------------------
 
-widget GUIMenuItem:
+widget UXMenuItem:
   attributes:
     label: string
     @public:
       [ondone, onportal]: GUICallback
-      portal: ptr GUIMenuItem
+      portal: ptr UXMenuItem
 
   proc select() =
     if isNil(self.portal):
@@ -143,4 +143,4 @@ widget GUIMenuItem:
       self.select()
 
 # Export Widget Inheritable
-export GUIMenuItem, prelude
+export UXMenuItem, prelude

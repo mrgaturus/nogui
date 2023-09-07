@@ -5,19 +5,19 @@ export menuitem, menuseparator
 # GUI Menu Popup
 # --------------
 
-widget GUIMenu:
+widget UXMenu:
   attributes:
     top: GUIWidget
     label: string
     # Current Menu Handle
-    selected: GUIMenuItem
+    selected: UXMenuItem
 
   callback cbClose:
     self.close()
     # Close Top Levels
     let top = self.top
     if not isNil(top) and top.vtable == self.vtable:
-      let m = cast[GUIMenu](top)
+      let m = cast[UXMenu](top)
       push(m.cbClose)
     # Remove Selected
     self.selected = nil
@@ -48,8 +48,8 @@ widget GUIMenu:
       # Warp submenu into a menuitem
       if w.vtable == self.vtable:
         let 
-          w0 = cast[GUIMenu](w)
-          w1 = cast[GUIMenuOpaque](w0)
+          w0 = cast[UXMenu](w)
+          w1 = cast[UXMenuOpaque](w0)
           item = menuitem(w0.label, w1)
         # Change Top Level
         w0.top = self
@@ -58,8 +58,8 @@ widget GUIMenu:
         w0.kind = wgMenu
         w = item
       # Bind Menu With Item
-      if w of GUIMenuItem:
-        let item = cast[GUIMenuItem](w)
+      if w of UXMenuItem:
+        let item = cast[UXMenuItem](w)
         item.ondone = self.cbClose
         item.portal = addr self.selected
       # Calculate Max Width
@@ -113,11 +113,11 @@ widget GUIMenu:
 # GUI Menu Bar Item
 # -----------------
 
-widget GUIMenuBarItem:
+widget UXMenuBarItem:
   attributes:
-    menu: GUIMenu
+    menu: UXMenu
     # Current Selected Handle
-    portal: ptr GUIMenuBarItem
+    portal: ptr UXMenuBarItem
 
   proc onportal() =
     let menu {.cursor.} = self.menu
@@ -136,10 +136,10 @@ widget GUIMenuBarItem:
     m.selected = nil
     m.close()
 
-  new menubar0(menu: GUIMenuOpaque):
+  new menubar0(menu: UXMenuOpaque):
     result.flags = wMouse
     let 
-      m = cast[GUIMenu](menu)
+      m = cast[UXMenu](menu)
       metrics = addr getApp().font
       fontsize = metrics.size
       # Minimun Size With Padding
@@ -200,10 +200,10 @@ widget GUIMenuBarItem:
 # GUI Menu Bar
 # ------------
 
-widget GUIMenuBar:
+widget UXMenuBar:
   attributes:
     # Selected Menu Item
-    selected: GUIMenuBarItem
+    selected: UXMenuBarItem
 
   new menubar():
     result.flags = wMouse
@@ -215,10 +215,10 @@ widget GUIMenuBar:
     for widget in forward(self.first):
       var w {.cursor.} = widget
       # Warp Into Menubar Item
-      if w of GUIMenu:
+      if w of UXMenu:
         let
-          w0 = cast[GUIMenu](w)
-          item = menubar0 GUIMenuOpaque(w0)
+          w0 = cast[UXMenu](w)
+          item = menubar0 UXMenuOpaque(w0)
         # Warp Into Item
         w0.replace(item)
         w0.top = self
@@ -226,8 +226,8 @@ widget GUIMenuBar:
         w0.cbClose = item.cbMenuClose
         w = item
       # Bind Portal to MenuBarItem
-      if w of GUIMenuBarItem:
-        cast[GUIMenuBarItem](w).portal = portal
+      if w of UXMenuBarItem:
+        cast[UXMenuBarItem](w).portal = portal
       # Calculate Max Height
       height = max(height, w.metrics.minH)
       x += w.metrics.minW
@@ -269,4 +269,4 @@ widget GUIMenuBar:
 # ---------------
 
 # TODO: allow do export on builder
-export GUIMenu
+export UXMenu
