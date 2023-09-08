@@ -5,7 +5,7 @@ from ../values import
   guiProjection
 # Data Loader
 from ../data import 
-  newShader, GUIGlyphIcon
+  newShader, GUIAtlasIcon
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
@@ -599,22 +599,37 @@ proc text*(ctx: ptr CTXRender, x, y: int32, clip: CTXRect, str: string) =
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
-proc icon*(ctx: ptr CTXRender, x, y: int32, id: GUIGlyphIcon) =
+proc icon*(ctx: ptr CTXRender, id: GUIAtlasIcon, x, y: int32) =
   let
     # Lookup Icon
-    icon = ctx.atlas.icon(uint16 id)
+    i = icon(ctx.atlas, uint16 id)
     # Icon Rect
     x = float32 x
     y = float32 y
-    xw = x + float32 icon.w
-    yh = y + float32 icon.h
+    xw = x + float32 i.w
+    yh = y + float32 i.h
   # Reserve Vertex
   ctx.addVerts(4, 6)
   # Icon Vertex Definition
-  ctx.vertexUV(0, x, y, icon.x1, icon.y1)
-  ctx.vertexUV(1, xw, y, icon.x2, icon.y1)
-  ctx.vertexUV(2, x, yh, icon.x1, icon.y2)
-  ctx.vertexUV(3, xw, yh, icon.x2, icon.y2)
+  ctx.vertexUV(0, x, y, i.x1, i.y1)
+  ctx.vertexUV(1, xw, y, i.x2, i.y1)
+  ctx.vertexUV(2, x, yh, i.x1, i.y2)
+  ctx.vertexUV(3, xw, yh, i.x2, i.y2)
+  # Elements Definition
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
+
+proc icon*(ctx: ptr CTXRender, id: GUIAtlasIcon, r: CTXRect) =
+  let
+    # Lookup Icon
+    i = icon(ctx.atlas, uint16 id)
+  # Reserve Vertex
+  ctx.addVerts(4, 6)
+  # Icon Vertex Definition
+  ctx.vertexUV(0, r.x, r.y, i.x1, i.y1)
+  ctx.vertexUV(1, r.xw, r.y, i.x2, i.y1)
+  ctx.vertexUV(2, r.x, r.yh, i.x1, i.y2)
+  ctx.vertexUV(3, r.xw, r.yh, i.x2, i.y2)
   # Elements Definition
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)
