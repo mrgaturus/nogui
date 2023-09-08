@@ -48,7 +48,7 @@ type
     # Current Icon Buffer
     header*: GUIHeaderIcon
     buffer*: GUIBufferIcon
-  GUIGlyphIcon* = distinct int32
+  GUIAtlasIcon* = distinct int32
 
 proc newIcons*(filename: string): GUIPackedIcons =
   new result

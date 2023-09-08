@@ -11,7 +11,7 @@ const
   mcPathsCount = CacheCounter"nogui:path"
   mcIconsCount = CacheCounter"nogui:icon"
 # Glyph Icon ID Type
-from data import GUIGlyphIcon
+from data import GUIAtlasIcon
 
 # ---------------------------
 # gorge Executor with Checker
@@ -78,7 +78,7 @@ macro folders*(paths: untyped) =
 func icon(item: NimNode): NimNode =
   let 
     value = newIntLitNode(mcIconsCount.value)
-    ty = bindSym"GUIGlyphIcon"
+    ty = bindSym"GUIAtlasIcon"
     # Icon Name and Visibility
     op = item[0]
     name = item[1]
