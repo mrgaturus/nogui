@@ -22,7 +22,7 @@ widget UXLayoutVBox:
       let metrics = addr widget.metrics
       # Accumulative Width
       h += metrics.minH
-      w = max(h, metrics.minW)
+      w = max(w, metrics.minW)
       # Check if is Fit
       if widget of UXMinCell:
         fit += metrics.minH
