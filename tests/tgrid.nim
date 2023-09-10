@@ -10,6 +10,16 @@ import nogui/ux/prelude
 import nogui/ux/widgets/[button, label, textbox]
 import nogui/ux/layouts/[grid, box, misc]
 import nogui/utf8
+import nogui/pack
+
+icons "tatlas", 16:
+  brush := "brush.svg"
+  clear := "clear.svg"
+  reset := "reset.svg"
+  close := "close.svg"
+  color := "color.png"
+  right := "right.svg"
+  left := "left.svg"
 
 controller CONLayout:
   attributes:
@@ -32,18 +42,18 @@ controller CONLayout:
       cell(0, 0): label("Name", hoLeft, veTop)
       cell(1, 0): textbox(addr self.text)
 
-      cell(0, 1): label("Address", hoLeft, veTop)
+      cell(0, 1): label("Message", hoLeft, veTop)
       cell(1, 1): textbox(addr self.subtext)
       cell(2, 1): vertical().child:
-        min: button("Add", cbHello)
-        min: button("Edit", cbHello)
-        min: button("Remove", cbHello)
-        min: button("Submit", cbHello)
-        min: button("Cancel", cbHello)
+        min: button(iconBrush, "Add", cbHello)
+        min: button(iconReset, "Edit", cbHello)
+        min: button(iconClear, "Remove", cbHello)
+        min: button(iconColor, "Submit", cbHello)
+        min: button(iconClose, "Cancel", cbHello)
       
       cell(1, 2): horizontal().child:
-        button("Previous", cbHello)
-        button("Next", cbHello)
+        button(iconLeft, "Previous", cbHello)
+        button(iconRight, "Next", cbHello)
 
   new conlayout():
     # Create New Widget

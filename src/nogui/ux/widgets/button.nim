@@ -1,20 +1,23 @@
-import ../prelude
+import ../[prelude, labeling]
 
 widget UXButton:
   attributes:
     cb: GUICallback
     label: string
 
+  proc init0(cb: GUICallback) =
+    # Widget Standard Flag
+    self.flags = wMouse
+    self.cb = cb
+
   new button(label: string, cb: GUICallback):
     let metrics = addr getApp().font
     # Set to Font Size Metrics
     result.minimum(label.width + metrics.size,
       metrics.height - metrics.desc)
-    # Widget Standard Flag
-    result.flags = wMouse
-    # Widget Attributes
+    # Init Callback
+    result.init0(cb)
     result.label = label
-    result.cb = cb
 
   method draw(ctx: ptr CTXRender) =
     let 
@@ -45,4 +48,41 @@ widget UXButton:
 # ---------------
 
 widget UXIconButton of UXButton:
-  discard
+  attributes:
+    icon: CTXIconID
+    lm: GUILabelMetrics
+
+  new button(icon: CTXIconID, cb: GUICallback):
+    result.init0(cb)
+    result.icon = icon
+    result.label = ""
+
+  new button(icon: CTXIconID, label: string, cb: GUICallback):
+    result.init0(cb)
+    result.icon = icon
+    result.label = label
+
+  method update =
+    let # Calculate Label Metrics
+      m = addr self.metrics
+      lm = metrics(self.icon, self.label)
+      # TODO: allow customize margin
+      pad = getApp().font.asc
+    # Change Min Size
+    m.minW = lm.w + pad
+    m.minH = lm.h + (pad shr 1)
+    # Change Label Metrics
+    self.lm = lm
+
+  method draw(ctx: ptr CTXRender) =
+    let
+      app = getApp()
+      rect = self.rect
+      p = center(self.lm, rect)
+    # Draw Button Background
+    ctx.color self.itemColor()
+    ctx.fill rect(self.rect)
+    # Draw icons And text
+    ctx.color app.colors.text
+    ctx.icon(self.icon, p.xi, p.yi)
+    ctx.text(p.xt, p.yt, self.label)
