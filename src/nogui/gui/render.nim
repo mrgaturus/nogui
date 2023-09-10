@@ -5,7 +5,7 @@ from ../values import
   guiProjection
 # Data Loader
 from ../data import 
-  newShader, GUIAtlasIcon
+  newShader, CTXIconID
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
@@ -599,7 +599,7 @@ proc text*(ctx: ptr CTXRender, x, y: int32, clip: CTXRect, str: string) =
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
-proc icon*(ctx: ptr CTXRender, id: GUIAtlasIcon, x, y: int32) =
+proc icon*(ctx: ptr CTXRender, id: CTXIconID, x, y: int32) =
   let
     # Lookup Icon
     i = icon(ctx.atlas, uint16 id)
@@ -619,7 +619,7 @@ proc icon*(ctx: ptr CTXRender, id: GUIAtlasIcon, x, y: int32) =
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)
 
-proc icon*(ctx: ptr CTXRender, id: GUIAtlasIcon, r: CTXRect) =
+proc icon*(ctx: ptr CTXRender, id: CTXIconID, r: CTXRect) =
   let
     # Lookup Icon
     i = icon(ctx.atlas, uint16 id)

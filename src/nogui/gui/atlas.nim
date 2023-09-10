@@ -202,7 +202,7 @@ proc expand(atlas: CTXAtlas) =
 # ATLAS GLYPH RENDERING PROCS
 # ---------------------------
 
-proc renderIcons(atlas: CTXAtlas, pack: GUIPackedIcons) =
+proc renderIcons(atlas: CTXAtlas, pack: CTXPackedIcons) =
   # Iterate Each Icon
   for icon in icons(pack):
     let info = icon.info

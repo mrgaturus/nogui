@@ -6,7 +6,7 @@ from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
 from ../../nogui import getApp, width, index
 # Import Atlas Icon ID
-from ../data import GUIAtlasIcon
+from ../data import CTXIconID
 
 # -----------------------
 # Standard Color Choosing
@@ -62,5 +62,5 @@ export signal except newGUIQueue
 export pushTimer, stopTimer
 # Export Relevant Global State
 export getApp, width, index
-# Export Icon Data ID
-export GUIAtlasIcon
+# Export Constant Icon ID
+export CTXIconID
