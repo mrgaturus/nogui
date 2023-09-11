@@ -11,31 +11,41 @@ widget UXButton:
     self.cb = cb
 
   new button(label: string, cb: GUICallback):
-    let metrics = addr getApp().font
-    # Set to Font Size Metrics
-    result.minimum(label.width + metrics.size,
-      metrics.height - metrics.desc)
-    # Init Callback
     result.init0(cb)
+    # Set Button Label
     result.label = label
+
+  method update =
+    let
+      font = addr getApp().font
+      m = addr self.metrics
+      # Calculate Sizes
+      w = width(self.label)
+      h = font.height
+      # TODO: allow customize margin
+      pad = font.asc
+    # Change Min Size
+    m.minW = int16 w + pad
+    m.minH = h + (pad shr 1)
 
   method draw(ctx: ptr CTXRender) =
     let 
       app = getApp()
       rect = addr self.rect
       colors = addr app.colors
-      metrics = addr app.font
-      # Text Center Offset
-      offset = self.metrics.minW - metrics.size
-    # Select Color State
-    ctx.color self.itemColor()
+      font = addr app.font
+      # Font Metrics
+      ox = self.metrics.minW - font.asc
+      oy = font.height - font.baseline
     # Fill Button Background
+    ctx.color self.itemColor()
     ctx.fill rect(self.rect)
     # Put Centered Text
     ctx.color(colors.text)
     ctx.text( # Draw Centered Text
-      rect.x + (rect.w - offset) shr 1, 
-      rect.y + metrics.asc shr 1, self.label)
+      rect.x + (rect.w - ox) shr 1,
+      rect.y + (rect.h - oy) shr 1, 
+      self.label)
 
   method event(state: ptr GUIState) =
     let cb = self.cb
@@ -54,11 +64,13 @@ widget UXIconButton of UXButton:
 
   new button(icon: CTXIconID, cb: GUICallback):
     result.init0(cb)
+    # Set Button Icon
     result.icon = icon
     result.label = ""
 
   new button(icon: CTXIconID, label: string, cb: GUICallback):
     result.init0(cb)
+    # Set Button Icon Label
     result.icon = icon
     result.label = label
 
