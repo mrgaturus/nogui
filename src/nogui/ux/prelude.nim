@@ -8,33 +8,40 @@ from ../../nogui import getApp, width, index
 # Import Atlas Icon ID
 from ../data import CTXIconID
 
-# -----------------------
-# Standard Color Choosing
-# -----------------------
+# ------------------------
+# GUI Control Color Helper
+# ------------------------
+
+proc colorControl*(self: GUIWidget, idle, hover, click: uint32): uint32 {.inline.} =
+  let flags = self.flags and wHoverGrab
+  # Choose Which Color Using State
+  if flags == 0: idle
+  elif flags == wHoverGrab: click
+  else: hover
+
+# --------------------
+# Toggle Button Colors
+# --------------------
 
 proc opaqueColor*(self: GUIWidget): uint32 =
-  let colors = addr getApp().colors
-  if not self.any(wHoverGrab):
-    0 # No Color
-  elif self.test(wHoverGrab):
-    colors.clicked
-  else: colors.focus
+  let c = addr getApp().colors
+  self.colorControl(0, c.focus, c.clicked)
+
+proc activeColor*(self: GUIWidget): uint32 =
+  let c = addr getApp().colors
+  self.colorControl(c.clicked, c.focus, c.item)
+
+# ------------------
+# Item Button Colors
+# ------------------
 
 proc optionColor*(self: GUIWidget): uint32 =
-  let colors = addr getApp().colors
-  if not self.any(wHoverGrab):
-    colors.darker
-  elif self.test(wHoverGrab):
-    colors.clicked
-  else: colors.focus
+  let c = addr getApp().colors
+  self.colorControl(c.darker, c.focus, c.clicked)
 
 proc itemColor*(self: GUIWidget): uint32 =
-  let colors = addr getApp().colors
-  if not self.any(wHoverGrab):
-    colors.item
-  elif self.test(wHoverGrab):
-    colors.clicked
-  else: colors.focus
+  let c = addr getApp().colors
+  self.colorControl(c.item, c.focus, c.clicked)
 
 # -----------------
 # Exporting Prelude
