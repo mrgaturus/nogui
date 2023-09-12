@@ -69,8 +69,8 @@ controller CONLayout:
       button("lol equisde", cbHello)
       label("", hoLeft, veMiddle)
 
-      field(): radio("Value A", 10, addr self.a)
-      field(): radio("Value B", 20, addr self.a)
+      field(): button("Value A", 10, addr self.a)
+      field(): button("Value B", 20, addr self.a)
       field(): checkbox("Transparent", addr self.check0)
       field("Blending", addr self.check2): 
         slider(addr self.valueC)

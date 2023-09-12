@@ -51,3 +51,30 @@ widget UXCheckBox:
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
       self.check[] = not self.check[]
+
+# -----------------
+# GUI Toggle Button
+# -----------------
+
+import button
+# Define Toggle Button Widget
+widget UXButtonCheck of UXButtonOpaque:
+  attributes:
+    check: ptr bool
+
+  new button(label: string, check: ptr bool):
+    result.init0(label)
+    # Set Checkbox Attribute
+    result.check = check
+
+  new button(icon: CTXIconID, label: string, check: ptr bool):
+    result.init0(label, icon)
+    # Set Checkbox Attribute
+    result.check = check
+
+  method draw(ctx: ptr CTXRender) =
+    self.draw0(ctx, self.check[])
+
+  method event(state: ptr GUIState) =
+    if state.kind == evCursorRelease and self.test(wHover):
+      self.check[] = not self.check[]

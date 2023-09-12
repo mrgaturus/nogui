@@ -7,12 +7,12 @@ from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
-import nogui/ux/widgets/[button, label, textbox]
-import nogui/ux/layouts/[grid, box, misc]
+import nogui/ux/widgets/[button, label, textbox, radio, check]
+import nogui/ux/layouts/[grid, box, misc, level]
 import nogui/utf8
 import nogui/pack
 
-icons "tatlas", 16:
+icons "tatlas", 24:
   brush := "brush.svg"
   clear := "clear.svg"
   reset := "reset.svg"
@@ -25,11 +25,14 @@ controller CONLayout:
   attributes:
     widget: GUIWidget
     [text, subtext]: UTF8Input
+    a: int32
+    b: bool
 
   callback cbHello:
     echo "hello world"
 
   proc createWidget: UXGridLayout =
+    let option = addr self.a
     let cbHello = self.cbHello
     result = grid(3, 3)
     # Adjust Layout
@@ -44,12 +47,13 @@ controller CONLayout:
 
       cell(0, 1): label("Message", hoLeft, veTop)
       cell(1, 1): textbox(addr self.subtext)
-      cell(2, 1): vertical().child:
-        min: button(iconBrush, "Add", cbHello)
-        min: button(iconReset, "Edit", cbHello)
-        min: button(iconClear, "Remove", cbHello)
-        min: button(iconColor, "Submit", cbHello)
-        min: button(iconClose, "Cancel", cbHello)
+      cell(2, 1): vlevel().child:
+        min: button(iconBrush, "", 0, option)
+        min: button(iconReset, "", 1, option)
+        min: button(iconClear, "", 2, option)
+        min: button(iconColor, "", 3, option)
+        min: button(iconClose, "", 4, option)
+        min: button(iconClose, "", addr self.b)
       
       cell(1, 2): horizontal().child:
         button(iconLeft, "Previous", cbHello)
