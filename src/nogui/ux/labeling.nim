@@ -35,7 +35,8 @@ proc metrics*(icon: CTXIconID, label: string): GUILabelMetrics =
     wi = glyph.w
   # Store Label Width
   result.w = wi + adv + wt
-  if wt <= 0: result.w -= adv
+  if (wt and wi) <= 0: 
+    result.w -= adv
   # Store Label Height
   result.h = max(font.height, glyph.h)
   # Store Width Advance
@@ -52,7 +53,8 @@ proc metrics*(label: string): GUILabelMetrics =
     wi = font.height
   # Store Label Width
   result.w = wi + adv + wt
-  if wt <= 0: result.w -= adv
+  if (wt and wi) <= 0: 
+    result.w -= adv
   # Store Label Height
   result.h = wi
   # Store Width Advance

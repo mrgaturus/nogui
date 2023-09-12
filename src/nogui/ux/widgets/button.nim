@@ -79,10 +79,11 @@ widget UXIconButton of UXButton:
       m = addr self.metrics
       lm = metrics(self.icon, self.label)
       # TODO: allow customize margin
-      pad = getApp().font.asc
+      pad0 = getApp().font.asc
+      pad1 = pad0 and not 1
     # Change Min Size
-    m.minW = lm.w + pad
-    m.minH = lm.h + (pad shr 1)
+    m.minW = lm.w + pad1
+    m.minH = lm.h + (pad0 shr 1)
     # Change Label Metrics
     self.lm = lm
 
@@ -98,3 +99,67 @@ widget UXIconButton of UXButton:
     ctx.color app.colors.text
     ctx.icon(self.icon, p.xi, p.yi)
     ctx.text(p.xt, p.yt, self.label)
+
+# -----------------
+# GUI Opaque Button
+# -----------------
+
+widget UXButtonOpaque:
+  attributes:
+    icon: CTXIconID
+    label: string
+    # Label Metrics
+    lm: GUILabelMetrics
+
+  proc init0*(label: string) =
+    self.flags = wMouse
+    # XXX: is posible have 65535 icons?
+    self.icon = CTXIconID(65535)
+    self.label = label
+
+  proc init0*(label: string, icon: CTXIconID) =
+    self.flags = wMouse
+    # Set Button Opaque Attributes
+    self.icon = icon
+    self.label = label
+
+  proc draw0*(ctx: ptr CTXRender, active: bool) =
+    let
+      app = getApp()
+      rect = self.rect
+      p = center(self.lm, rect)
+    # Decide Current Color
+    let bgColor = if not active:
+      self.opaqueColor()
+    else: self.activeColor()
+    # Fill Button Background
+    ctx.color bgColor
+    ctx.fill rect(self.rect)
+    # Select Glyph Color
+    ctx.color app.colors.text
+    # Draw icons And text
+    if self.icon.ord < 65535:
+      ctx.icon(self.icon, p.xi, p.yi)
+    ctx.text(p.xt, p.yt, self.label)
+
+  method update =
+    let # Widget Metrics
+      m = addr self.metrics
+      # TODO: allow customize margin
+      pad0 = getApp().font.asc
+      pad1 = pad0 and not 1
+    # Calculate Label Metrics
+    var lm: GUILabelMetrics
+    if self.icon.ord < 65535:
+      lm = metrics(self.icon, self.label)
+    else: # Arrange No Label
+      lm = metrics(self.label)
+      lm.w = lm.label
+    # Change Min Size
+    m.minW = lm.w + pad1
+    m.minH = lm.h + (pad0 shr 1)
+    # Change Label Metrics
+    self.lm = lm
+
+# TODO: export by default
+export UXButtonOpaque
