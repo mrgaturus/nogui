@@ -5,9 +5,9 @@ import prelude except
   pushTimer,
   stopTimer
 
-# ------------------------
-# Icon/Text Metric Helpers
-# ------------------------
+# --------------------------
+# Icon/Text Labeling Metrics
+# --------------------------
 
 type
   GUILabelMetrics* = object
@@ -19,6 +19,10 @@ type
     # t -> Text
     xi*, yi*: int16
     xt*, yt*: int16
+
+# --------------------------
+# Icon/Text Metric Preparing
+# --------------------------
 
 proc metrics*(icon: CTXIconID, label: string): GUILabelMetrics =
   let 
@@ -46,17 +50,23 @@ proc metrics*(label: string): GUILabelMetrics =
     # Labeling Metrics
     wt = int16 width(label)
     wi = font.height
-  # Store Content Metrics
+  # Store Label Width
   result.w = wi + adv + wt
+  if wt <= 0: result.w -= adv
+  # Store Label Height
   result.h = wi
   # Store Width Advance
   result.icon = wi
   result.label = wt
 
-proc center*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
+# ---------------------
+# Icon/Text Positioning
+# ---------------------
+
+proc locate*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
   let
-    cx = int16 r.x + (r.w - m.w) shr 1
-    cy = int16 r.y + (r.h - m.h) shr 1
+    cx = int16 r.x
+    cy = int16 r.y
     # Text Positions
     font = addr getApp().font
     xt = m.w - m.label
@@ -69,3 +79,24 @@ proc center*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
   # Text Position
   result.xt = cx + xt
   result.yt = cy + yt
+
+proc center*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
+  let
+    cx = int16 (r.w - m.w) shr 1
+    cy = int16 (r.h - m.h) shr 1
+  # Calculate Initial Location 
+  result = locate(m, r)
+  # Move to Center
+  result.xi += cx
+  result.yi += cy
+  # Text Position
+  result.xt += cx
+  result.yt += cy
+
+proc left*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
+  let cy = int16 (r.h - m.h) shr 1
+  # Calculate Initial Location 
+  result = locate(m, r)
+  # Move to Center
+  result.yi += cy
+  result.yt += cy
