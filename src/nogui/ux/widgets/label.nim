@@ -16,14 +16,18 @@ widget UXLabel:
     [cx, cy]: int32
 
   new label(text: string, ho: HoAlign, ve: VeAlign):
-    let height = getApp().font.height
-    # Set New Text
-    result.text = text
     # Set Alignment
     result.h_align = ho
     result.v_align = ve
-    # Set Size Hints
-    result.minimum(text.width, height)
+    # Set Text Label
+    result.text = text
+
+  method update =
+    let
+      w = width(self.text)
+      h = getApp().font.height
+    # Set Minimun Size
+    self.minimum(w, h)
 
   method layout =
     block: # X Position Align

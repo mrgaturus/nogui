@@ -10,14 +10,16 @@ widget UXSlider:
     decimals: int8
 
   new slider(value: ptr Value, decimals = 0'i8):
-    let height = getApp().font.height
     # Widget Standard Flag
     result.flags = wMouse
-    # Set Minimun Size
-    result.minimum(0, height)
     # Set Widget Attributes
     result.value = value
     result.decimals = decimals
+
+  method update =
+    let size = getApp().font.height
+    # Set Minimun Size
+    self.minimum(size, size)
 
   method draw(ctx: ptr CTXRender) =
     let

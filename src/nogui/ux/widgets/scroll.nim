@@ -11,14 +11,16 @@ widget UXScroll:
     vertical: bool
 
   new scrollbar(value: ptr Value, vertical: bool):
-    let height = getApp().font.asc
     # Widget Standard Flag
     result.flags = wMouse
-    # Set Minimun Size
-    result.minimum(height, height)
     # Set Widget Attributes
     result.value = value
     result.vertical = vertical
+
+  method update =
+    let size = getApp().font.asc
+    # Set Minimun Size
+    self.minimum(size, size)
 
   method draw(ctx: ptr CTXRender) =
     let 
@@ -37,7 +39,7 @@ widget UXScroll:
     ctx.fill(r)
     # Scroll Side Scaler
     template scroller(size: int32, x, w: var float32) =
-      let 
+      let
         side = float32(size)
         factor = side * side / dist
         # Calculate Metrics

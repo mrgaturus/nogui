@@ -60,6 +60,12 @@ widget GUIDummy:
   new dummy():
     result.flags = wMouse
 
+  method layout =
+    for w in forward(self.first):
+      let m = addr w.metrics
+      if m.w <= 0: m.w = m.minW
+      if m.h <= 0: m.h = m.minh
+
 widget GUIPanel:
   new panel():
     result.flags = wMouse
