@@ -61,6 +61,8 @@ widget UXIconButton of UXButton:
   attributes:
     icon: CTXIconID
     lm: GUILabelMetrics
+    # Button Opaque
+    opaque: bool
 
   new button(icon: CTXIconID, cb: GUICallback):
     result.init0(cb)
@@ -73,6 +75,9 @@ widget UXIconButton of UXButton:
     # Set Button Icon Label
     result.icon = icon
     result.label = label
+
+  proc opaque*: UXButton {.inline.} =
+    self.opaque = true; self
 
   method update =
     let # Calculate Label Metrics
@@ -92,8 +97,12 @@ widget UXIconButton of UXButton:
       app = getApp()
       rect = self.rect
       p = center(self.lm, rect)
+    # Decide Current Color
+    let bgColor = if not self.opaque:
+      self.itemColor()
+    else: self.opaqueColor()
     # Draw Button Background
-    ctx.color self.itemColor()
+    ctx.color bgColor
     ctx.fill rect(self.rect)
     # Draw icons And text
     ctx.color app.colors.text
