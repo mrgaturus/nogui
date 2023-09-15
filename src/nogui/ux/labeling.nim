@@ -23,11 +23,12 @@ type
     w*, h*: int16
     # Width Advance Metrics
     icon*, label*: int16
+  GUIMenuMetrics* {.borrow.} = 
+    distinct GUILabelMetrics
+  # Label Positioning
   GUILabelPosition* = object
-    # i -> Icon
-    # t -> Text
-    xi*, yi*: int16
-    xt*, yt*: int16
+    xi*, yi*: int16 # i -> Icon
+    xt*, yt*: int16 # t -> Text
 
 # --------------------------
 # Icon/Text Metric Preparing
@@ -114,3 +115,75 @@ proc left*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
   # Move to Center
   result.yi += cy
   result.yt += cy
+
+# -----------------------
+# Icon/Label Menu Metrics
+# -----------------------
+
+proc metricsMenu*(label: string, icon = CTXIconEmpty): GUIMenuMetrics =
+  var lm = # Calculate Initial Metrics
+    if icon.noEmpty():
+      metricsLabel(label, icon)
+    else: metricsOption(label)
+  # Return GUIMenuMetrics
+  GUIMenuMetrics(lm)
+
+proc width*(m: GUIMenuMetrics): int16 =
+  let adv = getApp().font.asc shr 1
+  # Calculate Menu Full Size
+  m.w + adv + m.icon
+
+proc label*(m: GUIMenuMetrics, r: GUIRect): GUILabelPosition =
+  # Calculate Label Location
+  result = GUILabelMetrics(m).left(r)
+  # Add Label Padding
+  let adv = getApp().font.asc shr 1
+  result.xt += adv
+  result.xi += adv
+
+proc extra*(m: GUIMenuMetrics, r: GUIRect): GUIRect =
+  let
+    size = m.icon
+    cx = r.x + (r.w - size)
+    cy = r.y + (r.h - m.h) shr 1
+  # Calculate Extra Icon Rectangle
+  result = GUIRect(x: cx, y: cy, w: size, h: size)
+  result.x -= getApp().font.asc shr 1
+
+# -----------------------
+# Triangle Icon Rendering
+# -----------------------
+
+proc arrowRect(r: GUIRect, sw, sh: float32): CTXRect =
+  result = rect(r)
+  # Calculate Center
+  let 
+    cx = (result.x + result.xw) * 0.5
+    cy = (result.y + result.yh) * 0.5
+  # Scale Center
+  result.x = (result.x - cx) * sw + cx
+  result.y = (result.y - cy) * sh + cy
+  result.xw = (result.xw - cx) * sw + cx
+  result.yh = (result.yh - cy) * sh + cy
+
+proc arrowRight*(ctx: ptr CTXRender, r: GUIRect) =
+  let
+    r = arrowRect(r, 0.25, 0.5)
+    c = (r.y + r.yh) * 0.5
+    # Triangle Points
+    p0 = point(r.x, r.y)
+    p1 = point(r.x, r.yh)
+    p2 = point(r.xw, c)
+  # Render Triangle
+  ctx.triangle(p0, p1, p2)
+
+proc arrowDown*(ctx: ptr CTXRender, r: GUIRect) =
+  let
+    r = arrowRect(r, 0.5, 0.25)
+    c = (r.x + r.xw) * 0.5
+    # Triangle Points
+    p0 = point(r.xw, r.y)
+    p1 = point(r.x, r.y)
+    p2 = point(c, r.yh)
+  # Render Triangle
+  ctx.triangle(p0, p1, p2)
