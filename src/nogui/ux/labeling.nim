@@ -5,6 +5,15 @@ import prelude except
   pushTimer,
   stopTimer
 
+# --------------------
+# Icon Existence Check
+# --------------------
+
+const CTXIconEmpty* = CTXIconID(65535)
+# XXX: is posible have 65535 icons?
+template noEmpty*(id: CTXIconID): bool =
+  cast[uint16](id) < 65535
+
 # --------------------------
 # Icon/Text Labeling Metrics
 # --------------------------
@@ -24,26 +33,29 @@ type
 # Icon/Text Metric Preparing
 # --------------------------
 
-proc metrics*(icon: CTXIconID, label: string): GUILabelMetrics =
+proc metricsLabel*(label: string, icon = CTXIconEmpty): GUILabelMetrics =
   let 
     app = getApp()
     font = addr app.font
     adv = font.asc shr 1
-    # Labeling Metrics
-    glyph = icon(app.atlas, uint16 icon)
+    # Text Size
     wt = int16 width(label)
-    wi = glyph.w
-  # Store Label Width
-  result.w = wi + adv + wt
-  if (wt and wi) <= 0: 
-    result.w -= adv
-  # Store Label Height
-  result.h = max(font.height, glyph.h)
-  # Store Width Advance
-  result.icon = wi
+  # Store Label Metrics
+  result.w = wt
+  result.h = font.height
   result.label = wt
+  # Store Icon Width
+  if icon.noEmpty:
+    let g = icon(app.atlas, uint16 icon)
+    # Store Icon Metrics
+    result.w += g.w
+    result.h = max(result.h, g.h)
+    result.icon = g.w
+  # Add Advance Padding
+  if result.label > 0 and result.icon > 0:
+    result.w += adv
 
-proc metrics*(label: string): GUILabelMetrics =
+proc metricsOption*(label: string): GUILabelMetrics =
   let 
     app = getApp()
     font = addr app.font
@@ -53,7 +65,7 @@ proc metrics*(label: string): GUILabelMetrics =
     wi = font.height
   # Store Label Width
   result.w = wi + adv + wt
-  if (wt and wi) <= 0: 
+  if wt <= 0 or wi <= 0: 
     result.w -= adv
   # Store Label Height
   result.h = wi

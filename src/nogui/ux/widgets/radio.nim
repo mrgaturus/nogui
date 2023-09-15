@@ -18,7 +18,7 @@ widget UXRadio:
   method update =
     let
       m = addr self.metrics
-      lm = metrics(self.label)
+      lm = metricsOption(self.label)
     # Set Minimun Size
     m.minW = lm.w
     m.minH = lm.h
@@ -61,13 +61,19 @@ widget UXButtonOption of UXButtonOpaque:
     value: int32
     check: ptr int32
 
+  new button(icon: CTXIconID, value: int32, check: ptr int32):
+    result.init0("", icon)
+    # Set Checkbox Attribute
+    result.value = value
+    result.check = check
+
   new button(label: string, value: int32, check: ptr int32):
     result.init0(label)
     # Set Checkbox Attribute
     result.value = value
     result.check = check
 
-  new button(icon: CTXIconID, label: string, value: int32, check: ptr int32):
+  new button(label: string, icon: CTXIconID, value: int32, check: ptr int32):
     result.init0(label, icon)
     # Set Checkbox Attribute
     result.value = value

@@ -48,12 +48,12 @@ controller CONLayout:
       cell(0, 1): label("Message", hoLeft, veTop)
       cell(1, 1): textbox(addr self.subtext)
       cell(2, 1): vlevel().child:
-        min: button(iconBrush, "", 0, option)
-        min: button(iconReset, "", 1, option)
-        min: button(iconClear, "", 2, option)
-        min: button(iconColor, "", 3, option)
-        min: button(iconClose, "", 4, option)
-        min: button(iconClose, "", addr self.b)
+        min: button(iconBrush, 0, option)
+        min: button(iconReset, 1, option)
+        min: button(iconClear, 2, option)
+        min: button(iconColor, 3, option)
+        min: button(iconClose, 4, option)
+        min: button(iconClose, addr self.b)
       
       cell(1, 2): horizontal().child:
         button(iconLeft, "Previous", cbHello)

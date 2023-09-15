@@ -16,7 +16,7 @@ widget UXCheckBox:
   method update =
     let 
       m = addr self.metrics
-      lm = metrics(self.label)
+      lm = metricsOption(self.label)
     # Set Minimun Size
     m.minW = lm.w
     m.minH = lm.h
@@ -62,14 +62,16 @@ widget UXButtonCheck of UXButtonOpaque:
   attributes:
     check: ptr bool
 
-  new button(label: string, check: ptr bool):
-    result.init0(label)
-    # Set Checkbox Attribute
+  new button(icon: CTXIconID, check: ptr bool):
+    result.init0("", icon)
     result.check = check
 
-  new button(icon: CTXIconID, label: string, check: ptr bool):
+  new button(label: string, check: ptr bool):
+    result.init0(label)
+    result.check = check
+
+  new button(label: string, icon: CTXIconID, check: ptr bool):
     result.init0(label, icon)
-    # Set Checkbox Attribute
     result.check = check
 
   method draw(ctx: ptr CTXRender) =

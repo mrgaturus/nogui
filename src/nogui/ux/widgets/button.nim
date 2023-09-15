@@ -82,13 +82,13 @@ widget UXIconButton of UXButton:
   method update =
     let # Calculate Label Metrics
       m = addr self.metrics
-      lm = metrics(self.icon, self.label)
+      lm = metricsLabel(self.label, self.icon)
       # TODO: allow customize margin
-      pad0 = getApp().font.asc
-      pad1 = pad0 and not 1
+      pad0 = getApp().font.asc shr 1
+      pad1 = pad0 shl 1
     # Change Min Size
     m.minW = lm.w + pad1
-    m.minH = lm.h + (pad0 shr 1)
+    m.minH = lm.h + pad0
     # Change Label Metrics
     self.lm = lm
 
@@ -120,15 +120,9 @@ widget UXButtonOpaque:
     # Label Metrics
     lm: GUILabelMetrics
 
-  proc init0*(label: string) =
+  proc init0*(label: string, icon = CTXIconEmpty) =
     self.flags = wMouse
-    # XXX: is posible have 65535 icons?
-    self.icon = CTXIconID(65535)
-    self.label = label
-
-  proc init0*(label: string, icon: CTXIconID) =
-    self.flags = wMouse
-    # Set Button Opaque Attributes
+    # Labeling Values
     self.icon = icon
     self.label = label
 
@@ -137,6 +131,7 @@ widget UXButtonOpaque:
       app = getApp()
       rect = self.rect
       p = center(self.lm, rect)
+      icon = self.icon
     # Decide Current Color
     let bgColor = if not active:
       self.opaqueColor()
@@ -147,26 +142,22 @@ widget UXButtonOpaque:
     # Select Glyph Color
     ctx.color app.colors.text
     # Draw icons And text
-    if self.icon.ord < 65535:
-      ctx.icon(self.icon, p.xi, p.yi)
+    if icon.noEmpty():
+      ctx.icon(icon, p.xi, p.yi)
     ctx.text(p.xt, p.yt, self.label)
 
   method update =
     let # Widget Metrics
       m = addr self.metrics
+      icon = self.icon
       # TODO: allow customize margin
-      pad0 = getApp().font.asc
-      pad1 = pad0 and not 1
-    # Calculate Label Metrics
-    var lm: GUILabelMetrics
-    if self.icon.ord < 65535:
-      lm = metrics(self.icon, self.label)
-    else: # Arrange No Label
-      lm = metrics(self.label)
-      lm.w = lm.label
+      pad0 = getApp().font.asc shr 1
+      pad1 = pad0 shr 1
+      # Calculate Label Metrics
+      lm = metricsLabel(self.label, icon)
     # Change Min Size
     m.minW = lm.w + pad1
-    m.minH = lm.h + (pad0 shr 1)
+    m.minH = lm.h + pad0
     # Change Label Metrics
     self.lm = lm
 
