@@ -102,21 +102,14 @@ widget UXMenuItemPopup of UXMenuItem:
       app = getApp()
       rect = rect self.rect
       colors = addr app.colors
-      desc = float32 app.font.desc
-      minH = float32 self.metrics.minH shr 1
+      r = extra(self.lm, self.rect)
     # Fill Selected Background
     if not self.test(wHover) and self.portal[] == self:
       ctx.color colors.item
       ctx.fill rect
     # Draw Menu Label
     self.draw0(ctx)
-    # Fill Background
-    ctx.color(colors.text)
-    let
-      p0 = point(rect.xw - minH, rect.y - desc - desc)
-      p1 = point(rect.xw - minH, rect.yh + desc + desc)
-      p2 = point(rect.xw + desc * 1.5, (rect.y + rect.yh) * 0.5)
-    ctx.triangle(p0, p1, p2)
+    ctx.arrowRight(r)
 
   method event(state: ptr GUIState) =
     discard
