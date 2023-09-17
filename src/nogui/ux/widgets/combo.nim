@@ -1,6 +1,20 @@
 import menu, menu/base
 import std/importutils
 from ../../builder import controller
+# Menu Item Attributes
+privateAccess(UXMenuItem)
+
+# -----------------
+# Combobox Selected
+# -----------------
+
+type
+  ComboValue = object
+    value*: int
+    # Labeling Info
+    label: string
+    icon: CTXIconID
+    lm: GUIMenuMetrics
 
 # -------------
 # Combobox Item
@@ -10,19 +24,36 @@ widget UXComboItem of UXMenuItem:
   attributes:
     value: int
     # Portal to ComboModel
-    selected: ptr UXComboItem
+    selected: ptr ComboValue
 
   new comboitem(label: string, value: int):
     result.init0(label)
     result.value = value
 
+  new comboitem(label: string, icon: CTXIconID, value: int):
+    result.init0(label, icon)
+    result.value = value
+
+  proc combovalue: ComboValue =
+    let labeling = metricsMenu(self.label, self.icon)
+    # Return Combo Value Info
+    ComboValue(
+      value: self.value,
+      icon: self.icon,
+      label: self.label,
+      lm: labeling)
+
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)
+    # Draw Icon
+    let p = label(self.lm, self.rect)
+    if noEmpty(self.icon):
+      ctx.icon(self.icon, p.xi, p.yi)
 
   method event(state: ptr GUIState) =
-    # Change Selected
+    # Change Selected Combovalue
     if self.event0(state):
-      self.selected[] = self
+      self.selected[] = self.combovalue
 
 # -------------------
 # GUI Combobox Portal
@@ -31,7 +62,8 @@ widget UXComboItem of UXMenuItem:
 controller ComboModel:
   attributes:
     menu: UXMenu
-    selected: UXComboItem
+    # Selected Value
+    selected: ComboValue
     flatten: seq[pointer]
     # User Defined Callback
     ondone: GUICallback
@@ -53,7 +85,7 @@ controller ComboModel:
         break
     # Replace Found
     assert not isNil(found)
-    self.selected = found
+    self.selected = found.combovalue
 
   proc configure(menu: UXMenu) =
     let portal = addr self.selected
@@ -76,8 +108,9 @@ controller ComboModel:
     # Configure Menu
     self.flatten = newSeq[pointer](0)
     self.configure(menu)
-    # Select First Item of Flatten Cache
-    self.selected = cast[UXComboItem](self.flatten[0])
+    # Select First Item and Get Combovalue
+    let peek = cast[UXComboItem](self.flatten[0])
+    self.selected = peek.combovalue
     self.menu = menu
 
   new combomodel(menu: UXMenu):
@@ -104,44 +137,38 @@ widget GUIComboBox:
     menu.metrics.w = int16 rect.w
 
   new combobox(model: ComboModel):
-    # Configure Combobox Metrics
-    let metrics = addr getApp().font
-    result.minimum(0, metrics.height - metrics.desc)
-    # Configure Button
     result.flags = wMouse
     result.model = model
 
+  method update =
+    let # Calculate Label Metrics
+      font = addr getApp().font
+      m = addr self.metrics
+      size = font.height
+      # TODO: allow customize margin
+      pad0 = font.asc shr 1
+      pad1 = pad0 shl 1
+    # Change Min Size
+    m.minW = size + pad1
+    m.minH = size + pad0
+
   method draw(ctx: ptr CTXRender) =
     let 
-      app = getApp()
-      rect = addr self.rect
-      colors = addr app.colors
-      metrics = addr app.font
-      # Text Center Offset
-      s {.cursor.} = self.model.selected
-    # Region Cursor
-    var r = rect(self.rect)
-    # Allow Private of MenuItem
-    privateAccess(UXMenuItem)
-    # Select Color State
+      s = addr self.model.selected
+      ex = extra(s.lm, self.rect)
+    # Labeling Position
+    var p = label(s.lm, self.rect)
+    # Fill Background Color
     ctx.color self.itemColor()
-    ctx.fill r
-    # Put Combobox Text
-    ctx.color(colors.text)
-    ctx.text( # Draw Centered Text
-      rect.x + metrics.size, 
-      rect.y + metrics.asc shr 1, s.label)
-    # Draw Triangle
-    r.xw -= float32 metrics.asc shr 1
-    r.yh -= float32 metrics.asc shr 1
-    r.x = r.xw - float32 metrics.size
-    r.y = r.yh - float32 metrics.size - metrics.asc shr 2
-    # Triangle
-    ctx.triangle(
-      point((r.x + r.xw) * 0.5, r.yh),
-      point(r.xw, r.y),
-      point(r.x, r.y),      
-    )
+    ctx.fill rect(self.rect)
+    ctx.color getApp().colors.text
+    # Draw Combobox Icon
+    if noEmpty(s.icon):
+      ctx.icon(s.icon, p.xi, p.yi)
+    else: p.xt -= s.lm.icon
+    # Draw Combobox Text and Arrow
+    ctx.text(p.xt, p.yt, s.label)
+    ctx.arrowDown(ex)
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:

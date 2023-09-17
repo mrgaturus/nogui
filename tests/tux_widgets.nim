@@ -123,7 +123,7 @@ controller CONPlayground:
     # Selection Items
     self.selected = 
       combomodel(): menu("").child:
-          comboitem("Normal", 0)
+          comboitem("Normal", iconBrush, 0)
           menuseparator("Dark")
           comboitem("Multiply", 0)
           comboitem("Darken", 0)
