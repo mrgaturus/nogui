@@ -142,8 +142,7 @@ widget UXButtonOpaque:
     # Select Glyph Color
     ctx.color app.colors.text
     # Draw icons And text
-    if icon.noEmpty():
-      ctx.icon(icon, p.xi, p.yi)
+    ctx.icon(icon, p.xi, p.yi)
     ctx.text(p.xt, p.yt, self.label)
 
   method update =

@@ -5,8 +5,8 @@ import ../gui/[widget, event, render, atlas, signal]
 from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
 from ../../nogui import getApp, width, index
-# Import Atlas Icon ID
-from ../data import CTXIconID
+# Import Icon ID Helper
+from ../data import CTXIconID, CTXIconEmpty, `==`
 
 # ------------------------
 # GUI Control Color Helper
@@ -70,4 +70,4 @@ export pushTimer, stopTimer
 # Export Relevant Global State
 export getApp, width, index
 # Export Constant Icon ID
-export CTXIconID
+export CTXIconID, CTXIconEmpty, data.`==`

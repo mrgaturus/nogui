@@ -48,8 +48,10 @@ type
     # Current Icon Buffer
     header*: CTXHeaderIcon
     buffer*: CTXBufferIcon
-  # Usable Icon ID Const
-  CTXIconID* = distinct int32
+# Icon ID Type and Empty Checking
+type CTXIconID* = distinct uint16
+const CTXIconEmpty* = CTXIconID(65535)
+proc `==`*(a, b: CTXIconID): bool {.borrow.}
 
 proc newIcons*(filename: string): CTXPackedIcons =
   new result

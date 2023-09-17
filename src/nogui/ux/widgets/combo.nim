@@ -45,10 +45,9 @@ widget UXComboItem of UXMenuItem:
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)
-    # Draw Icon
+    # Draw Label Icon
     let p = label(self.lm, self.rect)
-    if noEmpty(self.icon):
-      ctx.icon(self.icon, p.xi, p.yi)
+    ctx.icon(self.icon, p.xi, p.yi)
 
   method event(state: ptr GUIState) =
     # Change Selected Combovalue
@@ -163,9 +162,9 @@ widget GUIComboBox:
     ctx.fill rect(self.rect)
     ctx.color getApp().colors.text
     # Draw Combobox Icon
-    if noEmpty(s.icon):
-      ctx.icon(s.icon, p.xi, p.yi)
-    else: p.xt -= s.lm.icon
+    if s.icon == CTXIconEmpty:
+      p.xt -= s.lm.icon
+    else: ctx.icon(s.icon, p.xi, p.yi)
     # Draw Combobox Text and Arrow
     ctx.text(p.xt, p.yt, s.label)
     ctx.arrowDown(ex)

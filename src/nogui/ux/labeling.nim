@@ -5,15 +5,6 @@ import prelude except
   pushTimer,
   stopTimer
 
-# --------------------
-# Icon Existence Check
-# --------------------
-
-const CTXIconEmpty* = CTXIconID(65535)
-# XXX: is posible have 65535 icons?
-template noEmpty*(id: CTXIconID): bool =
-  cast[uint16](id) < 65535
-
 # --------------------------
 # Icon/Text Labeling Metrics
 # --------------------------
@@ -46,7 +37,7 @@ proc metricsLabel*(label: string, icon = CTXIconEmpty): GUILabelMetrics =
   result.h = font.height
   result.label = wt
   # Store Icon Width
-  if icon.noEmpty:
+  if icon != CTXIconEmpty:
     let g = icon(app.atlas, uint16 icon)
     # Store Icon Metrics
     result.w += g.w
@@ -122,7 +113,7 @@ proc left*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
 
 proc metricsMenu*(label: string, icon = CTXIconEmpty): GUIMenuMetrics =
   var lm = # Calculate Initial Metrics
-    if icon.noEmpty():
+    if icon != CTXIconEmpty:
       metricsLabel(label, icon)
     else: metricsOption(label)
   # Return GUIMenuMetrics

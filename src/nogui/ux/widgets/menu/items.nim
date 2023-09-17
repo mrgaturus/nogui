@@ -25,10 +25,9 @@ widget UXMenuItemCB of UXMenuItem:
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)
-    # Draw Icon
+    # Draw Label Icon
     let p = label(self.lm, self.rect)
-    if noEmpty(self.icon):
-      ctx.icon(self.icon, p.xi, p.yi)
+    ctx.icon(self.icon, p.xi, p.yi)
 
 # ---------------
 # GUI Menu Option

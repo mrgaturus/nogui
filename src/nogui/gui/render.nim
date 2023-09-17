@@ -5,7 +5,7 @@ from ../values import
   guiProjection
 # Data Loader
 from ../data import 
-  newShader, CTXIconID
+  newShader, CTXIconID, CTXIconEmpty, `==`
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
@@ -604,10 +604,11 @@ proc text*(ctx: ptr CTXRender, x, y: int32, clip: CTXRect, str: string) =
     unsafeAddr(x)[] += glyph.advance
 
 proc icon*(ctx: ptr CTXRender, id: CTXIconID, x, y: int32) =
+  # Lookup Icon if is not Empty
+  if id == CTXIconEmpty: return
+  let i = icon(ctx.atlas, uint16 id)
+  # Calculate Icon Metrics
   let
-    # Lookup Icon
-    i = icon(ctx.atlas, uint16 id)
-    # Icon Rect
     x = float32 x
     y = float32 y
     xw = x + float32 i.w
@@ -624,9 +625,9 @@ proc icon*(ctx: ptr CTXRender, id: CTXIconID, x, y: int32) =
   ctx.triangle(3, 1,2,3)
 
 proc icon*(ctx: ptr CTXRender, id: CTXIconID, r: CTXRect) =
-  let
-    # Lookup Icon
-    i = icon(ctx.atlas, uint16 id)
+  # Lookup Icon if is not Empty
+  if id == CTXIconEmpty: return
+  let i = icon(ctx.atlas, uint16 id)
   # Reserve Vertex
   ctx.addVerts(4, 6)
   # Icon Vertex Definition
