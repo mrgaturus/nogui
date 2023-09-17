@@ -89,9 +89,9 @@ widget UXMenuItem:
   attributes:
     label: string
     icon: CTXIconID
-    # Menu Item Actions
+    lm: GUIMenuMetrics
+    # Menu Item Action
     @public:
-      lm: GUIMenuMetrics
       [ondone, onportal]: GUICallback
       portal: ptr UXMenuItem
 

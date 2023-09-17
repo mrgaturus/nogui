@@ -1,4 +1,7 @@
+import std/importutils
 import base
+# Use MenuItem Attributes
+privateAccess(UXMenuItem)
 
 # -----------------
 # GUI Menu Callback
@@ -7,6 +10,10 @@ import base
 widget UXMenuItemCB of UXMenuItem:
   attributes:
     cb: GUICallback
+
+  new menuitem(label: string, icon: CTXIconID, cb: GUICallback):
+    result.init0(label, icon)
+    result.cb = cb
 
   new menuitem(label: string, cb: GUICallback):
     result.init0(label)
@@ -17,8 +24,11 @@ widget UXMenuItemCB of UXMenuItem:
       push(self.cb)
 
   method draw(ctx: ptr CTXRender) =
-    # Draw Base
     self.draw0(ctx)
+    # Draw Icon
+    let p = label(self.lm, self.rect)
+    if noEmpty(self.icon):
+      ctx.icon(self.icon, p.xi, p.yi)
 
 # ---------------
 # GUI Menu Option
@@ -27,25 +37,41 @@ widget UXMenuItemCB of UXMenuItem:
 widget UXMenuItemOption of UXMenuItem:
   attributes:
     option: ptr int32
-    expected: int32
+    value: int32
     # Optional Callback
-    @public:
-      cb: GUICallback
+    @public: cb: GUICallback
 
-  new menuoption(label: string, option: ptr int32, expected: int32):
+  new menuoption(label: string, option: ptr int32, value: int32):
     result.init0(label)
     result.option = option
+    result.value = value
 
   method event(state: ptr GUIState) =
     if self.event0(state):
-      self.option[] = self.expected
+      self.option[] = self.value
       # Execute Callback
       if valid(self.cb):
         push(self.cb)
 
   method draw(ctx: ptr CTXRender) =
-    # Draw Base
     self.draw0(ctx)
+    # Locate Option Circle
+    let
+      lm = self.lm
+      p = label(lm, self.rect)
+      # Locate Circle Center
+      cp = point(
+        p.xi + lm.icon shr 1,
+        p.yi + lm.icon shr 1)
+      # Radius Size
+      r = float32(lm.icon) * 0.4
+    # Draw Option Circle
+    ctx.color self.itemColor()
+    ctx.circle(cp, r)
+    # If Checked Draw Circle Mark
+    if self.option[] == self.value:
+      ctx.color getApp().colors.text
+      ctx.circle(cp, r * 0.5)
 
 # -----------------
 # GUI Menu Checkbox
@@ -72,6 +98,24 @@ widget UXMenuItemCheck of UXMenuItem:
   method draw(ctx: ptr CTXRender) =
     # Draw Base
     self.draw0(ctx)
+    # Locate Check Square
+    let
+      lm = self.lm
+      p = label(lm, self.rect)
+      # Locate Check Square
+    var r = rect(p.xi, p.yi, lm.icon, lm.icon)
+    # Draw Check Square
+    ctx.color self.itemColor()
+    ctx.fill(r)
+    # If Checked Draw Circle Mark
+    if self.check[]:
+      let pad = float32(lm.icon shr 2)
+      # Locate Marked Check
+      r.x += pad; r.y += pad
+      r.xw -= pad; r.yh -= pad
+      # Draw Marked Check
+      ctx.color getApp().colors.text
+      ctx.fill(r)
 
 # ----------------
 # GUI Menu Popover
