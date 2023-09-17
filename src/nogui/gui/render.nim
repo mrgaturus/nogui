@@ -444,25 +444,29 @@ proc triangle*(ctx: ptr CTXRender, a,b,c: CTXPoint) =
   ctx.vertex(2, c.x, c.y)
   # Elements Description
   ctx.triangle(0, 0,1,2)
-  var # Antialiased
-    i, j: int32 # Sides
-    k, l: int32 = 3 # AA
+  # Calculate Antialiasing
+  var
+    i: int32
+    # Prev Position
+    j = 2'i32
+    l, k = 3'i32
+    # Calculate
     x, y, norm: float32
   while i < 3:
-    j = (i + 1) mod 3 # Truncate Side
-    x = ctx.pVert[i].y - ctx.pVert[j].y
-    y = ctx.pVert[j].x - ctx.pVert[i].x
+    let 
+      p0 = addr ctx.pVert[j]
+      p1 = addr ctx.pVert[i]
+    x = p0.y - p1.y
+    y = p1.x - p0.x
     # Normalize Position Vector
-    norm = invSqrt(x*x + y*y)
+    norm = invSqrt(x * x + y * y)
     x *= norm; y *= norm
     # Add Antialiased Vertexs to Triangle Sides
-    ctx.vertexAA(k, ctx.pVert[i].x + x, ctx.pVert[i].y + y)
-    ctx.vertexAA(k+1, ctx.pVert[j].x + x, ctx.pVert[j].y + y)
-    # Add Antialiased Elements
-    ctx.triangle(l, i, j, k)
-    ctx.triangle(l+3, j, k, k+1)
-    # Next Triangle Size
-    i += 1; k += 2; l += 6
+    ctx.vertexAA(k, p0.x + x, p0.y + y)
+    ctx.vertexAA(k + 1, p1.x + x, p1.y + y)
+    ctx.quad(l, j, k, k + 1, i)
+    # Next Triangle Side
+    j = i; i += 1; k += 2; l += 6
 
 proc line*(ctx: ptr CTXRender, a,b: CTXPoint) =
   ctx.addVerts(6, 12)
