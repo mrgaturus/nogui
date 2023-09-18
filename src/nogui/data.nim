@@ -32,25 +32,28 @@ proc toDataPath(path: string): string =
 # -----------------------
 
 type
-  GUIHeaderIcon = object
+  CTXHeaderIcon = object
     bytes*: cuint
     w*, h*, fit*: cshort
     channels*: cshort
     # Allocated Chunk
     pad0: cuint
-  GUIBufferIcon = ptr UncheckedArray[byte]
-  GUIChunkIcon* = object
-    info*: ptr GUIHeaderIcon
-    buffer*: GUIBufferIcon
-  GUIPackedIcons* = ref object
+  CTXBufferIcon = ptr UncheckedArray[byte]
+  CTXChunkIcon* = object
+    info*: ptr CTXHeaderIcon
+    buffer*: CTXBufferIcon
+  CTXPackedIcons* = ref object
     handle: File
     allocated: int
     # Current Icon Buffer
-    header*: GUIHeaderIcon
-    buffer*: GUIBufferIcon
-  GUIGlyphIcon* = distinct int32
+    header*: CTXHeaderIcon
+    buffer*: CTXBufferIcon
+# Icon ID Type and Empty Checking
+type CTXIconID* = distinct uint16
+const CTXIconEmpty* = CTXIconID(65535)
+proc `==`*(a, b: CTXIconID): bool {.borrow.}
 
-proc newIcons*(filename: string): GUIPackedIcons =
+proc newIcons*(filename: string): CTXPackedIcons =
   new result
   # Try Open File
   let path = toDataPath(filename)
@@ -62,26 +65,26 @@ proc newIcons*(filename: string): GUIPackedIcons =
     signature != 0x4955474f4e'u64:
       raise newException(IOError, path & " is not valid")
 
-proc bytesIcon(pack: GUIPackedIcons, bytes: int): GUIBufferIcon =
+proc bytesIcon(pack: CTXPackedIcons, bytes: int): CTXBufferIcon =
   if bytes > pack.allocated:
     pack.allocated = bytes
     # We dont need prev data
     let prev = pack.buffer
     if not isNil(prev):
       dealloc(prev)
-    pack.buffer = cast[GUIBufferIcon](alloc bytes)
+    pack.buffer = cast[CTXBufferIcon](alloc bytes)
   # Return Current Buffer
   pack.buffer
 
-iterator icons*(pack: GUIPackedIcons): GUIChunkIcon =
+iterator icons*(pack: CTXPackedIcons): CTXChunkIcon =
   let
     handle = pack.handle
     info = addr pack.header
   # Chunk Yiedler
-  var result: GUIChunkIcon
+  var result: CTXChunkIcon
   result.info = info
   # Read Chunk and Write a PNG
-  const headSize = sizeof GUIHeaderIcon
+  const headSize = sizeof CTXHeaderIcon
   while readBuffer(handle, info, headSize) == headSize:
     let 
       bytes = int info.bytes

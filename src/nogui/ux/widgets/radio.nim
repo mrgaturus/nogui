@@ -1,47 +1,87 @@
-import ../prelude
+import ../[prelude, labeling]
 
-widget GUIRadio:
+widget UXRadio:
   attributes:
     label: string
+    lm: GUILabelMetrics
     # Radio Check
-    expected: int32
+    value: int32
     check: ptr int32
 
-  new radio(label: string, expected: int32, check: ptr int32):
-    let metrics = addr getApp().font
-    # Set to Font Size Metrics
-    result.minimum(0, metrics.height)
-    # Widget Standard Flag
+  new radio(label: string, value: int32, check: ptr int32):
     result.flags = wMouse
-    # Radio Button Attributes
     result.label = label
-    result.expected = expected
+    # Radio Attributes
+    result.value = value
     result.check = check
 
+  method update =
+    let
+      m = addr self.metrics
+      lm = metricsOption(self.label)
+    # Set Minimun Size
+    m.minW = lm.w
+    m.minH = lm.h
+    # Set Label Metrics
+    self.lm = lm
+
   method draw(ctx: ptr CTXRender) =
-    let 
-      app = getApp()
-      rect = addr self.rect
-      colors = addr app.colors
-      # Locate Point
-      r = rect.h shr 1
-      p = point(rect.x + r, rect.y + r)
-      # Circle Radious Size
-      radius = float32(r)
-    # Fill Radio Background
+    let
+      lm = self.lm
+      # Label Position & Color
+      p = left(self.lm, self.rect)
+      col = getApp().colors.text
+      # Center Point
+      r = lm.icon shr 1
+      pc = point(p.xi + r, p.yi + r)
+      radius = float32(r) - 0.5
+    # Fill Checkbox Circle
     ctx.color self.optionColor()
-    ctx.circle(p, radius)
-    # Set Text Color
-    ctx.color(colors.text)
+    ctx.circle(pc, radius)
+    # Set Glyphs Color
+    ctx.color(col)
     # If Checked Draw Circle Mark
-    if self.check[] == self.expected:
-      ctx.circle(p, radius * 0.5)
-    # Draw Text Next To Circle
-    ctx.text( # Centered Vertically
-      rect.x + rect.h + 4, 
-      rect.y - app.font.desc,
-      self.label)
+    if self.check[] == self.value:
+      ctx.circle(pc, radius * 0.5)
+    # Draw Text Next to Checkbox
+    ctx.text(p.xt, p.yt, self.label)
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      self.check[] = self.expected
+      self.check[] = self.value
+
+# -----------------
+# GUI Option Button
+# -----------------
+
+import button
+# Define Toggle Button Widget
+widget UXButtonOption of UXButtonOpaque:
+  attributes:
+    value: int32
+    check: ptr int32
+
+  new button(icon: CTXIconID, value: int32, check: ptr int32):
+    result.init0("", icon)
+    # Set Checkbox Attribute
+    result.value = value
+    result.check = check
+
+  new button(label: string, value: int32, check: ptr int32):
+    result.init0(label)
+    # Set Checkbox Attribute
+    result.value = value
+    result.check = check
+
+  new button(label: string, icon: CTXIconID, value: int32, check: ptr int32):
+    result.init0(label, icon)
+    # Set Checkbox Attribute
+    result.value = value
+    result.check = check
+
+  method draw(ctx: ptr CTXRender) =
+    self.draw0(ctx, self.check[] == self.value)
+
+  method event(state: ptr GUIState) =
+    if state.kind == evCursorRelease and self.test(wHover):
+      self.check[] = self.value

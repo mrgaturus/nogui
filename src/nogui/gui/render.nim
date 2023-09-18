@@ -5,7 +5,7 @@ from ../values import
   guiProjection
 # Data Loader
 from ../data import 
-  newShader, GUIGlyphIcon
+  newShader, CTXIconID, CTXIconEmpty, `==`
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
@@ -444,25 +444,29 @@ proc triangle*(ctx: ptr CTXRender, a,b,c: CTXPoint) =
   ctx.vertex(2, c.x, c.y)
   # Elements Description
   ctx.triangle(0, 0,1,2)
-  var # Antialiased
-    i, j: int32 # Sides
-    k, l: int32 = 3 # AA
+  # Calculate Antialiasing
+  var
+    i: int32
+    # Prev Position
+    j = 2'i32
+    l, k = 3'i32
+    # Calculate
     x, y, norm: float32
   while i < 3:
-    j = (i + 1) mod 3 # Truncate Side
-    x = ctx.pVert[i].y - ctx.pVert[j].y
-    y = ctx.pVert[j].x - ctx.pVert[i].x
+    let 
+      p0 = addr ctx.pVert[j]
+      p1 = addr ctx.pVert[i]
+    x = p0.y - p1.y
+    y = p1.x - p0.x
     # Normalize Position Vector
-    norm = invSqrt(x*x + y*y)
+    norm = invSqrt(x * x + y * y)
     x *= norm; y *= norm
     # Add Antialiased Vertexs to Triangle Sides
-    ctx.vertexAA(k, ctx.pVert[i].x + x, ctx.pVert[i].y + y)
-    ctx.vertexAA(k+1, ctx.pVert[j].x + x, ctx.pVert[j].y + y)
-    # Add Antialiased Elements
-    ctx.triangle(l, i, j, k)
-    ctx.triangle(l+3, j, k, k+1)
-    # Next Triangle Size
-    i += 1; k += 2; l += 6
+    ctx.vertexAA(k, p0.x + x, p0.y + y)
+    ctx.vertexAA(k + 1, p1.x + x, p1.y + y)
+    ctx.quad(l, j, k, k + 1, i)
+    # Next Triangle Side
+    j = i; i += 1; k += 2; l += 6
 
 proc line*(ctx: ptr CTXRender, a,b: CTXPoint) =
   ctx.addVerts(6, 12)
@@ -599,22 +603,38 @@ proc text*(ctx: ptr CTXRender, x, y: int32, clip: CTXRect, str: string) =
     # To Next Glyph X Position
     unsafeAddr(x)[] += glyph.advance
 
-proc icon*(ctx: ptr CTXRender, x, y: int32, id: GUIGlyphIcon) =
+proc icon*(ctx: ptr CTXRender, id: CTXIconID, x, y: int32) =
+  # Lookup Icon if is not Empty
+  if id == CTXIconEmpty: return
+  let i = icon(ctx.atlas, uint16 id)
+  # Calculate Icon Metrics
   let
-    # Lookup Icon
-    icon = ctx.atlas.icon(uint16 id)
-    # Icon Rect
     x = float32 x
     y = float32 y
-    xw = x + float32 icon.w
-    yh = y + float32 icon.h
+    xw = x + float32 i.w
+    yh = y + float32 i.h
   # Reserve Vertex
   ctx.addVerts(4, 6)
   # Icon Vertex Definition
-  ctx.vertexUV(0, x, y, icon.x1, icon.y1)
-  ctx.vertexUV(1, xw, y, icon.x2, icon.y1)
-  ctx.vertexUV(2, x, yh, icon.x1, icon.y2)
-  ctx.vertexUV(3, xw, yh, icon.x2, icon.y2)
+  ctx.vertexUV(0, x, y, i.x1, i.y1)
+  ctx.vertexUV(1, xw, y, i.x2, i.y1)
+  ctx.vertexUV(2, x, yh, i.x1, i.y2)
+  ctx.vertexUV(3, xw, yh, i.x2, i.y2)
+  # Elements Definition
+  ctx.triangle(0, 0,1,2)
+  ctx.triangle(3, 1,2,3)
+
+proc icon*(ctx: ptr CTXRender, id: CTXIconID, r: CTXRect) =
+  # Lookup Icon if is not Empty
+  if id == CTXIconEmpty: return
+  let i = icon(ctx.atlas, uint16 id)
+  # Reserve Vertex
+  ctx.addVerts(4, 6)
+  # Icon Vertex Definition
+  ctx.vertexUV(0, r.x, r.y, i.x1, i.y1)
+  ctx.vertexUV(1, r.xw, r.y, i.x2, i.y1)
+  ctx.vertexUV(2, r.x, r.yh, i.x1, i.y2)
+  ctx.vertexUV(3, r.xw, r.yh, i.x2, i.y2)
   # Elements Definition
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)

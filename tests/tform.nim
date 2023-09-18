@@ -7,7 +7,7 @@ from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
-import nogui/ux/widgets/[button, slider, check, label]
+import nogui/ux/widgets/[button, slider, check, radio, label]
 import nogui/ux/layouts/[form, level, misc]
 import nogui/values
 
@@ -52,6 +52,7 @@ controller CONLayout:
     [check0, check1]: bool
     [check2, check3]: bool
     [check4, check5]: bool
+    a: int32
 
   callback cbHello:
     echo "hello world"
@@ -68,6 +69,8 @@ controller CONLayout:
       button("lol equisde", cbHello)
       label("", hoLeft, veMiddle)
 
+      field(): button("Value A", 10, addr self.a)
+      field(): button("Value B", 20, addr self.a)
       field(): checkbox("Transparent", addr self.check0)
       field("Blending", addr self.check2): 
         slider(addr self.valueC)

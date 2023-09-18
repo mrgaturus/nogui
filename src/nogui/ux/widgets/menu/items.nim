@@ -1,12 +1,19 @@
+import std/importutils
 import base
+# Use MenuItem Attributes
+privateAccess(UXMenuItem)
 
 # -----------------
 # GUI Menu Callback
 # -----------------
 
-widget GUIMenuItemCB of GUIMenuItem:
+widget UXMenuItemCB of UXMenuItem:
   attributes:
     cb: GUICallback
+
+  new menuitem(label: string, icon: CTXIconID, cb: GUICallback):
+    result.init0(label, icon)
+    result.cb = cb
 
   new menuitem(label: string, cb: GUICallback):
     result.init0(label)
@@ -17,41 +24,59 @@ widget GUIMenuItemCB of GUIMenuItem:
       push(self.cb)
 
   method draw(ctx: ptr CTXRender) =
-    # Draw Base
     self.draw0(ctx)
+    # Draw Label Icon
+    let p = label(self.lm, self.rect)
+    ctx.icon(self.icon, p.xi, p.yi)
 
 # ---------------
 # GUI Menu Option
 # ---------------
 
-widget GUIMenuItemOption of GUIMenuItem:
+widget UXMenuItemOption of UXMenuItem:
   attributes:
     option: ptr int32
-    expected: int32
+    value: int32
     # Optional Callback
-    @public:
-      cb: GUICallback
+    @public: cb: GUICallback
 
-  new menuoption(label: string, option: ptr int32, expected: int32):
+  new menuoption(label: string, option: ptr int32, value: int32):
     result.init0(label)
     result.option = option
+    result.value = value
 
   method event(state: ptr GUIState) =
     if self.event0(state):
-      self.option[] = self.expected
+      self.option[] = self.value
       # Execute Callback
       if valid(self.cb):
         push(self.cb)
 
   method draw(ctx: ptr CTXRender) =
-    # Draw Base
     self.draw0(ctx)
+    # Locate Option Circle
+    let
+      lm = self.lm
+      p = label(lm, self.rect)
+      # Locate Circle Center
+      cp = point(
+        p.xi + lm.icon shr 1,
+        p.yi + lm.icon shr 1)
+      # Radius Size
+      r = float32(lm.icon) * 0.4
+    # Draw Option Circle
+    ctx.color self.itemColor()
+    ctx.circle(cp, r)
+    # If Checked Draw Circle Mark
+    if self.option[] == self.value:
+      ctx.color getApp().colors.text
+      ctx.circle(cp, r * 0.5)
 
 # -----------------
 # GUI Menu Checkbox
 # -----------------
 
-widget GUIMenuItemCheck of GUIMenuItem:
+widget UXMenuItemCheck of UXMenuItem:
   attributes:
     check: ptr bool
     # Optional Callback
@@ -72,13 +97,31 @@ widget GUIMenuItemCheck of GUIMenuItem:
   method draw(ctx: ptr CTXRender) =
     # Draw Base
     self.draw0(ctx)
+    # Locate Check Square
+    let
+      lm = self.lm
+      p = label(lm, self.rect)
+      # Locate Check Square
+    var r = rect(p.xi, p.yi, lm.icon, lm.icon)
+    # Draw Check Square
+    ctx.color self.itemColor()
+    ctx.fill(r)
+    # If Checked Draw Circle Mark
+    if self.check[]:
+      let pad = float32(lm.icon shr 2)
+      # Locate Marked Check
+      r.x += pad; r.y += pad
+      r.xw -= pad; r.yh -= pad
+      # Draw Marked Check
+      ctx.color getApp().colors.text
+      ctx.fill(r)
 
 # ----------------
 # GUI Menu Popover
 # ----------------
 
-type GUIMenuOpaque* = distinct GUIWidget
-widget GUIMenuItemPopup of GUIMenuItem:
+type UXMenuOpaque* = distinct GUIWidget
+widget UXMenuItemPopup of UXMenuItem:
   attributes: @public:
     popup: GUIWidget
 
@@ -92,7 +135,7 @@ widget GUIMenuItemPopup of GUIMenuItem:
       popup.move(rect.x + rect.w, rect.y - 2)
     else: popup.close()
 
-  new menuitem(label: string, popup: GUIMenuOpaque):
+  new menuitem(label: string, popup: UXMenuOpaque):
     result.init0(label)
     result.popup = GUIWidget(popup)
     result.onportal = result.popupCB
@@ -102,23 +145,16 @@ widget GUIMenuItemPopup of GUIMenuItem:
       app = getApp()
       rect = rect self.rect
       colors = addr app.colors
-      desc = float32 app.font.desc
-      minH = float32 self.metrics.minH shr 1
+      r = extra(self.lm, self.rect)
     # Fill Selected Background
     if not self.test(wHover) and self.portal[] == self:
       ctx.color colors.item
       ctx.fill rect
     # Draw Menu Label
     self.draw0(ctx)
-    # Fill Background
-    ctx.color(colors.text)
-    let
-      p0 = point(rect.xw - minH, rect.y - desc - desc)
-      p1 = point(rect.xw - minH, rect.yh + desc + desc)
-      p2 = point(rect.xw + desc * 1.5, (rect.y + rect.yh) * 0.5)
-    ctx.triangle(p0, p1, p2)
+    ctx.arrowRight(r)
 
   method event(state: ptr GUIState) =
     discard
 
-export GUIMenuItemPopup
+export UXMenuItemPopup

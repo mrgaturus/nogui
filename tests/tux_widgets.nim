@@ -8,6 +8,7 @@ from nogui/builder import controller, widget, child
 import nogui/values
 import nogui/ux/prelude
 import nogui/utf8
+import nogui/pack
 # Import All Widgets
 import nogui/ux/widgets/[
   button,
@@ -21,6 +22,17 @@ import nogui/ux/widgets/[
   menu,
   combo
 ]
+
+import nogui/ux/widgets/menu/items
+
+icons "tatlas", 16:
+  brush := "brush.svg"
+  clear := "clear.svg"
+  reset := "reset.svg"
+  close := "close.svg"
+  color := "color.png"
+  right := "right.svg"
+  left := "left.svg"
 
 # -----------------------
 # Simple Widget Forwarder
@@ -59,6 +71,12 @@ proc locate(self: GUIWidget, rect: GUIMetrics): GUIWidget =
 widget GUIDummy:
   new dummy():
     result.flags = wMouse
+
+  method layout =
+    for w in forward(self.first):
+      let m = addr w.metrics
+      if m.w <= 0: m.w = m.minW
+      if m.h <= 0: m.h = m.minh
 
 widget GUIPanel:
   new panel():
@@ -105,7 +123,7 @@ controller CONPlayground:
     # Selection Items
     self.selected = 
       combomodel(): menu("").child:
-          comboitem("Normal", 0)
+          comboitem("Normal", iconBrush, 0)
           menuseparator("Dark")
           comboitem("Multiply", 0)
           comboitem("Darken", 0)
@@ -188,11 +206,11 @@ controller CONPlayground:
       menubar().locate(0, 0).child:
         # File Menu
         menu("File").child:
-          menuitem("New", cb)
-          menuitem("Open", cb)
+          menuitem("New", iconBrush, cb)
+          menuitem("Open", iconClear, cb)
           menuseparator()
-          menuitem("Save", cb)
-          menuitem("Save as", cb)
+          menuitem("Save", iconReset, cb)
+          menuitem("Save as", iconReset, cb)
           # Custom Widget
           menuseparator("Color Chooser")
           cube
@@ -204,8 +222,12 @@ controller CONPlayground:
             menuitem("World", cb)
             # More More Menus
             menu("Menu Menu").child:
-              menuitem("World 2", cb)
-              menuitem("World 2", cb)
+              menuoption("Option A", addr self.a, 0)
+              menuoption("Option B", addr self.a, 1)
+              menuseparator()
+              menucheck("Check A", addr self.check)
+              menucheck("Check A Again", addr self.check)
+              menucheck("Check B", addr self.check1)
           menu("Menu 2").child:
             menuitem("The", cb)
             menuitem("Game", cb)

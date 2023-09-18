@@ -4,7 +4,7 @@ import ./color/[base, hue, sv]
 # Simple Color Bar
 # ----------------
 
-widget GUIColorCube:
+widget UXColorCube:
   new colorcube(hsv: ptr HSVColor):
     result.add hue0bar(hsv)
     result.add sv0square(hsv)
@@ -37,7 +37,7 @@ widget GUIColorCube:
 # Color Wheel Square
 # ------------------
 
-widget GUIColorWheel:
+widget UXColorWheel:
   attributes:
     hold: GUIWidget
 
@@ -107,7 +107,7 @@ widget GUIColorWheel:
 # Color Wheel Triangle
 # --------------------
 
-widget GUIColorWheel0Triangle:
+widget UXColorWheel0Triangle:
   attributes:
     hold: GUIWidget
 
@@ -151,7 +151,7 @@ widget GUIColorWheel0Triangle:
 
   proc collide(x, y: float32): bool =
     let 
-      sv = cast[GUIColor0Triangle](self.last)
+      sv = cast[UXColor0Triangle](self.last)
       # Calculate Center
       rect = rect (sv.rect)
       cx = (rect.x + rect.xw) * 0.5

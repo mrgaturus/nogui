@@ -11,20 +11,23 @@ from ../../gui/event import
 from ../../gui/signal import 
   WindowSignal, msgOpenIM, msgCloseIM
 
-widget GUITextBox:
+widget UXTextBox:
   attributes:
     input: ptr UTF8Input
     # Text Metric Cache
     [wc, wo, wl]: int32
 
   new textbox(input: ptr UTF8Input):
-    let metrics = addr getApp().font
-    # Widget Standard Flags
     result.flags = wMouse or wKeyboard
-    # Set Minimun Size Like a Button
-    result.minimum(0, metrics.height - metrics.desc)
     # Widget Attributes
     result.input = input
+
+  method update =
+    let 
+      font = addr getApp().font
+      size = font.height - font.desc
+    # Set Minimun Size
+    self.minimum(size, size)
 
   proc calculateOffsets() =
     let
@@ -74,7 +77,7 @@ widget GUITextBox:
       else: # Hover Outline Color
         ctx.color(colors.focus)
       # Draw Outline Status
-      ctx.line rect(self.rect), -1
+      ctx.line rect(self.rect), 1
     # Set Color To White
     ctx.color(colors.text)
     # Draw Current Text
