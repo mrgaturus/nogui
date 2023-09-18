@@ -2,14 +2,14 @@ import ../prelude
 from strutils import 
   formatFloat, ffDecimal
 from ../../values import
-  Value, toRaw, lerp, discrete, toFloat, toInt
+  Lerp, toRaw, lerp, discrete, toFloat, toInt
 
 widget UXSlider:
   attributes:
-    value: ptr Value
+    value: ptr Lerp
     decimals: int8
 
-  new slider(value: ptr Value, decimals = 0'i8):
+  new slider(value: ptr Lerp, decimals = 0'i8):
     # Widget Standard Flag
     result.flags = wMouse
     # Set Widget Attributes

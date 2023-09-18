@@ -36,7 +36,7 @@ proc spacing(w: GUIWidget): GUIWidget =
   #result.margin = 4
   result = margin(size = 16, a)
 
-proc half(value: ptr Value): UXAdjustLayout =
+proc half(value: ptr Lerp): UXAdjustLayout =
   result = adjust slider(value)
   # Adjust Metrics
   result.scaleW = 0.75
@@ -44,11 +44,11 @@ proc half(value: ptr Value): UXAdjustLayout =
 controller CONLayout:
   attributes:
     widget: GUIWidget
-    [valueA, valueB]: Value
-    [valueA1, valueB1]: Value
-    [valueC, valueD]: Value
-    [valueE, valueF]: Value
-    [valueG, valueH]: Value
+    [valueA, valueB]: Lerp
+    [valueA1, valueB1]: Lerp
+    [valueC, valueD]: Lerp
+    [valueE, valueF]: Lerp
+    [valueG, valueH]: Lerp
     [check0, check1]: bool
     [check2, check3]: bool
     [check4, check5]: bool

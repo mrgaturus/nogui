@@ -94,7 +94,7 @@ controller CONPlayground:
   attributes:
     [a, b]: int32
     [check, check1]: bool
-    [v1, v2]: Value
+    [v1, v2]: Lerp
     widget: GUIDummy
     text: UTF8Input
     color: RGBColor

@@ -1,16 +1,16 @@
 import ../prelude
 from ../../values import
-  Value, toRaw, lerp,
+  Lerp, toRaw, lerp,
   distance, toFloat, toInt
 
 widget UXScroll:
   attributes:
-    value: ptr Value
+    value: ptr Lerp
     [pos, t]: float32
     # Scroll Orientation
     vertical: bool
 
-  new scrollbar(value: ptr Value, vertical: bool):
+  new scrollbar(value: ptr Lerp, vertical: bool):
     # Widget Standard Flag
     result.flags = wMouse
     # Set Widget Attributes
