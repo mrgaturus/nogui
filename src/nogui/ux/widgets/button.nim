@@ -80,12 +80,14 @@ widget UXIconButton of UXButton:
     self.opaque = true; self
 
   method update =
-    let # Calculate Label Metrics
+    let # Widget Metrics
       m = addr self.metrics
+      # Calculate Label Metrics
       lm = metricsLabel(self.label, self.icon)
+      extra = int16(lm.label > 0)
       # TODO: allow customize margin
       pad0 = getApp().font.asc shr 1
-      pad1 = pad0 shl 1
+      pad1 = pad0 shl extra
     # Change Min Size
     m.minW = lm.w + pad1
     m.minH = lm.h + pad0
@@ -149,11 +151,12 @@ widget UXButtonOpaque:
     let # Widget Metrics
       m = addr self.metrics
       icon = self.icon
-      # TODO: allow customize margin
-      pad0 = getApp().font.asc shr 1
-      pad1 = pad0 shr 1
       # Calculate Label Metrics
       lm = metricsLabel(self.label, icon)
+      extra = int16(lm.label > 0)
+      # TODO: allow customize margin
+      pad0 = getApp().font.asc shr 1
+      pad1 = pad0 shl extra
     # Change Min Size
     m.minW = lm.w + pad1
     m.minH = lm.h + pad0
