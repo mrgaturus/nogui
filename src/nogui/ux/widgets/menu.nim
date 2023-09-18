@@ -138,35 +138,40 @@ widget UXMenuBarItem:
 
   new menubar0(menu: UXMenuOpaque):
     result.flags = wMouse
-    let 
-      m = cast[UXMenu](menu)
-      metrics = addr getApp().font
-      fontsize = metrics.size
-      # Minimun Size With Padding
-      height = metrics.height + fontsize
-      width = m.label.width + (fontsize shl 1)
-    # Ajust New Size
-    result.minimum(width, height)
-    # Set Current Menu
-    result.menu = m
+    result.menu = cast[UXMenu](menu)
+
+  method update =
+    let
+      # TODO: allow customize margin
+      font = addr getApp().font
+      pad0 = font.size
+      pad1 = pad0 shl 1
+      # Font Width
+      m = addr self.metrics
+      w = int16 width(self.menu.label)
+      h = font.height
+    # Set Minimun Size
+    m.minW = w + pad1
+    m.minH = h + pad0
 
   method draw(ctx: ptr CTXRender) =
     let
       app = getApp()
-      metrics = addr app.font
-      colors = addr app.colors
-      # Font Size
-      fontsize = metrics.size
       rect = addr self.rect
+      colors = addr app.colors
+      font = addr app.font
+      # Font Metrics
+      ox = self.metrics.minW - (font.size shl 1)
+      oy = font.height - font.baseline
     # Fill Background
     if self.test(wHover) or self.portal[] == self:
       ctx.color colors.item
       ctx.fill rect rect[]
-    # Draw Menu Bar Item Text
+    # Draw Text Centered
     ctx.color(colors.text)
     ctx.text(
-      rect.x + fontsize,
-      rect.y + fontsize,
+      rect.x + (rect.w - ox) shr 1,
+      rect.y + (rect.h - oy) shr 1, 
       self.menu.label)
 
   method event(state: ptr GUIState) =
@@ -225,6 +230,8 @@ widget UXMenuBar:
         w0.kind = wgPopup
         w0.cbClose = item.cbMenuClose
         w = item
+        # Update New Menu
+        item.vtable.update(item)
       # Bind Portal to MenuBarItem
       if w of UXMenuBarItem:
         cast[UXMenuBarItem](w).portal = portal
