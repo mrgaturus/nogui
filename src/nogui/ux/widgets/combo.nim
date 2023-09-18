@@ -35,7 +35,10 @@ widget UXComboItem of UXMenuItem:
     result.value = value
 
   proc combovalue: ComboValue =
-    let labeling = metricsMenu(self.label, self.icon)
+    var labeling = metricsMenu(self.label, self.icon)
+    # Remove Offset if Empty Icon
+    if self.icon == CTXIconEmpty:
+      labeling.w -= self.lm.icon
     # Return Combo Value Info
     ComboValue(
       value: self.value,
@@ -161,12 +164,10 @@ widget GUIComboBox:
     ctx.color self.itemColor()
     ctx.fill rect(self.rect)
     ctx.color getApp().colors.text
-    # Draw Combobox Icon
-    if s.icon == CTXIconEmpty:
-      p.xt -= s.lm.icon
-    else: ctx.icon(s.icon, p.xi, p.yi)
-    # Draw Combobox Text and Arrow
+    # Draw Icon And Label
+    ctx.icon(s.icon, p.xi, p.yi)
     ctx.text(p.xt, p.yt, s.label)
+    # Draw Combobox Arrow
     ctx.arrowDown(ex)
 
   method event(state: ptr GUIState) =
