@@ -6,10 +6,7 @@ from ../gui/signal import GUICallback, push, valid
 
 type
   ValueHeader = object
-    foreign: bool
     cb*: GUICallback
-  ValueData[T] {.union.} = object
-    value: T
     loc: pointer
   ValueOpaque = ptr object
     head: ValueHeader
@@ -17,7 +14,7 @@ type
   # - Widget Shared Values
   Value*[T] = object
     head*: ValueHeader
-    data: ValueData[T]
+    data: T
   SValue*[T] = ptr Value[T]
 
 converter toShared*[T](value: var Value[T]): 
@@ -32,32 +29,30 @@ template `&`*(t: typedesc): typedesc = SValue[t]
 # ---------------------------
 
 proc value*[T](a: T): Value[T] =
-  result.data.value = a
+  result.data = a
 
 proc value*[T](a: T, cb: GUICallback): Value[T] =
+  result.data = a
   result.head.cb = cb
-  result.data.value = a
 
 proc value*[T](a: ptr T): Value[T] =
-  result.head.foreign = true
-  result.data.loc = a
+  result.head.loc = a
 
 proc value*[T](a: ptr T, cb: GUICallback): Value[T] =
   let head = addr result.head
-  head.foreign = true
+  # Set Foreign Data
+  head.loc = a
   head.cb = cb
-  # Store Foreign Value
-  result.data.loc = a
 
 # ------------------------
 # Shared Values Reactivity
 # ------------------------
 
 proc peek(head: var ValueHeader): pointer =
-  result = addr cast[ValueOpaque](addr head).loc
-  # De-reference as Foreign Pointer
-  if head.foreign:
-    result = cast[ptr pointer](result)[]
+  # Decide Value Location
+  if isNil(head.loc):
+    addr cast[ValueOpaque](addr head).loc
+  else: cast[ptr pointer](head.loc)
 
 proc react(head: var ValueHeader): pointer =
   result = head.peek()
