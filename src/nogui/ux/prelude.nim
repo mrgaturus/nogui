@@ -7,6 +7,8 @@ from ../gui/timer import pushTimer, stopTimer
 from ../../nogui import getApp, width, index
 # Import Icon ID Helper
 from ../data import CTXIconID, CTXIconEmpty, `==`
+# Import Shared Values
+import values
 
 # ------------------------
 # GUI Control Color Helper
@@ -71,3 +73,5 @@ export pushTimer, stopTimer
 export getApp, width, index
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
+# Export Shared Values
+export values

@@ -50,6 +50,16 @@ proc interval*(n: var Lerp, max: sink float32) {.inline.} =
 proc interval*(n: var Lerp, r: LerpSlice) {.inline.} =
   interval(n, r.a, r.b)
 
+# ---------------------
+# Numeric Lerp Creation
+# ---------------------
+
+proc lerp*(min, max: sink float32): Lerp {.inline.} =
+  result.interval(min, max)
+
+proc lerp*(r: LerpSlice): Lerp {.inline.} =
+  result.interval(r)
+
 # -------------------
 # Numeric Lerp Bounds
 # -------------------
