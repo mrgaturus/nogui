@@ -35,22 +35,17 @@ widget UXMenuItemCB of UXMenuItem:
 
 widget UXMenuItemOption of UXMenuItem:
   attributes:
-    option: ptr int32
+    option: & int32
     value: int32
-    # Optional Callback
-    @public: cb: GUICallback
 
-  new menuoption(label: string, option: ptr int32, value: int32):
+  new menuoption(label: string, option: & int32, value: int32):
     result.init0(label)
     result.option = option
     result.value = value
 
   method event(state: ptr GUIState) =
     if self.event0(state):
-      self.option[] = self.value
-      # Execute Callback
-      if valid(self.cb):
-        push(self.cb)
+      self.option.react[] = self.value
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)
@@ -68,7 +63,7 @@ widget UXMenuItemOption of UXMenuItem:
     ctx.color self.itemColor()
     ctx.circle(cp, r)
     # If Checked Draw Circle Mark
-    if self.option[] == self.value:
+    if self.option.peek[] == self.value:
       ctx.color getApp().colors.text
       ctx.circle(cp, r * 0.5)
 
@@ -78,21 +73,16 @@ widget UXMenuItemOption of UXMenuItem:
 
 widget UXMenuItemCheck of UXMenuItem:
   attributes:
-    check: ptr bool
-    # Optional Callback
-    @public:
-      cb: GUICallback
+    check: & bool
 
-  new menucheck(label: string, check: ptr bool):
+  new menucheck(label: string, check: & bool):
     result.init0(label)
     result.check = check
 
   method event(state: ptr GUIState) =
     if self.event0(state):
-      self.check[] = not self.check[]
-      # Execute Callback
-      if valid(self.cb):
-        push(self.cb)
+      let check = self.check.react()
+      check[] = not check[]
 
   method draw(ctx: ptr CTXRender) =
     # Draw Base
@@ -107,7 +97,7 @@ widget UXMenuItemCheck of UXMenuItem:
     ctx.color self.itemColor()
     ctx.fill(r)
     # If Checked Draw Circle Mark
-    if self.check[]:
+    if self.check.peek[]:
       let pad = float32(lm.icon shr 2)
       # Locate Marked Check
       r.x += pad; r.y += pad

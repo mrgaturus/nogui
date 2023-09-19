@@ -6,9 +6,9 @@ widget UXRadio:
     lm: GUILabelMetrics
     # Radio Check
     value: int32
-    check: ptr int32
+    check: & int32
 
-  new radio(label: string, value: int32, check: ptr int32):
+  new radio(label: string, value: int32, check: & int32):
     result.flags = wMouse
     result.label = label
     # Radio Attributes
@@ -41,14 +41,14 @@ widget UXRadio:
     # Set Glyphs Color
     ctx.color(col)
     # If Checked Draw Circle Mark
-    if self.check[] == self.value:
+    if self.check.peek[] == self.value:
       ctx.circle(pc, radius * 0.5)
     # Draw Text Next to Checkbox
     ctx.text(p.xt, p.yt, self.label)
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      self.check[] = self.value
+      self.check.react[] = self.value
 
 # -----------------
 # GUI Option Button
@@ -59,29 +59,29 @@ import button
 widget UXButtonOption of UXButtonOpaque:
   attributes:
     value: int32
-    check: ptr int32
+    check: & int32
 
-  new button(icon: CTXIconID, value: int32, check: ptr int32):
-    result.init0("", icon)
-    # Set Checkbox Attribute
-    result.value = value
-    result.check = check
-
-  new button(label: string, value: int32, check: ptr int32):
-    result.init0(label)
-    # Set Checkbox Attribute
-    result.value = value
-    result.check = check
-
-  new button(label: string, icon: CTXIconID, value: int32, check: ptr int32):
+  new button(label: string, icon: CTXIconID, check: & int32, value: int32):
     result.init0(label, icon)
     # Set Checkbox Attribute
     result.value = value
     result.check = check
 
+  new button(icon: CTXIconID, check: & int32, value: int32):
+    result.init0("", icon)
+    # Set Checkbox Attribute
+    result.value = value
+    result.check = check
+
+  new button(label: string, check: & int32, value: int32):
+    result.init0(label)
+    # Set Checkbox Attribute
+    result.value = value
+    result.check = check
+
   method draw(ctx: ptr CTXRender) =
-    self.draw0(ctx, self.check[] == self.value)
+    self.draw0(ctx, self.check.peek[] == self.value)
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      self.check[] = self.value
+      self.check.react[] = self.value
