@@ -112,7 +112,7 @@ widget UXMenuItemCheck of UXMenuItem:
 
 type UXMenuOpaque* = distinct GUIWidget
 widget UXMenuItemPopup of UXMenuItem:
-  attributes: @public:
+  attributes: {.public.}:
     popup: GUIWidget
 
   callback popupCB:

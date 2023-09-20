@@ -11,10 +11,10 @@ import nogui/ux/widgets/[button, slider, check, radio, label]
 import nogui/ux/layouts/[form, level, misc]
 import nogui/values
 
-proc field(name: string, check: ptr bool, w: GUIWidget): GUIWidget =
+proc field(name: string, check: & bool, w: GUIWidget): GUIWidget =
   let ck = # Dummy Test
     if not isNil(check): check
-    else: cast[ptr bool](w)
+    else: cast[& bool](w)
   # Create Middle Checkbox
   let c = checkbox("", ck)
   if isNil(check):
@@ -36,7 +36,7 @@ proc spacing(w: GUIWidget): GUIWidget =
   #result.margin = 4
   result = margin(size = 16, a)
 
-proc half(value: ptr Lerp): UXAdjustLayout =
+proc half(value: & Lerp): UXAdjustLayout =
   result = adjust slider(value)
   # Adjust Metrics
   result.scaleW = 0.75
@@ -44,15 +44,15 @@ proc half(value: ptr Lerp): UXAdjustLayout =
 controller CONLayout:
   attributes:
     widget: GUIWidget
-    [valueA, valueB]: Lerp
-    [valueA1, valueB1]: Lerp
-    [valueC, valueD]: Lerp
-    [valueE, valueF]: Lerp
-    [valueG, valueH]: Lerp
-    [check0, check1]: bool
-    [check2, check3]: bool
-    [check4, check5]: bool
-    a: int32
+    [valueA, valueB]: @ Lerp
+    [valueA1, valueB1]: @ Lerp
+    [valueC, valueD]: @ Lerp
+    [valueE, valueF]: @ Lerp
+    [valueG, valueH]: @ Lerp
+    [check0, check1]: @ bool
+    [check2, check3]: @ bool
+    [check4, check5]: @ bool
+    a: @ int32
 
   callback cbHello:
     echo "hello world"
@@ -61,41 +61,41 @@ controller CONLayout:
     let cbHello = self.cbHello
     # Create Layout
     spacing: form().child:
-      field("Size"): slider(addr self.valueA)
-      field("Min Size"): half(addr self.valueA1)
-      field("Opacity"): slider(addr self.valueB)
-      field("Min Opacity"): half(addr self.valueB1)
+      field("Size"): slider(self.valueA)
+      field("Min Size"): half(self.valueA1)
+      field("Opacity"): slider(self.valueB)
+      field("Min Opacity"): half(self.valueB1)
       
       button("lol equisde", cbHello)
       label("", hoLeft, veMiddle)
 
-      field(): button("Value A", 10, addr self.a)
-      field(): button("Value B", 20, addr self.a)
-      field(): checkbox("Transparent", addr self.check0)
-      field("Blending", addr self.check2): 
-        slider(addr self.valueC)
-      field("Dilution", addr self.check3): 
-        slider(addr self.valueD)
+      field(): button("Value A", self.a, 10)
+      field(): button("Value B", self.a, 20)
+      field(): checkbox("Transparent", self.check0)
+      field("Blending", self.check2): 
+        slider(self.valueC)
+      field("Dilution", self.check3): 
+        slider(self.valueD)
       field("Persistence", nil): 
-        slider(addr self.valueF)
-      field("Watering", addr self.check4): 
-        slider(addr self.valueE)
-      field(): checkbox("Colouring", addr self.check1)
+        slider(self.valueF)
+      field("Watering", self.check4): 
+        slider(self.valueE)
+      field(): checkbox("Colouring", self.check1)
       
       label("", hoLeft, veMiddle)
-      field("Min Pressure"): slider(addr self.valueG)
+      field("Min Pressure"): slider(self.valueG)
 
   new conlayout():
     # Create New Widget
-    interval(result.valueA, 0, 100)
-    interval(result.valueA1, 0, 100)
-    interval(result.valueB1, 0, 100)
-    interval(result.valueB, 20, 50)
-    interval(result.valueC, -100, 100)
-    interval(result.valueD, 0, 5)
-    interval(result.valueE, 0, 100)
-    interval(result.valueF, 0, 200)
-    interval(result.valueG, 0, 300)
+    result.valueA = lerp(0, 100).value
+    result.valueA1 = lerp(0, 100).value
+    result.valueB1 = lerp(0, 100).value
+    result.valueB = lerp(20, 50).value
+    result.valueC = lerp(-100, 100).value
+    result.valueD = lerp(0, 5).value
+    result.valueE = lerp(0, 100).value
+    result.valueF = lerp(0, 200).value
+    result.valueG = value(result.valueD.peek, result.cbHello)
     result.widget = result.createWidget()
 
 proc main() =

@@ -91,7 +91,7 @@ widget UXMenuItem:
     icon: CTXIconID
     lm: GUIMenuMetrics
     # Menu Item Action
-    @public:
+    {.public.}:
       [ondone, onportal]: GUICallback
       portal: ptr UXMenuItem
 

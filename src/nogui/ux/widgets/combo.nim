@@ -69,7 +69,7 @@ controller ComboModel:
     flatten: seq[pointer]
     # User Defined Callback
     ondone: GUICallback
-    @public: onchange: GUICallback
+    {.public.}: onchange: GUICallback
 
   callback cbMenuDone:
     close(self.menu)
