@@ -162,7 +162,7 @@ func cbCallback(self, state, fn: NimNode): NimNode =
           var `name` = `fresh`[]; `stmts`
       # Remember Line
       expectIdent(ty[0], "sink")
-      warped[0][0][0].copyLineInfo(extra)
+      warped[0][0][0].copyLineInfo(declare)
       # Replace Values
       name = fresh
       stmts = warped
@@ -310,7 +310,9 @@ func wType(name, super, defines: NimNode): NimNode =
   )
   # Declare Type
   result = quote do:
-    type `name` = `n` 
+    type `name` = `n`
+  # Warning / Error Information
+  result[0][0].copyLineInfo(defines)
 
 # -------------------
 # Widget Proc/Methods

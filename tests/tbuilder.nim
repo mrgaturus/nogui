@@ -37,3 +37,5 @@ controller UXHello:
     {.public.}: 
       [zz, aa]: int
 
+  callback ex(afdffd: sink int32):
+    discard
