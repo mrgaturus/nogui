@@ -1,14 +1,12 @@
 from ../builder import widget
 # Import Widget and Rendering
-import ../gui/[widget, event, render, atlas, signal]
+import ../gui/[widget, event, render, atlas, signal, value]
 # Import Event and Callback Stuff
 from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
 from ../../nogui import getApp, width, index
 # Import Icon ID Helper
 from ../data import CTXIconID, CTXIconEmpty, `==`
-# Import Shared Values
-import values
 
 # ------------------------
 # GUI Control Color Helper
@@ -74,4 +72,4 @@ export getApp, width, index
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values
-export values
+export value

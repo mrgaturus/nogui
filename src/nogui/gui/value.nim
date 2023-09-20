@@ -1,4 +1,4 @@
-from ../gui/signal import GUICallback, push, valid
+from signal import GUICallback, push, valid
 
 # ------------------------
 # Shared Values Definition
@@ -15,14 +15,13 @@ type
   Value*[T] = object
     head*: ValueHeader
     data: T
-  SValue*[T] = ptr Value[T]
 
-converter toShared*[T](value: var Value[T]): 
-  SValue[T] {.inline.} = addr value
+converter toShared*[T](value: var Value[T]):
+  ptr Value[T] {.inline.} = addr value
 
 # Shared Values Type Shortcuts
 template `@`*(t: typedesc): typedesc = Value[t]
-template `&`*(t: typedesc): typedesc = SValue[t]
+template `&`*(t: typedesc): typedesc = ptr Value[t]
 
 # ---------------------------
 # Shared Values Encapsulation
@@ -64,8 +63,8 @@ proc react(head: var ValueHeader): pointer =
 # Shared Values Abstraction
 # -------------------------
 
-template peek*[T](value: SValue[T]): ptr T =
+template peek*[T](value: ptr Value[T]): ptr T =
   cast[ptr T](peek value.head)
 
-template react*[T](value: SValue[T]): ptr T =
+template react*[T](value: ptr Value[T]): ptr T =
   cast[ptr T](react value.head)
