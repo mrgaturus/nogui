@@ -1,6 +1,6 @@
 from ../builder import widget
 # Import Widget and Rendering
-import ../gui/[widget, event, render, atlas, signal]
+import ../gui/[widget, event, render, atlas, signal, value]
 # Import Event and Callback Stuff
 from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
@@ -71,3 +71,5 @@ export pushTimer, stopTimer
 export getApp, width, index
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
+# Export Shared Values
+export value

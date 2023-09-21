@@ -1,6 +1,5 @@
 # TODO: complete inherit initialization
-# TODO: shortcut for {.cursor.} on ref attributes
-import gui/[widget, event, render]
+import gui/[widget, event, render, value]
 from gui/signal import 
   GUICallback, GUICallbackEX, 
   unsafeCallback, unsafeCallbackEX
@@ -101,6 +100,7 @@ func cbAttribute(self, cb: NimNode): NimNode =
     # Attribute Definition
     name = declare[0]
     ty = declare[1]
+    post = postfix(name, "*")
     # Pointer Casting
     dot = nnkDotExpr.newTree(ident"result", name)
     convert = nnkCast.newTree(
@@ -110,13 +110,13 @@ func cbAttribute(self, cb: NimNode): NimNode =
   case ty.kind
   of nnkEmpty:
     let call = bindSym"unsafeCallback"
-    defs.add name, bindSym"GUICallback", dummy
+    defs.add post, bindSym"GUICallback", dummy
     # Add Simple Injector
     inject.add(dot, nnkCall.newTree(call, convert, sym))
   of nnkIdent:
     let call = nnkBracketExpr.newTree(
       bindSym"unsafeCallbackEX", ty)
-    defs.add name, nnkBracketExpr.newTree(
+    defs.add post, nnkBracketExpr.newTree(
       bindSym"GUICallbackEX", ty), dummy
     # Add Extra Injector
     inject.add(dot, nnkCall.newTree(call, convert, sym))
@@ -163,7 +163,7 @@ func cbCallback(self, state, fn: NimNode): NimNode =
           var `name` = `fresh`[]; `stmts`
       # Remember Line
       expectIdent(ty[0], "sink")
-      warped[0][0][0].copyLineInfo(extra)
+      warped[0][0][0].copyLineInfo(declare)
       # Replace Values
       name = fresh
       stmts = warped
@@ -186,49 +186,86 @@ func cbCallback(self, state, fn: NimNode): NimNode =
     stmts
   )
 
-# ------------------
-# Widget Type Object
-# ------------------
+# ----------------------
+# Widget Type Attributes
+# ----------------------
 
-func wIdents(attribute: NimNode, public = false): NimNode =
+func wTraits(stmts: NimNode): NimNode =
+  let dummy = newEmptyNode()
+  var # Type, Name, Pragmas
+    name, ty = dummy
+    pragmas = nnkPragma.newTree()
+  # Check Pragma Traits
+  for trait in stmts:
+    if trait.eqIdent("public"):
+      name = nnkPostfix.newTree(ident"*", dummy)
+    elif trait.eqIdent("value"):
+      ty = nnkBracketExpr.newTree(bindSym"Value", dummy)
+    # Otherwise Add Pragma
+    else: pragmas.add trait
+  # Warp Pragmas Into PragmaExpr
+  if pragmas.len > 0:
+    pragmas = nnkPragmaExpr.newTree(dummy, pragmas)
+  # Return New IdentDef Template
+  result = nnkIdentDefs.newTree(
+    name, pragmas, ty)
+
+func wIdent(name, traits: NimNode): NimNode =
+  result = traits[0].copyNimTree
+  let p = traits[1].copyNimTree
+  # Assemble Attribute Ident
+  if result.kind == nnkPostfix:
+    result[1] = name
+  else: result = name
+  # Assemble Pragmas
+  if p.kind == nnkPragmaExpr:
+    p[0] = result
+    result = p
+
+func wAttribute(attribute, traits: NimNode): NimNode =
   result = newNimNode(nnkIdentDefs)
   # Add Identification
   let ident = attribute[0]
   case ident.kind
   of nnkIdent:
-    result.add if public: 
-        postfix(ident, "*")
-      else: ident
+    result.add wIdent(ident, traits)
   of nnkBracket:
     for id in ident:
-      result.add if public: 
-          postfix(id, "*") 
-        else: id
+      result.add wIdent(id, traits)
   else: result = newEmptyNode()
   # Add Attribute Type
   if result.kind == nnkIdentDefs:
-    let s = attribute[1]
-    expectKind(s, nnkStmtList)
-    result.add s[0]
-    # Add Boilerplate Empty
+    var ty = attribute[1]
+    expectKind(ty, nnkStmtList)
+    ty = ty[0]
+    # Warp Into Value Type?
+    let warp = traits[2]
+    if warp.kind == nnkBracketExpr:
+      warp[1] = ty
+      ty = warp
+    # Add Attribute Type
+    result.add ty
     result.add newEmptyNode()
 
+# ------------------
+# Widget Type Object
+# ------------------
+
 func wDefines(list, stmts: NimNode) =
+  let dummy = wTraits(nnkIdentDefs.newNimNode)
   # Get Attributes from Statments
   for ident in stmts:
     case ident.kind
     of nnkCall:
-      list.add wIdents(ident)
-    of nnkPrefix:
-      expectIdent(ident[0], "@")
-      expectIdent(ident[1], "public")
-      # Expect Statment List
-      let publics = ident[2]
-      expectKind(publics, nnkStmtList)
-      # Process Each Public Attribute
-      for pub in publics:
-        if pub.kind == nnkCall:
-          list.add wIdents(pub, true)
+      list.add wAttribute(ident, dummy)
+    of nnkPragmaBlock:
+      let 
+        traits = wTraits(ident[0])
+        idents = ident[1]
+      # Process Each Attribute
+      for id in idents:
+        if id.kind == nnkCall:
+          list.add wAttribute(id, traits)
         # Add New Attribute
     else: continue
 
@@ -274,7 +311,9 @@ func wType(name, super, defines: NimNode): NimNode =
   )
   # Declare Type
   result = quote do:
-    type `name` = `n` 
+    type `name` * = `n`
+  # Warning / Error Information
+  result[0][0].copyLineInfo(defines)
 
 # -------------------
 # Widget Proc/Methods

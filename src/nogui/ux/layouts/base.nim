@@ -1,4 +1,5 @@
 import ../prelude
+export prelude
 
 # ------------------------
 # Widget Layout Cell Hints
@@ -46,10 +47,3 @@ widget UXDummy:
 widget UXMinCell of UXLayoutCell:
   new min(w: GUIWidget):
     result.cell0(w)
-
-# --------------------
-# Widget Layout Export
-# --------------------
-
-# TODO: export by default
-export prelude, UXLayoutCell, UXMinCell

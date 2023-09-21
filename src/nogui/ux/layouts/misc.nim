@@ -33,7 +33,7 @@ proc offset(m: int16): int16 =
 # ----------------------
 
 widget UXAdjustLayout:
-  attributes: @public:
+  attributes: {.public.}:
     # Aligment Position
     hoAlign: UXPosHKind
     veAlign: UXPosVKind
@@ -103,7 +103,7 @@ widget UXAdjustLayout:
 # -----------------
 
 widget UXMarginLayout:
-  attributes: @public:
+  attributes: {.public.}:
     [marginW, marginH]: int16
 
   new margin(w: GUIWidget):
@@ -147,6 +147,3 @@ widget UXMarginLayout:
     # Apply Padding
     m.w = m0.w - pw
     m.h = m0.h - ph
-
-# TODO: export by default
-export UXAdjustLayout, UXMarginLayout

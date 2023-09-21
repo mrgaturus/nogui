@@ -2,14 +2,14 @@ import ../prelude
 from strutils import 
   formatFloat, ffDecimal
 from ../../values import
-  Value, toRaw, lerp, discrete, toFloat, toInt
+  Lerp, toRaw, lerp, discrete, toFloat, toInt
 
 widget UXSlider:
   attributes:
-    value: ptr Value
+    value: & Lerp
     decimals: int8
 
-  new slider(value: ptr Value, decimals = 0'i8):
+  new slider(value: & Lerp, decimals = 0'i8):
     # Widget Standard Flag
     result.flags = wMouse
     # Set Widget Attributes
@@ -27,21 +27,22 @@ widget UXSlider:
       font = addr app.font
       colors = addr app.colors
       rect = addr self.rect
+      value = self.value.peek()
     block: # Draw Slider
       var r = rect(self.rect)
       # Fill Slider Background
       ctx.color(colors.darker)
       ctx.fill(r)
       # Get Slider Width and Fill Slider Bar
-      r.xw = r.x + float32(rect.w) * self.value[].toRaw
+      r.xw = r.x + float32(rect.w) * value[].toRaw
       ctx.color self.itemColor()
       ctx.fill(r)
     # Draw Text Information
     let text = 
       if self.decimals > 0:
-        formatFloat(self.value[].toFloat, 
+        formatFloat(value[].toFloat, 
           ffDecimal, self.decimals)
-      else: $self.value[].toInt
+      else: $value[].toInt
     ctx.color(colors.text)
     ctx.text( # On The Right Side
       rect.x + rect.w - text.width - (font.size shr 1),
@@ -52,7 +53,7 @@ widget UXSlider:
       let 
         rect = addr self.rect
         t = (state.mx - rect.x) / rect.w
-        value = self.value
+        value = self.value.react()
       # Change Value
       if self.decimals > 0:
         value[].lerp(t)

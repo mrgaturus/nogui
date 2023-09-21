@@ -5,9 +5,9 @@ widget UXCheckBox:
     label: string
     lm: GUILabelMetrics
     # Checkbox Data
-    check: ptr bool
+    check: & bool
 
-  new checkbox(label: string, check: ptr bool):
+  new checkbox(label: string, check: & bool):
     result.flags = wMouse
     # Checkbox Attributes
     result.label = label
@@ -38,7 +38,7 @@ widget UXCheckBox:
     # Set Glyphs Color
     ctx.color(col)
     # Draw Mark if Checked
-    if self.check[]:
+    if self.check.peek[]:
       let pad = float32(lm.icon shr 2)
       # Locate Marked Check
       r.x += pad; r.y += pad
@@ -50,7 +50,8 @@ widget UXCheckBox:
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      self.check[] = not self.check[]
+      let check = self.check.react()
+      check[] = not check[]
 
 # -----------------
 # GUI Toggle Button
@@ -60,23 +61,24 @@ import button
 # Define Toggle Button Widget
 widget UXButtonCheck of UXButtonOpaque:
   attributes:
-    check: ptr bool
+    check: & bool
 
-  new button(icon: CTXIconID, check: ptr bool):
+  new button(icon: CTXIconID, check: & bool):
     result.init0("", icon)
     result.check = check
 
-  new button(label: string, check: ptr bool):
+  new button(label: string, check: & bool):
     result.init0(label)
     result.check = check
 
-  new button(label: string, icon: CTXIconID, check: ptr bool):
+  new button(label: string, icon: CTXIconID, check: & bool):
     result.init0(label, icon)
     result.check = check
 
   method draw(ctx: ptr CTXRender) =
-    self.draw0(ctx, self.check[])
+    self.draw0(ctx, self.check.peek[])
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      self.check[] = not self.check[]
+      let check = self.check.react()
+      check[] = not check[]

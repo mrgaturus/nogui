@@ -104,8 +104,7 @@ widget UXMenu:
   method handle(kind: GUIHandle) =
     let s = self.selected
     if kind == outFrame and not isNil(s):
-      if valid(s.onportal):
-        push(s.onportal)
+      push(s.onportal)
       # Remove Selected
       self.selected = nil
 
@@ -270,10 +269,3 @@ widget UXMenuBar:
         let prev {.cursor.} = self.selected
         self.selected = nil
         prev.onportal()
-
-# ---------------
-# GUI Menu Export
-# ---------------
-
-# TODO: allow do export on builder
-export UXMenu

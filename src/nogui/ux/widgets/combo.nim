@@ -69,13 +69,12 @@ controller ComboModel:
     flatten: seq[pointer]
     # User Defined Callback
     ondone: GUICallback
-    @public: onchange: GUICallback
+    {.public.}: onchange: GUICallback
 
   callback cbMenuDone:
     close(self.menu)
     # Send User Defined Callback
-    if valid(self.onchange):
-      push(self.onchange)
+    push(self.onchange)
 
   proc select*(value: int) =
     var found: UXComboItem
@@ -174,5 +173,3 @@ widget GUIComboBox:
     if state.kind == evCursorClick:
       self.flags.clear(wGrab)
       push(self.cbOpenMenu)
-
-export ComboModel
