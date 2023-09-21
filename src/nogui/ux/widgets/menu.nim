@@ -270,10 +270,3 @@ widget UXMenuBar:
         let prev {.cursor.} = self.selected
         self.selected = nil
         prev.onportal()
-
-# ---------------
-# GUI Menu Export
-# ---------------
-
-# TODO: allow do export on builder
-export UXMenu

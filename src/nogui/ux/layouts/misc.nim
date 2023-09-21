@@ -147,6 +147,3 @@ widget UXMarginLayout:
     # Apply Padding
     m.w = m0.w - pw
     m.h = m0.h - ph
-
-# TODO: export by default
-export UXAdjustLayout, UXMarginLayout

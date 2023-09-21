@@ -27,7 +27,7 @@ widget UXHelloWord:
 
 template myPragma {.pragma.}
 
-controller UXHello:
+controller Hello:
   attributes:
     z: int
     {.public, bitsize: 8, myPragma.}: 
@@ -37,5 +37,5 @@ controller UXHello:
     {.public.}: 
       [zz, aa]: int
 
-  callback ex(afdffd: sink int32):
+  callback ex(ab: sink int32):
     discard

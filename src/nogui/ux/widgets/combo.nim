@@ -174,5 +174,3 @@ widget GUIComboBox:
     if state.kind == evCursorClick:
       self.flags.clear(wGrab)
       push(self.cbOpenMenu)
-
-export ComboModel

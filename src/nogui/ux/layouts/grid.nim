@@ -195,6 +195,3 @@ widget UXGridLayout:
         loc = locate(self.hBand, c.y, c.h)
         m.y = loc.pos
         m.h = loc.size
-
-# TODO: export by default
-export UXGridLayout

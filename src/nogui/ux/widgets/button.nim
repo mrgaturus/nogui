@@ -162,6 +162,3 @@ widget UXButtonOpaque:
     m.minH = lm.h + pad0
     # Change Label Metrics
     self.lm = lm
-
-# TODO: export by default
-export UXButtonOpaque

@@ -1,4 +1,5 @@
 import ../../[prelude, labeling]
+export prelude, labeling
 
 # --------------------------------
 # TODO: Move this to widget module
@@ -152,6 +153,3 @@ widget UXMenuItem:
   method handle(kind: GUIHandle) =
     if kind in {inHover, inFocus}:
       self.select()
-
-# Export Widget Inheritable
-export UXMenuItem, prelude, labeling

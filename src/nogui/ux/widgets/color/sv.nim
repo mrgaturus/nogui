@@ -230,5 +230,3 @@ widget UXColor0Triangle:
       # Replace Saturation Value
       self.hsv.s = s
       self.hsv.v = v
-
-export UXColor0Triangle

@@ -100,6 +100,7 @@ func cbAttribute(self, cb: NimNode): NimNode =
     # Attribute Definition
     name = declare[0]
     ty = declare[1]
+    post = postfix(name, "*")
     # Pointer Casting
     dot = nnkDotExpr.newTree(ident"result", name)
     convert = nnkCast.newTree(
@@ -109,13 +110,13 @@ func cbAttribute(self, cb: NimNode): NimNode =
   case ty.kind
   of nnkEmpty:
     let call = bindSym"unsafeCallback"
-    defs.add name, bindSym"GUICallback", dummy
+    defs.add post, bindSym"GUICallback", dummy
     # Add Simple Injector
     inject.add(dot, nnkCall.newTree(call, convert, sym))
   of nnkIdent:
     let call = nnkBracketExpr.newTree(
       bindSym"unsafeCallbackEX", ty)
-    defs.add name, nnkBracketExpr.newTree(
+    defs.add post, nnkBracketExpr.newTree(
       bindSym"GUICallbackEX", ty), dummy
     # Add Extra Injector
     inject.add(dot, nnkCall.newTree(call, convert, sym))
@@ -310,7 +311,7 @@ func wType(name, super, defines: NimNode): NimNode =
   )
   # Declare Type
   result = quote do:
-    type `name` = `n`
+    type `name` * = `n`
   # Warning / Error Information
   result[0][0].copyLineInfo(defines)
 

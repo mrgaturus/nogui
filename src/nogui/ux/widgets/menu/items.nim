@@ -146,5 +146,3 @@ widget UXMenuItemPopup of UXMenuItem:
 
   method event(state: ptr GUIState) =
     discard
-
-export UXMenuItemPopup
