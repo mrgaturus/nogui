@@ -1,5 +1,6 @@
 import menu/[base, items]
-export menuitem, menuseparator
+# Export Menu Item Variants
+export menuitem, menuoption, menucheck, menuseparator
 
 # --------------
 # GUI Menu Popup
