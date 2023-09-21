@@ -48,10 +48,8 @@ widget UXButton:
       self.label)
 
   method event(state: ptr GUIState) =
-    let cb = self.cb
-    if state.kind == evCursorRelease and 
-    self.test(wHover) and cb.valid: 
-      cb.push()
+    if state.kind == evCursorRelease and self.test(wHover):
+      push(self.cb) # Emit Callback
 
 # ---------------
 # GUI Icon Button

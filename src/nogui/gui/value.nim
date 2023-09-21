@@ -1,4 +1,4 @@
-from signal import GUICallback, push, valid
+from signal import GUICallback, push
 
 # ------------------------
 # Shared Values Definition
@@ -56,8 +56,7 @@ proc peek(head: var ValueHeader): pointer =
 proc react(head: var ValueHeader): pointer =
   result = head.peek()
   # Queue Changed Callback
-  if valid(head.cb):
-    push(head.cb)
+  push(head.cb)
 
 # -------------------------
 # Shared Values Abstraction

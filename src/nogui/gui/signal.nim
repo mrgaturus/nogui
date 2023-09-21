@@ -135,7 +135,7 @@ proc pushSignal(msg: WindowSignal, data: pointer, size: Natural) =
   queue.push(signal)
 
 proc pushCallback(cb: GUICallback) =
-  assert(not cb.fn.isNil)
+  if isNil(cb.fn): return
   # Get Queue Pointer from Global
   let 
     queue = opaque
@@ -147,8 +147,7 @@ proc pushCallback(cb: GUICallback) =
   queue.push(signal)
 
 proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
-  assert(not isNil cb.fn)
-  assert(not isNil data)
+  if isNil(cb.fn) and isNil(data): return
   # Get Queue Pointer from Global
   let
     queue = opaque

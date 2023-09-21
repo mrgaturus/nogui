@@ -104,8 +104,7 @@ widget UXMenu:
   method handle(kind: GUIHandle) =
     let s = self.selected
     if kind == outFrame and not isNil(s):
-      if valid(s.onportal):
-        push(s.onportal)
+      push(s.onportal)
       # Remove Selected
       self.selected = nil
 

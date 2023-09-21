@@ -74,8 +74,7 @@ controller ComboModel:
   callback cbMenuDone:
     close(self.menu)
     # Send User Defined Callback
-    if valid(self.onchange):
-      push(self.onchange)
+    push(self.onchange)
 
   proc select*(value: int) =
     var found: UXComboItem
