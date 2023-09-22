@@ -69,16 +69,20 @@ widget UXMenuSeparatorLabel:
       rect = addr self.rect
       colors = addr app.colors
       font = addr app.font
-      # Font Metrics
-      ox = self.metrics.minW - font.asc
-      oy = font.height - font.baseline
+      # Center Y Offset
+      offset = font.baseline
+      oy = font.height - offset
+    # Opacity Constants
+    const 
+      cAlpha = 0x7FFFFFFF'u32
+      cText = 0xB0FFFFFF'u32
     # Create Rect
-    ctx.color(colors.item and 0x7FFFFFFF)
+    ctx.color(colors.item and cAlpha)
     ctx.fill rect rect[]
     # Draw Text Centered
-    ctx.color(colors.text)
+    ctx.color(colors.text and cText)
     ctx.text(
-      rect.x + (rect.w - ox) shr 1,
+      rect.x + offset,
       rect.y + (rect.h - oy) shr 1, 
       self.label)
 
@@ -130,9 +134,9 @@ widget UXMenuItem:
   proc event0*(state: ptr GUIState): bool =
     # Remove Grab Flag
     self.flags.clear(wGrab)
-    # Check if was actioned and execute ondone callback
-    if state.kind == evCursorRelease and self.test(wHover):
-      push(self.ondone)
+    # Check if was actioned and send ondone callback
+    result = state.kind == evCursorRelease and self.test(wHover)
+    if result: push(self.ondone)
 
   method update =
     let

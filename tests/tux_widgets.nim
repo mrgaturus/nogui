@@ -92,8 +92,8 @@ widget GUIPanel:
 
 controller CONPlayground:
   attributes:
-    [a, b]: int32
-    [check, check1]: bool
+    [a, b]: @ int32
+    [check, check1]: @ bool
     [v1, v2]: Lerp
     widget: GUIDummy
     text: UTF8Input
@@ -163,9 +163,9 @@ controller CONPlayground:
         button("Nested World", cb).locate(20, 10)
         button("Nested World 2", cb).locate(20, 35)
       # Locate Nested Sliders
-      panel().locate(160, 80, 128, 128).child:
-        slider(addr self.v1).locateW(20, 10, 100)
-        slider(addr self.v2).locateW(20, 35, 100)
+      #panel().locate(160, 80, 128, 128).child:
+      #  slider(addr self.v1).locateW(20, 10, 100)
+      #  slider(addr self.v2).locateW(20, 35, 100)
       # Locate Nested Radio Buttons / Checkbox
       panel().locate(300, 80, 128, 268).child:
         radio("Option 1", 0, addr self.a).locateW(20, 10, 100)
@@ -251,8 +251,8 @@ controller CONPlayground:
 
   new conplayground(a, b: cint):
     # Set New Values
-    result.a = a
-    result.b = b
+    result.a = value(a)
+    result.b = value(b)
     echo sizeof(result[])
     # Initialize Values
     interval(result.v1, 20, 123)
