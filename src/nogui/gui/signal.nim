@@ -200,6 +200,21 @@ proc valid*(cb: GUICallback): bool {.inline.} =
 template valid*[T](cb: GUICallbackEX[T]): bool =
   GUICallback(cb).valid
 
+# --------------------------
+# GUI CALLBACK FORCE CALLERS
+# --------------------------
+
+proc force*(cb: GUICallback) =
+  let fn = cast[GUICallbackProc](cb.fn)
+  fn(cb.sender, opaque.state)
+
+proc forceEX(cb: GUICallback, data: pointer) =
+  let fn = cast[GUICallbackProcEX](cb.fn)
+  fn(cb.sender, opaque.state, data)
+
+template force*[T](cb: GUICallbackEX[T], data: ptr T) =
+  forceEX(cb.GUICallback, data)
+
 # ---------------------------------
 # GUI SIGNAL DATA POINTER CONVERTER
 # ---------------------------------
