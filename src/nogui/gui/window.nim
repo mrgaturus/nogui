@@ -40,7 +40,7 @@ type
     w*, h*: int32
     # X11 Cursor
     xCursor: Cursor
-    xCursorLabel: cuint
+    xCursorLabel: Cursor
     # X11 Input Method
     xim: XIM
     xic: XIC
@@ -568,6 +568,11 @@ proc render*(win: GUIWindow) =
 # TODO: Get rid of this with native plaforms on C
 # -----------------------------------------------
 export x.Cursor
+# Import Xcursor.h missing
+include x11/x11pragma
+const libXcursor* = "libXcursor.so"
+{.pragma: libXcursor, cdecl, dynlib: libXcursor, importc.}
+proc XcursorLibraryLoadCursor(dpy: PDisplay, name: cstring): Cursor {.libXcursor.}
 
 proc freeCursor(win: GUIWindow) =
   let cursor = win.xCursor
@@ -584,21 +589,26 @@ proc clearCursor*(win: GUIWindow) =
   # Free Cursor
   win.freeCursor()
 
-proc setCursor*(win: GUIWindow, label: int) =
-  let
-    display = win.display
-    label32 = cuint label
-    found = XCreateFontCursor(display, label32)
+template setCursor(win: GUIWindow, cursor: Cursor) =
+  let display = win.display
   # Clear Cursor First
   win.freeCursor()
   # Change Window Cursor
-  if XDefineCursor(display, win.xID, found) > 1:
+  if XDefineCursor(display, win.xID, cursor) > 1:
     log(lvWarning, "failed loading cursor")
   # Set Current Cursor Handle
-  win.xCursor = found
-  win.xCursorLabel = label32
+  win.xCursor = cursor
+  win.xCursorLabel = cursor
 
-proc setCursor*(win: GUIWindow, custom: Cursor) =
+proc setCursor*(win: GUIWindow, code: int) =
+  let found = XCreateFontCursor(win.display, cuint code)
+  win.setCursor(found)
+
+proc setCursor*(win: GUIWindow, name: cstring) =
+  let found = XcursorLibraryLoadCursor(win.display, name)
+  win.setCursor(found)
+
+proc setCursorCustom*(win: GUIWindow, custom: Cursor) =
   let display = win.display
   # Clear Cursor First
   win.freeCursor()

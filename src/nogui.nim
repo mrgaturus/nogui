@@ -178,11 +178,14 @@ proc index*(str: string, w: int32): int32 =
 #       rewriting x11 platforms to C
 # -----------------------------------------
 
-proc setCursor*(app: GUIApplication, label: int) =
-  setCursor(app.window, label)
+proc setCursor*(app: GUIApplication, code: int) =
+  setCursor(app.window, code)
 
-proc setCursor*(app: GUIApplication, custom: Cursor) =
-  setCursor(app.window, custom)
+proc setCursor*(app: GUIApplication, name: cstring) =
+  setCursor(app.window, name)
+
+proc setCursorCustom*(app: GUIApplication, custom: Cursor) =
+  setCursorCustom(app.window, custom)
 
 proc clearCursor*(app: GUIApplication) =
   clearCursor(app.window)
