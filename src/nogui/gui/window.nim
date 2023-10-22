@@ -38,6 +38,9 @@ type
     display: PDisplay
     xID: Window
     w*, h*: int32
+    # X11 Cursor
+    xCursor: Cursor
+    xCursorLabel: cuint
     # X11 Input Method
     xim: XIM
     xic: XIC
@@ -560,3 +563,47 @@ proc render*(win: GUIWindow) =
   finish() # -- End GUI Rendering
   # Present Frame to X11/EGL
   discard eglSwapBuffers(win.eglDsp, win.eglSur)
+
+# -----------------------------------------------
+# TODO: Get rid of this with native plaforms on C
+# -----------------------------------------------
+export x.Cursor
+
+proc freeCursor(win: GUIWindow) =
+  let cursor = win.xCursor
+  # Free Cursor if is not Custom
+  if win.xCursorLabel > 0 and cursor > 0:
+    discard XFreeCursor(win.display, cursor)
+  # Free Current Cursor
+  win.xCursor = 0
+  win.xCursorLabel = 0
+
+proc clearCursor*(win: GUIWindow) =
+  if XUndefineCursor(win.display, win.xID) > 1:
+   log(lvWarning, "failed restoring cursor")
+  # Free Cursor
+  win.freeCursor()
+
+proc setCursor*(win: GUIWindow, label: int) =
+  let
+    display = win.display
+    label32 = cuint label
+    found = XCreateFontCursor(display, label32)
+  # Clear Cursor First
+  win.freeCursor()
+  # Change Window Cursor
+  if XDefineCursor(display, win.xID, found) > 1:
+    log(lvWarning, "failed loading cursor")
+  # Set Current Cursor Handle
+  win.xCursor = found
+  win.xCursorLabel = label32
+
+proc setCursor*(win: GUIWindow, custom: Cursor) =
+  let display = win.display
+  # Clear Cursor First
+  win.freeCursor()
+  # Change Window Cursor
+  if XDefineCursor(display, win.xID, custom) != 0:
+    log(lvWarning, "failed loading cursor")
+  # Set Current Cursor Handle
+  win.xCursor = custom

@@ -4,6 +4,9 @@ from x11/keysym import
   XK_Backspace, XK_Left, XK_Right,
   XK_Return, XK_Escape,
   XK_Delete, XK_Home, XK_End
+import x11/cursorfont
+from ../../../nogui import 
+  setCursor, clearCursor
 # -----------------------
 import ../../utf8
 from ../../gui/event import 
@@ -124,4 +127,8 @@ widget UXTextBox:
       pushSignal(msgOpenIM)
     of outFocus: 
       pushSignal(msgCloseIM)
+    of inHover:
+      getApp().setCursor(XC_xterm)
+    of outHover:
+      getApp().clearCursor()
     else: discard

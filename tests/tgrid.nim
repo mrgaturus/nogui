@@ -25,8 +25,8 @@ controller CONLayout:
   attributes:
     widget: GUIWidget
     [text, subtext]: UTF8Input
-    a: int32
-    b: bool
+    a: @ int32
+    b: @ bool
 
   callback cbHello:
     echo "hello world"
@@ -48,11 +48,11 @@ controller CONLayout:
       cell(0, 1): label("Message", hoLeft, veTop)
       cell(1, 1): textbox(addr self.subtext)
       cell(2, 1): vlevel().child:
-        min: button(iconBrush, 0, option)
-        min: button(iconReset, 1, option)
-        min: button(iconClear, 2, option)
-        min: button(iconColor, 3, option)
-        min: button(iconClose, 4, option)
+        min: button(iconBrush, option, 0)
+        min: button(iconReset, option, 1)
+        min: button(iconClear, option, 2)
+        min: button(iconColor, option, 3)
+        min: button(iconClose, option, 4)
         min: button(iconClose, addr self.b)
       
       cell(1, 2): horizontal().child:

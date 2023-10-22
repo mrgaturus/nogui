@@ -172,3 +172,17 @@ proc index*(str: string, w: int32): int32 =
       if w + (advance shr 1) > 0:
         result = i
       break
+
+# -----------------------------------------
+# TODO: expose public apis for window after
+#       rewriting x11 platforms to C
+# -----------------------------------------
+
+proc setCursor*(app: GUIApplication, label: int) =
+  setCursor(app.window, label)
+
+proc setCursor*(app: GUIApplication, custom: Cursor) =
+  setCursor(app.window, custom)
+
+proc clearCursor*(app: GUIApplication) =
+  clearCursor(app.window)
