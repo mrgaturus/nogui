@@ -206,11 +206,15 @@ template valid*[T](cb: GUICallbackEX[T]): bool =
 
 proc force*(cb: GUICallback) =
   let fn = cast[GUICallbackProc](cb.fn)
-  fn(cb.sender, opaque.state)
+  # Execute if is Valid
+  if not isNil(fn):
+    fn(cb.sender, opaque.state)
 
 proc forceEX(cb: GUICallback, data: pointer) =
   let fn = cast[GUICallbackProcEX](cb.fn)
-  fn(cb.sender, opaque.state, data)
+  # Execute if is Valid
+  if not (fn.isNil or data.isNil):
+    fn(cb.sender, opaque.state, data)
 
 template force*[T](cb: GUICallbackEX[T], data: ptr T) =
   forceEX(cb.GUICallback, data)
