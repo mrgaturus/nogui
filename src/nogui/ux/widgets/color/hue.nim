@@ -1,3 +1,4 @@
+# TODO: event propagation will make work again with ptr
 from math import 
   sin, cos, arctan2, log2, PI
 import base
@@ -8,9 +9,9 @@ import base
 
 widget UXHue0Bar:
   attributes:
-    hsv: ptr HSVColor
+    hsv: & HSVColor
 
-  new hue0bar(hsv: ptr HSVColor):
+  new hue0bar(hsv: & HSVColor):
     result.hsv = hsv
     result.flags = wMouse
     # Minimun Width Size
@@ -43,7 +44,7 @@ widget UXHue0Bar:
   proc drawCursor(ctx: ptr CTXRender) =
     # Calculate Cursor Color
     let
-      h = self.hsv.h
+      h = peek(self.hsv).h
       item = toRGB self.itemColor()
       # Contrast Colors
       color0 = HSVColor(h: h, s: 1.0, v: 1.0).toRGB
@@ -89,7 +90,7 @@ widget UXHue0Bar:
       t = clamp(delta, 0, 1)
     # Change Hue Interpolation
     if (state.kind == evCursorClick) or self.test(wGrab):
-      self.hsv.h = t
+      react(self.hsv).h = t
 
 # ----------------
 # Color Hue Circle
@@ -97,10 +98,10 @@ widget UXHue0Bar:
 
 widget UXHue0Circle:
   attributes:
-    hsv: ptr HSVColor
+    hsv: & HSVColor
     clicked: bool
 
-  new hue0circle(hsv: ptr HSVColor):
+  new hue0circle(hsv: & HSVColor):
     result.hsv = hsv
     result.flags = wMouse
 
@@ -170,7 +171,7 @@ widget UXHue0Circle:
       ra1 = 0.05 * radius
       # Get Color
       app = getApp()
-      h = self.hsv.h
+      h = peek(self.hsv).h
       hsv = HSVColor(h: h, s: 1.0, v: 1.0)
       # Colors
       rgb = hsv.toRGB
@@ -213,7 +214,7 @@ widget UXHue0Circle:
       var angle = arctan2(dy, dx)
       if angle < 0.0:
         angle += 2 * PI
-      self.hsv.h = angle / PI * 0.5
+      react(self.hsv).h = angle / PI * 0.5
     else: clicked = false
     # Replace Clicked
     self.clicked = clicked

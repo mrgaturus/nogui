@@ -1,3 +1,4 @@
+# TODO: event propagation will make work again with ptr
 from math import cos, sin, sqrt, PI
 import base
 
@@ -7,9 +8,9 @@ import base
 
 widget UXColor0Square:
   attributes:
-    hsv: ptr HSVColor
+    hsv: & HSVColor
     
-  new sv0square(hsv: ptr HSVColor):
+  new sv0square(hsv: & HSVColor):
     result.hsv = hsv
     result.flags = wMouse
     # Minimun Width Size
@@ -19,7 +20,8 @@ widget UXColor0Square:
   proc drawSV(ctx: ptr CTXRender) =
     let 
       rect = rect(self.rect)
-      color0 = HSVColor(h: self.hsv.h, s: 1.0, v: 1.0)
+      hsv = peek(self.hsv)
+      color0 = HSVColor(h: hsv.h, s: 1.0, v: 1.0)
       color1 = color0.toRGB.toPacked
     # Reserve Vertex
     ctx.addVerts(8, 12)
@@ -45,7 +47,7 @@ widget UXColor0Square:
   proc drawCursor(ctx: ptr CTXRender) =
     let
       app = getApp()
-      hsv = self.hsv
+      hsv = peek(self.hsv)
       s = hsv.s
       v = 1.0 - hsv.v
       # Colors
@@ -75,8 +77,9 @@ widget UXColor0Square:
       x = (state.mx - self.rect.x) / self.rect.w
       y = (state.my - self.rect.y) / self.rect.h
     if (state.kind == evCursorClick) or self.test(wGrab):
-      self.hsv.s = clamp(x, 0, 1)
-      self.hsv.v = clamp(1 - y, 0, 1)
+      let hsv = react(self.hsv)
+      hsv.s = clamp(x, 0, 1)
+      hsv.v = clamp(1 - y, 0, 1)
 
 # ----------------------
 # Triangle Helpers Procs
@@ -123,9 +126,9 @@ proc uvmap(tri: SV0Triangle, u, v: float32): CTXPoint =
 
 widget UXColor0Triangle:
   attributes:
-    hsv: ptr HSVColor
+    hsv: & HSVColor
 
-  new sv0triangle(hsv: ptr HSVColor):
+  new sv0triangle(hsv: & HSVColor):
     result.hsv = hsv
     result.flags = wMouse
     # Minimun Width Size
@@ -145,7 +148,7 @@ widget UXColor0Triangle:
       cx = (r.x + r.xw) * 0.5
       cy = (r.y + r.yh) * 0.5
       # Initial Angle
-      angle = self.hsv.h * pi2
+      angle = peek(self.hsv).h * pi2
     # Calculate Triangles
     var ox, oy, theta: float32
     for i in 0 ..< 3:
@@ -162,7 +165,7 @@ widget UXColor0Triangle:
     let
       app = getApp()
       # Colors
-      rgb = self.hsv[].toRGB
+      rgb = peek(self.hsv)[].toRGB
       item = toRGB app.colors.item
       color0 = contrast(item, rgb)
       size = float32 getApp().font.asc shr 1
@@ -175,10 +178,10 @@ widget UXColor0Triangle:
   method draw(ctx: ptr CTXRender) =
     # Calculate Triangle
     let
-      hsv = self.hsv
+      hsv = peek(self.hsv)
       tri = self.triangle()
       p = tri.uvmap(hsv.s, hsv.v)
-      h = self.hsv.h
+      h = hsv.h
     # Calculate Color Corners
     var hc: array[3, GUIColor]
     block: # Avoid so much objects
@@ -228,5 +231,6 @@ widget UXColor0Triangle:
         v = 0.0
         s = 1.0 - s
       # Replace Saturation Value
-      self.hsv.s = s
-      self.hsv.v = v
+      let hsv = react(self.hsv)
+      hsv.s = s
+      hsv.v = v

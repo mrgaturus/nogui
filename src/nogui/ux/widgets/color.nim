@@ -1,3 +1,4 @@
+# TODO: event propagation will make work again with ptr
 import ./color/[base, hue, sv]
 
 # ----------------
@@ -5,12 +6,12 @@ import ./color/[base, hue, sv]
 # ----------------
 
 widget UXColorCube:
-  new colorcube(hsv: ptr HSVColor):
+  new colorcube(hsv: & HSVColor):
     result.add hue0bar(hsv)
     result.add sv0square(hsv)
     result.flags = wMouse
 
-  new colorcube0triangle(hsv: ptr HSVColor):
+  new colorcube0triangle(hsv: & HSVColor):
     result.add hue0bar(hsv)
     result.add sv0triangle(hsv)
     result.flags = wMouse
@@ -41,7 +42,7 @@ widget UXColorWheel:
   attributes:
     hold: GUIWidget
 
-  new colorwheel(hsv: ptr HSVColor):
+  new colorwheel(hsv: & HSVColor):
     let 
       wheel = hue0circle(hsv)
       square = sv0square(hsv)
@@ -111,7 +112,7 @@ widget UXColorWheel0Triangle:
   attributes:
     hold: GUIWidget
 
-  new colorwheel0triangle(hsv: ptr HSVColor):
+  new colorwheel0triangle(hsv: & HSVColor):
     let 
       wheel = hue0circle(hsv)
       triangle = sv0triangle(hsv)
