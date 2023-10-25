@@ -1,5 +1,5 @@
 # TODO: complete inherit initialization
-import gui/[widget, event, render, value]
+import gui/[widget, event, render]
 from gui/signal import 
   GUICallback, GUICallbackEX, 
   unsafeCallback, unsafeCallbackEX
@@ -193,14 +193,12 @@ func cbCallback(self, state, fn: NimNode): NimNode =
 func wTraits(stmts: NimNode): NimNode =
   let dummy = newEmptyNode()
   var # Type, Name, Pragmas
-    name, ty = dummy
+    name = dummy
     pragmas = nnkPragma.newTree()
   # Check Pragma Traits
   for trait in stmts:
     if trait.eqIdent("public"):
       name = nnkPostfix.newTree(ident"*", dummy)
-    elif trait.eqIdent("value"):
-      ty = nnkBracketExpr.newTree(bindSym"Value", dummy)
     # Otherwise Add Pragma
     else: pragmas.add trait
   # Warp Pragmas Into PragmaExpr
@@ -208,7 +206,7 @@ func wTraits(stmts: NimNode): NimNode =
     pragmas = nnkPragmaExpr.newTree(dummy, pragmas)
   # Return New IdentDef Template
   result = nnkIdentDefs.newTree(
-    name, pragmas, ty)
+    name, pragmas)
 
 func wIdent(name, traits: NimNode): NimNode =
   result = traits[0].copyNimTree
@@ -238,11 +236,6 @@ func wAttribute(attribute, traits: NimNode): NimNode =
     var ty = attribute[1]
     expectKind(ty, nnkStmtList)
     ty = ty[0]
-    # Warp Into Value Type?
-    let warp = traits[2]
-    if warp.kind == nnkBracketExpr:
-      warp[1] = ty
-      ty = warp
     # Add Attribute Type
     result.add ty
     result.add newEmptyNode()
@@ -252,7 +245,9 @@ func wAttribute(attribute, traits: NimNode): NimNode =
 # ------------------
 
 func wDefines(list, stmts: NimNode) =
-  let dummy = wTraits(nnkIdentDefs.newNimNode)
+  let
+    du = newEmptyNode()
+    dummy = nnkIdentDefs.newTree(du, du)
   # Get Attributes from Statments
   for ident in stmts:
     case ident.kind

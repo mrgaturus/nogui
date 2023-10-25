@@ -1,29 +1,13 @@
 from nogui/builder import controller, widget
+import nogui/ux/widgets/menu
 
 widget UXHelloWord:
   attributes:
-    #[
-    b: int
-    [z, e, f]: int
-    {.public.}:
-      b: int
-    {.public, value.}:
-      c: int
-    @public:
-      d: int
-    type A = object
-      a: Value[int]
-      b* {.cursor.}: ref int
-      c {.cursor, hello.}: Value[int]
-      z: int
-      x*: int
-    ]#
-    type A = object
-      e* {.cursor, hello: "Hello World".}, f {.cursor.}: int
-      a, b, c: int
-  type
-    Hola = ref object
-      a* {.bitsize: 8.}, b* {.myPragma.}: int
+    [a, b]: int
+
+widget UXHelloWord2:
+  attributes:
+    [a, b]: int
 
 template myPragma {.pragma.}
 
@@ -32,10 +16,12 @@ controller Hello:
     z: int
     {.public, bitsize: 8, myPragma.}: 
       [a, b, c]: int
-    {.value.}: 
+    {.public.}: 
       [e, f]: int
     {.public.}: 
       [zz, aa]: int
 
-  callback ex(ab: sink int32):
+  callback ex:
     discard
+
+echo UXMenuBar.type
