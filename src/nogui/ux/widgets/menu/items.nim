@@ -1,4 +1,3 @@
-import std/importutils
 import base
 # Use MenuItem Attributes
 privateAccess(UXMenuItem)

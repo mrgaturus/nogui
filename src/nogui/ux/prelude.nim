@@ -7,6 +7,8 @@ from ../gui/timer import pushTimer, stopTimer
 from ../../nogui import getApp, width, index
 # Import Icon ID Helper
 from ../data import CTXIconID, CTXIconEmpty, `==`
+# Import Private Access
+from std/importutils import privateAccess
 
 # ------------------------
 # GUI Control Color Helper
@@ -73,3 +75,5 @@ export getApp, width, index
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values
 export value
+# Export Private Access
+export privateAccess

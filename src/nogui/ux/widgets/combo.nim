@@ -1,5 +1,4 @@
 import menu, menu/base
-import std/importutils
 from ../../builder import controller
 # Menu Item Attributes
 privateAccess(UXMenuItem)
