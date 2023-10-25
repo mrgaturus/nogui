@@ -4,17 +4,27 @@ from ../../builder import controller
 # Menu Item Attributes
 privateAccess(UXMenuItem)
 
-# -----------------
-# Combobox Selected
-# -----------------
+# -----------------------
+# Combobox Selected Value
+# -----------------------
 
 type
-  ComboValue = object
+  ComboValue* = object
     value*: int
     # Labeling Info
     label: string
     icon: CTXIconID
+    # Labeling Metrics
     lm: GUIMenuMetrics
+
+proc combovalue*(label: string, icon: CTXIconID, value: int): ComboValue =
+  result.value = value
+  result.label = label
+  result.icon = icon
+  # Calculate Label Metrics
+  result.lm = metricsMenu(label, icon)
+  if icon == CTXIconEmpty:
+    result.lm.w -= result.lm.icon
 
 # -------------
 # Combobox Item
@@ -35,16 +45,7 @@ widget UXComboItem of UXMenuItem:
     result.value = value
 
   proc combovalue: ComboValue =
-    var labeling = metricsMenu(self.label, self.icon)
-    # Remove Offset if Empty Icon
-    if self.icon == CTXIconEmpty:
-      labeling.w -= self.lm.icon
-    # Return Combo Value Info
-    ComboValue(
-      value: self.value,
-      icon: self.icon,
-      label: self.label,
-      lm: labeling)
+    combovalue(self.label, self.icon, self.value)
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)
@@ -64,12 +65,12 @@ widget UXComboItem of UXMenuItem:
 controller ComboModel:
   attributes:
     menu: UXMenu
-    # Selected Value
-    selected: ComboValue
     flatten: seq[pointer]
-    # User Defined Callback
     ondone: GUICallback
-    {.public.}: onchange: GUICallback
+    # Usable Data
+    {.public.}: 
+      selected: ComboValue
+      onchange: GUICallback
 
   callback cbMenuDone:
     close(self.menu)
@@ -85,8 +86,8 @@ controller ComboModel:
         found = item
         break
     # Replace Found
-    assert not isNil(found)
-    self.selected = found.combovalue
+    if not isNil(found):
+      self.selected = found.combovalue
 
   proc configure(menu: UXMenu) =
     let portal = addr self.selected
@@ -121,7 +122,7 @@ controller ComboModel:
 # GUI Combobox
 # ------------
 
-widget GUIComboBox:
+widget UXComboBox:
   attributes:
     model: ComboModel
 
