@@ -5,12 +5,12 @@ from ../../values import
 
 widget UXScroll:
   attributes:
-    value: ptr Lerp
+    value: & Lerp
     [pos, t]: float32
     # Scroll Orientation
     vertical: bool
 
-  new scrollbar(value: ptr Lerp, vertical: bool):
+  new scrollbar(value: & Lerp, vertical: bool):
     # Widget Standard Flag
     result.flags = wMouse
     # Set Widget Attributes
@@ -18,7 +18,7 @@ widget UXScroll:
     result.vertical = vertical
 
   method update =
-    let size = getApp().font.asc
+    let size = getApp().font.baseline
     # Set Minimun Size
     self.minimum(size, size)
 
@@ -28,7 +28,7 @@ widget UXScroll:
       colors = addr app.colors
       height = float32(app.font.height)
       # Value Distance
-      value = self.value
+      value = peek(self.value)
       dist = value[].distance
       t = value[].toRaw
       # Bound Rect
@@ -58,7 +58,7 @@ widget UXScroll:
 
   method event(state: ptr GUIState) =
     let
-      value = self.value
+      value = react(self.value)
       dist = value[].distance
       t = value[].toRaw
       rect = addr self.rect

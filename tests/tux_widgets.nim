@@ -94,11 +94,11 @@ controller CONPlayground:
   attributes:
     [a, b]: @ int32
     [check, check1]: @ bool
-    [v1, v2]: Lerp
+    [v1, v2]: @ Lerp
     widget: GUIDummy
     text: UTF8Input
     color: RGBColor
-    hsv0: HSVColor
+    hsv0: @ HSVColor
     selected: ComboModel
 
   callback cbHelloWorld:
@@ -255,8 +255,8 @@ controller CONPlayground:
     result.b = value(b)
     echo sizeof(result[])
     # Initialize Values
-    interval(result.v1, 20, 123)
-    interval(result.v2, 500, 268 * 8)
+    result.v1 = value lerp(20, 123)
+    result.v2 = value lerp(500, 268 * 8)
     # Create New Widget
     result.widget = result.createWidget()
 
@@ -270,7 +270,7 @@ proc main() =
   # Clear Color
   # Open Window
   executeApp(test.widget):
-    let rgb = test.hsv0.toRGB
+    let rgb = peek(test.hsv0)[].toRGB
     glClearColor(rgb.r, rgb.g, rgb.b, 1.0)
     glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
