@@ -407,9 +407,9 @@ proc arrange*(widget: GUIWidget) =
   # Propagate Metrics Changes to Parents
   while w.metrics != m and not isNil(w.parent):
     w = w.parent
+    m = w.metrics
     # Prepare Widget
     w.vtable.update(w)
-    m = w.metrics
   # Layout Widgets
   w.organize()
 
