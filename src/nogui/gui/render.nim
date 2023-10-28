@@ -345,6 +345,10 @@ proc intersect(ctx: ptr CTXRender, rect: var GUIRect): GUIRect =
   result.y = max(prev.y, rect.y)
   result.w = min(prev.x + prev.w, rect.x + rect.w) - result.x
   result.h = min(prev.y + prev.h, rect.y + rect.h) - result.y
+  # Clamp Dimensions to 0
+  if (result.w or result.h) < 0:
+    result.w = 0
+    result.h = 0
 
 proc push*(ctx: ptr CTXRender, rect: var GUIRect) =
   # Reset Current CMD
