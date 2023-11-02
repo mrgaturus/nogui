@@ -47,6 +47,11 @@ widget UXComboItem of UXMenuItem:
     combovalue(self.label, self.icon, self.value)
 
   method draw(ctx: ptr CTXRender) =
+    # Draw Background if Selected
+    if self.selected[].value == self.value:
+      ctx.color getApp().colors.darker
+      ctx.fill rect(self.rect)
+    # Draw Menu Handle
     self.draw0(ctx)
     # Draw Label Icon
     let p = label(self.lm, self.rect)
@@ -124,6 +129,7 @@ controller ComboModel:
 widget UXComboBox:
   attributes:
     model: ComboModel
+    opaque: bool
 
   callback cbOpenMenu:
     let 
@@ -140,6 +146,9 @@ widget UXComboBox:
   new combobox(model: ComboModel):
     result.flags = wMouse
     result.model = model
+
+  proc opaque*: UXComboBox {.inline.} =
+    self.opaque = true; self
 
   method update =
     let # Calculate Label Metrics
@@ -159,8 +168,12 @@ widget UXComboBox:
       ex = extra(s.lm, self.rect)
     # Labeling Position
     var p = label(s.lm, self.rect)
+    # Decide Current Color
+    let bgColor = if not self.opaque:
+      self.itemColor()
+    else: self.opaqueColor()
     # Fill Background Color
-    ctx.color self.itemColor()
+    ctx.color bgColor
     ctx.fill rect(self.rect)
     ctx.color getApp().colors.text
     # Draw Icon And Label
