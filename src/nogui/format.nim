@@ -28,14 +28,17 @@ converter peek*(c: ShallowString): string =
 # Alloc-Less String Format
 # ------------------------
 
-proc format*(c: ShallowString, f: cstring): string {.varargs.} =
-  var s = c.peek()
+proc format*(c: ShallowString, f: cstring) {.varargs.} =
+  var s = move c.s
   let l0 = cast[cint](s.len)
   # Auxiluar Values
   var
     l: cint
     b = cstring s
     args: va_list
+  # Hack to Avoid Duplicate
+  if l0 > 0:
+    {.emit: "`s`.p->cap &= ~NIM_STRLIT_FLAG;".}
   # Try First Format
   va_start(args, f)
   l = v_snprintf(b, l0, f, args) + 1
@@ -48,6 +51,8 @@ proc format*(c: ShallowString, f: cstring): string {.varargs.} =
     va_start(args, f)
     l = v_snprintf(b, l, f, args)
     va_end(args)
+  # Hack to Avoid Destroyed
+  if l > 0:
+    {.emit: "`s`.p->cap |= NIM_STRLIT_FLAG;".}
   # Move String
   c.s = move s
-  c.peek()
