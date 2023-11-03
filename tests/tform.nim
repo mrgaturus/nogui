@@ -10,6 +10,7 @@ import nogui/ux/prelude
 import nogui/ux/widgets/[button, slider, check, radio, label]
 import nogui/ux/layouts/[form, level, misc]
 import nogui/values
+import nogui/format
 
 proc field(name: string, check: & bool, w: GUIWidget): GUIWidget =
   let ck = # Dummy Test
@@ -72,10 +73,12 @@ controller CONLayout:
       field(): button("Value A", self.a, 10)
       field(): button("Value B", self.a, 20)
       field(): checkbox("Transparent", self.check0)
+
       field("Blending", self.check2): 
-        slider(self.valueC)
+        slider0int(self.valueC) do (s: ShallowString, v: Lerp):
+          s.format("%d apples", v.toInt * 2)
       field("Dilution", self.check3): 
-        slider(self.valueD)
+        slider0int(self.valueD, fmt0"%d bananas")
       field("Persistence", nil): 
         slider(self.valueF)
       field("Watering", self.check4): 
