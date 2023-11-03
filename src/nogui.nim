@@ -141,10 +141,9 @@ template executeApp*(root: GUIWidget, body: untyped) =
 # Alloc-Less Format Export
 # ------------------------
 
-export format, peek
 # Shallow String Lookup
-proc fmt*(app: GUIApplication): ShallowString
-  {.inline.} = addr app.fmt0
+proc fmt*(app: GUIApplication):
+  ShallowString {.inline.} = addr app.fmt0
 
 # ------------
 # Font Metrics
