@@ -7,7 +7,7 @@ from nogui/gui/signal import
 
 import nogui/libs/ft2
 import nogui/gui/[window, atlas]
-import nogui/[logger, utf8]
+import nogui/[logger, format, utf8]
 
 type
   GUIColors = object
@@ -34,6 +34,8 @@ type
     # Atlas Font Metrics
     font*: GUIFont
     colors*: GUIColors
+    # TODO: reuse it for event ut8buffer
+    fmt0: CacheString
   GUIApplication = ptr Application
 
 # -----------------------
@@ -134,6 +136,15 @@ template executeApp*(root: GUIWidget, body: untyped) =
       handleTimers(win)
       # Execute Body
       body; render(win)
+
+# ------------------------
+# Alloc-Less Format Export
+# ------------------------
+
+export format, peek
+# Shallow String Lookup
+proc fmt*(app: GUIApplication): ShallowString
+  {.inline.} = addr app.fmt0
 
 # ------------
 # Font Metrics
