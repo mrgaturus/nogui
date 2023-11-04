@@ -5,17 +5,21 @@ type
     min, max: float32
     # Interpolation
     dist, t: float32
-  LerpSlice = HSlice[float32, float32]
+  LerpDual* = object
+    min, mid, max: float32
+    # Interpolation
+    t: float32
   # Color Models
   RGBColor* = object
     r*, g*, b*: float32
   HSVColor* = object
     h*, s*, v*: float32
 
-# ------------------------
-# Numeric Lerp Calculation
-# ------------------------
+# -------------------
+# Single Numeric Lerp
+# -------------------
 
+# -- Converters --
 proc toFloat*(n: Lerp): float32 =
   n.min + n.dist * n.t
 
@@ -25,10 +29,7 @@ proc toRaw*(n: Lerp): float32 {.inline.} =
 proc toInt*(n: Lerp): int32 {.inline.} =
   result = int32(n.toFloat)
 
-# ---------------------
-# Numeric Lerp Interval
-# ---------------------
-
+# -- Definition --
 proc interval*(n: var Lerp, min, max: sink float32) =
   # Set Min and Max Values
   if min > max:
@@ -37,53 +38,136 @@ proc interval*(n: var Lerp, min, max: sink float32) =
   let 
     dist = max - min
     v = n.dist * n.t
-  # Set Current Value
-  n.t = clamp(v, 0.0, dist) / dist
+  # Restore Current Value
+  if dist > 0.0:
+    n.t = clamp(v, 0.0, dist) / dist
+  # Remove Value if Invalid
+  else: n.t = 0.0
   # Set Current Interval
   n.max = max
   n.min = min
   n.dist = dist
 
-proc interval*(n: var Lerp, max: sink float32) {.inline.} =
+proc interval*(n: var Lerp, max: float32) {.inline.} =
   interval(n, 0.0, max)
 
-proc interval*(n: var Lerp, r: LerpSlice) {.inline.} =
-  interval(n, r.a, r.b)
-
-# ---------------------
-# Numeric Lerp Creation
-# ---------------------
-
-proc lerp*(min, max: sink float32): Lerp {.inline.} =
+proc lerp*(min, max: float32): Lerp {.inline.} =
   result.interval(min, max)
 
-proc lerp*(r: LerpSlice): Lerp {.inline.} =
-  result.interval(r)
-
-# -------------------
-# Numeric Lerp Bounds
-# -------------------
-
+# -- Information --
 proc bounds*(n: Lerp): tuple[max, min: float32] =
   result = (n.max, n.min)
 
 proc distance*(n: Lerp): float32 {.inline.} =
   result = n.dist
 
-# --------------------------
-# Numeric Lerp Interpolation
-# --------------------------
-
+# -- Interpolator --
 proc discrete*(n: var Lerp, t: float32) =
   let
     t0 = clamp(t, 0.0, 1.0)
     dist = n.dist
   # Set Discretized Parameter
-  n.t = round(dist * t0) / dist
+  if dist > 0.0:
+    n.t = round(dist * t0) / dist
 
 proc lerp*(n: var Lerp, t: float32) =
   # Set Continious Parameter
   n.t = clamp(t, 0.0, 1.0)
+
+# -----------------
+# Dual Numeric Lerp
+# -----------------
+
+proc toSlice*(n: LerpDual): tuple[a, b, fract: float32] =
+  let 
+    ns = [n.min, n.mid, n.max]
+    t = n.t
+    # Lerp Chooser
+    fract = t - floor(t)
+    idx0 = int32 t
+    idx1 = min(idx0 + 1, 2)
+    # Minimun And Maximun
+    a = ns[idx0]
+    b = ns[idx1]
+  # Return Slice
+  (a, b, fract)
+
+# -- Converters --
+proc toFloat*(n: LerpDual): float32 =
+  let (a, b, fract) = n.toSlice()
+  # Calculate Interpolation
+  result = a + (b - a) * fract
+
+proc toRaw*(n: LerpDual): float32 {.inline.} = 
+  result = n.t
+
+proc toInt*(n: LerpDual): int32 {.inline.} =
+  result = int32(n.toFloat)
+
+# -- Definition --
+proc interval*(n: var LerpDual, min, mid, max: sink float32) =
+  var t = n.t
+  # Set Min and Max Values
+  if min > max:
+    swap(min, max)
+  # Clamp Mid Value
+  mid = clamp(mid, min, max)
+  # Restore Current Value
+  block restore:
+    var 
+      fract, dist: float32
+      prev = n.toFloat()
+    # Decide Prev Range
+    if prev < mid:
+      dist = mid - min
+      prev -= min
+    else: # prev >= mid
+      dist = max - mid
+      prev -= mid
+    # Calculate Fract
+    if dist > 0.0:
+      fract = clamp(prev, 0.0, dist) / dist
+    # Apply Fract to Interpolant
+    t = floor(t) + fract
+  # Set Current Interval
+  n.max = max
+  n.mid = mid
+  n.min = min
+  n.t = t
+
+proc lerp*(min, mid, max: float32): LerpDual {.inline.} =
+  result.interval(min, mid, max)
+
+# -- Information --
+proc bounds*(n: LerpDual): tuple[max, min: float32] =
+  result = (n.max, n.min)
+
+proc distance*(n: LerpDual): float32 {.inline.} =
+  result = n.max - n.min
+
+# -- Interpolator --
+proc discrete*(n: var LerpDual, t: float32) =
+  n.t = t
+  # Calculate Value
+  var v = n.toFloat()
+  let mid = n.mid
+  # Calculate Distance
+  let dist = 
+    if v < mid:
+      v -= n.min
+      mid - n.min
+    else: # prev >= mid
+      v -= mid
+      n.max - mid
+  # Set Discretized Parameter
+  if dist > 0.0:
+    v = round(v)
+    var t0 = floor(t) + (v / dist)
+    n.t = clamp(t0, 0.0, 2.0)
+
+proc lerp*(n: var LerpDual, t: float32) =
+  # Set Continious Parameter
+  n.t = clamp(t, 0.0, 2.0)
 
 # --------------------
 # RGB/HSV Color Values
