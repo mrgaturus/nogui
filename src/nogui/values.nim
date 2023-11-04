@@ -29,6 +29,15 @@ proc toRaw*(n: Lerp): float32 {.inline.} =
 proc toInt*(n: Lerp): int32 {.inline.} =
   result = int32(n.toFloat)
 
+# -- Inverse Converter --
+proc toNormal*(n: Lerp, v: float32, dv = 0.0): float32 =
+  let 
+    v1 = v + dv
+    dist = n.dist
+  # Calculate Interpolation
+  if dist > 0.0:
+    result = (v1 - n.min) / dist
+
 # -- Definition --
 proc interval*(n: var Lerp, min, max: sink float32) =
   # Set Min and Max Values
@@ -92,6 +101,25 @@ proc toSlice*(n: LerpDual): tuple[a, b, fract: float32] =
   # Return Slice
   (a, b, fract)
 
+# -- Inverse Converter --
+proc toNormal*(n: LerpDual, v: float32, dv = 0.0): float32 =
+  var
+    v1 = v + dv
+    dist: float32
+  let mid = n.mid
+  # Select a Range
+  if v1 < mid:
+    dist = mid - n.min
+    v1 -= n.min
+  else: # v1 >= n.mid
+    dist = n.max - mid
+    v1 -= mid
+    # Last Dual
+    result = 1.0
+  # Calculate Interpolation
+  if dist > 0.0:
+    result += v1 / dist
+
 # -- Converters --
 proc toFloat*(n: LerpDual): float32 =
   let (a, b, fract) = n.toSlice()
@@ -106,34 +134,19 @@ proc toInt*(n: LerpDual): int32 {.inline.} =
 
 # -- Definition --
 proc interval*(n: var LerpDual, min, mid, max: sink float32) =
-  var t = n.t
+  var v = n.toFloat()
   # Set Min and Max Values
   if min > max:
     swap(min, max)
   # Clamp Mid Value
   mid = clamp(mid, min, max)
-  # Restore Current Value
-  block restore:
-    var 
-      fract, dist: float32
-      prev = n.toFloat()
-    # Decide Prev Range
-    if prev < mid:
-      dist = mid - min
-      prev -= min
-    else: # prev >= mid
-      dist = max - mid
-      prev -= mid
-    # Calculate Fract
-    if dist > 0.0:
-      fract = clamp(prev, 0.0, dist) / dist
-    # Apply Fract to Interpolant
-    t = floor(t) + fract
   # Set Current Interval
   n.max = max
   n.mid = mid
   n.min = min
-  n.t = t
+  # Restore Current Value
+  v = n.toNormal(v)
+  n.t = clamp(v, 0.0, 2.0)
 
 proc lerp*(min, mid, max: float32): LerpDual {.inline.} =
   result.interval(min, mid, max)
@@ -149,21 +162,11 @@ proc distance*(n: LerpDual): float32 {.inline.} =
 proc discrete*(n: var LerpDual, t: float32) =
   n.t = t
   # Calculate Value
-  var v = n.toFloat()
-  let mid = n.mid
+  let 
+    v = round(n.toFloat)
+    t0 = n.toNormal(v)
   # Calculate Distance
-  let dist = 
-    if v < mid:
-      v -= n.min
-      mid - n.min
-    else: # prev >= mid
-      v -= mid
-      n.max - mid
-  # Set Discretized Parameter
-  if dist > 0.0:
-    v = round(v)
-    var t0 = floor(t) + (v / dist)
-    n.t = clamp(t0, 0.0, 2.0)
+  n.t = clamp(t0, 0.0, 2.0)
 
 proc lerp*(n: var LerpDual, t: float32) =
   # Set Continious Parameter

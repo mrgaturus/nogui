@@ -1,8 +1,7 @@
 import ../prelude
 import ../../format
 # Import Value Interpolation
-from ../../values import
-  Lerp, toRaw, lerp, discrete, toFloat, toInt, distance
+import ../../values
 
 # ---------------------
 # Lerp Formatting Procs
@@ -28,7 +27,7 @@ widget UXSlider:
   attributes:
     value: & Lerp
     # Slow Drag
-    t: float32
+    v: float32
     x: int16
     # Format Slider
     fn: SliderFmtProc
@@ -102,7 +101,7 @@ widget UXSlider:
         state.key == RightButton
       # Store Initial Values
       if slow:
-        self.t = value[].toRaw
+        self.v = value[].toFloat()
         self.x = x
       # Store Flag
       self.s0 = slow
@@ -111,12 +110,10 @@ widget UXSlider:
       var t = (x - rect.x) / rect.w
       # Check Slow Flag
       if self.s0:
-        let 
-          chunk = getApp().font.height
-          dist = value[].distance
+        let chunk = getApp().font.height
         # Calculate Slow Interpolant
         t = (x - self.x) / chunk
-        t = self.t + (t * self.step / dist)
+        t = value[].toNormal(self.v, t)
       # Change Value
       if self.z0:
         value[].discrete(t)
