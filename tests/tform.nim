@@ -76,9 +76,10 @@ controller CONLayout:
 
       field("Blending", self.check2): 
         slider0int(self.valueC) do (s: ShallowString, v: Lerp):
-          s.format("%d apples", v.toInt * 2)
+          let i = v.toInt
+          s.format("%d + %d = %d", i, i, i + i)
       field("Dilution", self.check3): 
-        slider0int(self.valueD, fmt0"%d bananas")
+        slider0int(self.valueD, fmt"%d cosos")
       field("Persistence", nil): 
         slider(self.valueF)
       field("Watering", self.check4): 

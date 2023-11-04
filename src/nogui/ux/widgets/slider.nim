@@ -2,7 +2,7 @@ import ../prelude
 import ../../format
 # Import Value Interpolation
 from ../../values import
-  Lerp, toRaw, lerp, discrete, toFloat, toInt
+  Lerp, toRaw, lerp, discrete, toFloat, toInt, distance
 
 # ---------------------
 # Lerp Formatting Procs
@@ -12,11 +12,11 @@ type SliderFmtProc* =
   proc(s: ShallowString, v: Lerp) {.nimcall.}
 
 # -- Easy Text Formatting --
-template fmt0*(f: cstring): SliderFmtProc =
+template fmt*(f: cstring): SliderFmtProc =
   proc (s: ShallowString, v: Lerp) =
     s.format(f, v.toInt)
 
-template fmt1*(f: cstring): SliderFmtProc =
+template fmf*(f: cstring): SliderFmtProc =
   proc (s: ShallowString, v: Lerp) =
     s.format(f, v.toFloat)
 
@@ -27,9 +27,15 @@ template fmt1*(f: cstring): SliderFmtProc =
 widget UXSlider:
   attributes:
     value: & Lerp
+    # Slow Drag
+    t: float32
+    x: int16
     # Format Slider
     fn: SliderFmtProc
     [z0, s0]: bool
+    # Misc Custom
+    {.public.}:
+      step: float32
 
   proc slider0(value: & Lerp, fn: SliderFmtProc, z0: bool) =
     # Widget Standard Flag
@@ -38,10 +44,12 @@ widget UXSlider:
     # Value Manipulation
     self.z0 = z0
     self.fn = fn
+    # Default Slow Step
+    self.step = 1.0
 
   # -- Integer Format --
   new slider(value: & Lerp):
-    result.slider0(value, fmt0"%d", true)
+    result.slider0(value, fmt"%d", true)
 
   # -- Customizable Format --
   new slider0float(value: & Lerp, fn: SliderFmtProc):
@@ -83,12 +91,35 @@ widget UXSlider:
       rect.y - font.desc, text)
 
   method event(state: ptr GUIState) =
+    let
+      x = int16 state.mx
+      rect = addr self.rect
+      value = self.value.peek
+    # Choose Slow Grab
+    if state.kind == evCursorClick:
+      let slow = # Check Slow Grab
+        (state.mods and ShiftMod) > 0 or 
+        state.key == RightButton
+      # Store Initial Values
+      if slow:
+        self.t = value[].toRaw
+        self.x = x
+      # Store Flag
+      self.s0 = slow
+    # Manipulate if Grabbed
     if self.test(wGrab):
-      let 
-        rect = addr self.rect
-        t = (state.mx - rect.x) / rect.w
-        value = self.value.react()
+      var t = (x - rect.x) / rect.w
+      # Check Slow Flag
+      if self.s0:
+        let 
+          chunk = getApp().font.height
+          dist = value[].distance
+        # Calculate Slow Interpolant
+        t = (x - self.x) / chunk
+        t = self.t + (t * self.step / dist)
       # Change Value
       if self.z0:
         value[].discrete(t)
       else: value[].lerp(t)
+      # Execute Changed Callback
+      push(self.value.head.cb)
