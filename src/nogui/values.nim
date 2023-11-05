@@ -1,14 +1,16 @@
-from math import floor, ceil, round
+from math import
+  floor, ceil, round,
+  log2, pow
 
 type
   Lerp* = object
     min, max: float32
     # Interpolation
     dist, t: float32
-  LerpDual* = object
-    min, mid, max: float32
+  Lerp2* = object
+    min, max: float32
     # Interpolation
-    t: float32
+    k, t: float32
   # Color Models
   RGBColor* = object
     r*, g*, b*: float32
@@ -23,11 +25,11 @@ type
 proc toFloat*(n: Lerp): float32 =
   n.min + n.dist * n.t
 
-proc toRaw*(n: Lerp): float32 {.inline.} = 
-  result = n.t
-
 proc toInt*(n: Lerp): int32 {.inline.} =
   result = int32(n.toFloat)
+
+proc toRaw*(n: Lerp): float32 {.inline.} = 
+  result = n.t
 
 # -- Inverse Converter --
 proc toNormal*(n: Lerp, v: float32, dv = 0.0): float32 =
@@ -87,90 +89,74 @@ proc lerp*(n: var Lerp, t: float32) =
 # Dual Numeric Lerp
 # -----------------
 
-proc toSlice*(n: LerpDual): tuple[a, b, fract: float32] =
-  let 
-    ns = [n.min, n.mid, n.max]
-    t = n.t
-    # Lerp Chooser
-    fract = t - floor(t)
-    idx0 = int32 t
-    idx1 = min(idx0 + 1, 2)
-    # Minimun And Maximun
-    a = ns[idx0]
-    b = ns[idx1]
-  # Return Slice
-  (a, b, fract)
-
 # -- Inverse Converter --
-proc toNormal*(n: LerpDual, v: float32, dv = 0.0): float32 =
-  var
-    v1 = v + dv
-    dist: float32
-  let mid = n.mid
-  # Select a Range
-  if v1 < mid:
-    dist = mid - n.min
-    v1 -= n.min
-  else: # v1 >= n.mid
-    dist = n.max - mid
-    v1 -= mid
-    # Last Dual
-    result = 1.0
-  # Calculate Interpolation
-  if dist > 0.0:
-    result += v1 / dist
+proc toNormal*(n: Lerp2, v: float32, dv = 0.0): float32 =
+  var v1 = v + dv
+  let delta = n.max - n.min
+  # Calculate Normalized Interpolation
+  if delta > 0.0 and n.k > 0.0:
+    result = (v1 - n.min) / delta
+    result = clamp(result, 0.0, 1.0)
+    result = pow(result, 1.0 / n.k)
 
 # -- Converters --
-proc toFloat*(n: LerpDual): float32 =
-  let (a, b, fract) = n.toSlice()
-  # Calculate Interpolation
-  result = a + (b - a) * fract
+proc toFloat*(n: Lerp2): float32 =
+  # Calculate Adjusted Interpolation
+  n.min + (n.max - n.min) * pow(n.t, n.k)
 
-proc toRaw*(n: LerpDual): float32 {.inline.} = 
-  result = n.t
-
-proc toInt*(n: LerpDual): int32 {.inline.} =
+proc toInt*(n: Lerp2): int32 {.inline.} =
   result = int32(n.toFloat)
 
+proc toRaw*(n: Lerp2): float32 {.inline.} = 
+  result = n.t
+
+proc toRawPow*(n: Lerp2): float32 {.inline.} = 
+  result = pow(n.t, n.k)
+
 # -- Definition --
-proc interval*(n: var LerpDual, min, mid, max: sink float32) =
+proc interval*(n: var Lerp2, min, mid, max: sink float32) =
   var v = n.toFloat()
   # Set Min and Max Values
   if min > max:
     swap(min, max)
   # Clamp Mid Value
-  mid = clamp(mid, min, max)
+  const ep = 1e-16
+  mid = clamp(mid, min + ep, max)
   # Set Current Interval
   n.max = max
-  n.mid = mid
   n.min = min
-  # Restore Current Value
-  v = n.toNormal(v)
-  n.t = clamp(v, 0.0, 2.0)
+  # Calculate K Adjust
+  let delta = mid - min
+  if delta > 0.0:
+    let k = (max - min) / delta
+    n.k = log2(k)
+    # Restore Current Value
+    n.t = n.toNormal(v)
 
-proc lerp*(min, mid, max: float32): LerpDual {.inline.} =
+proc lerp2*(min, mid, max: float32): Lerp2 {.inline.} =
+  result.interval(min, mid, max)
+
+proc lerp2*(min, max: float32): Lerp2 =
+  let mid = (max + min) * 0.5
   result.interval(min, mid, max)
 
 # -- Information --
-proc bounds*(n: LerpDual): tuple[max, min: float32] =
+proc bounds*(n: Lerp2): tuple[max, min: float32] =
   result = (n.max, n.min)
 
-proc distance*(n: LerpDual): float32 {.inline.} =
+proc distance*(n: Lerp2): float32 {.inline.} =
   result = n.max - n.min
 
 # -- Interpolator --
-proc discrete*(n: var LerpDual, t: float32) =
-  n.t = t
+proc discrete*(n: var Lerp2, t: float32) =
+  n.t = clamp(t, 0.0, 1.0)
   # Calculate Value
-  let 
-    v = round(n.toFloat)
-    t0 = n.toNormal(v)
-  # Calculate Distance
-  n.t = clamp(t0, 0.0, 2.0)
+  let v = round(n.toFloat)
+  n.t = n.toNormal(v)
 
-proc lerp*(n: var LerpDual, t: float32) =
+proc lerp*(n: var Lerp2, t: float32) =
   # Set Continious Parameter
-  n.t = clamp(t, 0.0, 2.0)
+  n.t = clamp(t, 0.0, 1.0)
 
 # --------------------
 # RGB/HSV Color Values
