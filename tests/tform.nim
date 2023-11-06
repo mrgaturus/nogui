@@ -10,6 +10,8 @@ import nogui/ux/prelude
 import nogui/ux/widgets/[button, slider, check, radio, label]
 import nogui/ux/layouts/[form, level, misc]
 import nogui/values
+import nogui/format
+from math import pow
 
 proc field(name: string, check: & bool, w: GUIWidget): GUIWidget =
   let ck = # Dummy Test
@@ -52,6 +54,7 @@ controller CONLayout:
     [check0, check1]: @ bool
     [check2, check3]: @ bool
     [check4, check5]: @ bool
+    dual0: @ Lerp2
     a: @ int32
 
   callback cbHello:
@@ -72,10 +75,13 @@ controller CONLayout:
       field(): button("Value A", self.a, 10)
       field(): button("Value B", self.a, 20)
       field(): checkbox("Transparent", self.check0)
+
       field("Blending", self.check2): 
-        slider(self.valueC)
+        slider0int(self.valueC) do (s: ShallowString, v: Lerp):
+          let i = v.toInt
+          s.format("%d + %d = %d", i, i, i + i)
       field("Dilution", self.check3): 
-        slider(self.valueD)
+        slider0int(self.valueD, fmt"%d cosos")
       field("Persistence", nil): 
         slider(self.valueF)
       field("Watering", self.check4): 
@@ -84,6 +90,14 @@ controller CONLayout:
       
       label("", hoLeft, veMiddle)
       field("Min Pressure"): slider(self.valueG)
+      field("Curve Pressure"): dual0float(self.dual0) do (s: ShallowString, v: Lerp2):
+        let 
+          f = v.toFloat
+          fs = pow(2.0, f) * 100.0
+        if f >= 0:
+          let i = int32(fs)
+          s.format("%d%%", i)
+        else: s.format("%.1f%%", fs)
 
   new conlayout():
     # Create New Widget
@@ -96,6 +110,7 @@ controller CONLayout:
     result.valueE = lerp(0, 100).value
     result.valueF = lerp(0, 200).value
     result.valueG = value(result.valueD.peek, result.cbHello)
+    result.dual0 = value lerp2(-5, 5)
     result.widget = result.createWidget()
 
 proc main() =

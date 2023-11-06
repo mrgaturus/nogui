@@ -4,7 +4,7 @@ import ../gui/[widget, event, render, atlas, signal, value]
 # Import Event and Callback Stuff
 from ../gui/timer import pushTimer, stopTimer
 # Import Global App State
-from ../../nogui import getApp, width, index, fmt
+from ../../nogui import getApp, width, index
 # Import Icon ID Helper
 from ../data import CTXIconID, CTXIconEmpty, `==`
 # Import Private Access
@@ -70,7 +70,7 @@ export event except
 export signal except newGUIQueue
 export pushTimer, stopTimer
 # Export Relevant Global State
-export getApp, width, index, fmt
+export getApp, width, index
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values

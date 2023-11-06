@@ -36,6 +36,7 @@ type
     colors*: GUIColors
     # TODO: reuse it for event ut8buffer
     fmt0: CacheString
+    fmt*: ShallowString
   GUIApplication = ptr Application
 
 # -----------------------
@@ -114,6 +115,8 @@ proc createApp*(w, h: int32, state: pointer) =
   result.window = newGUIWindow(w, h, queue, atlas)
   result.queue = queue
   result.atlas = atlas
+  # Create Shallow String
+  result.fmt = addr result.fmt0
   # Copy Default Data
   static: folders: "data" >> ""
 
@@ -136,14 +139,6 @@ template executeApp*(root: GUIWidget, body: untyped) =
       handleTimers(win)
       # Execute Body
       body; render(win)
-
-# ------------------------
-# Alloc-Less Format Export
-# ------------------------
-
-# Shallow String Lookup
-proc fmt*(app: GUIApplication):
-  ShallowString {.inline.} = addr app.fmt0
 
 # ------------
 # Font Metrics
