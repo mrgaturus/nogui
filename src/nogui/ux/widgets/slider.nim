@@ -29,7 +29,7 @@ template fmt2*(f: cstring): Lerp2FmtProc =
 
 template fmf2*(f: cstring): Lerp2FmtProc =
   proc (s: ShallowString, v: Lerp2) =
-    s.format(f, v.toInt)
+    s.format(f, v.toFloat)
 
 # ------------------------
 # Widget Lerp Event Commom
