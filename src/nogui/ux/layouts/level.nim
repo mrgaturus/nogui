@@ -19,16 +19,21 @@ widget UXLayoutHLevel:
   method update =
     # TODO: allow customize margin
     let margin = getApp().font.size shr 1
-    var w, h: int16
+    var w, h, count: int16
     # Calculate Min Size
     for widget in forward(self.first):
       let m = addr widget.metrics
       w += m.minW
       h = max(h, m.minH)
+      # Check if there is a Tail Cell
+      count += cast[int16](widget of UXLevelCell)
     # Store Min Size
     let m = addr self.metrics
-    m.minW = w + margin
+    m.minW = w
     m.minH = h
+    # Check Margin
+    if count > 0:
+      m.minW += margin
 
   method layout =
     var 
@@ -63,16 +68,21 @@ widget UXLayoutVLevel:
   method update =
     # TODO: allow customize margin
     let margin = getApp().font.size shr 1
-    var w, h: int16
+    var w, h, count: int16
     # Calculate Min Size
     for widget in forward(self.first):
       let m = addr widget.metrics
       w = max(w, m.minW)
       h += m.minH
+      # Check if there is a Tail Cell
+      count += cast[int16](widget of UXLevelCell)
     # Store Min Size
     let m = addr self.metrics
     m.minW = w
-    m.minH = h + margin
+    m.minH = h
+    # Check Margin
+    if count > 0:
+      m.minH += margin
 
   method layout =
     var 
