@@ -140,6 +140,14 @@ template executeApp*(root: GUIWidget, body: untyped) =
       # Execute Body
       body; render(win)
 
+# ---------------------------------------------
+# TODO: create proper api to lookup window info
+# ---------------------------------------------
+
+proc windowSize*(app: GUIApplication): tuple[w, h: int32] =
+  result.w = app.window.w
+  result.h = app.window.h
+
 # ------------
 # Font Metrics
 # ------------
