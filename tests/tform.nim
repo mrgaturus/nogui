@@ -112,6 +112,7 @@ controller CONLayout:
     result.valueG = value(result.valueD.peek, result.cbHello)
     result.dual0 = value lerp2(-5, 5)
     result.widget = result.createWidget()
+    result.dual0.peek[].lorp(-4)
 
 proc main() =
   createApp(1024, 600, nil)

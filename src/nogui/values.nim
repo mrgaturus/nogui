@@ -81,9 +81,14 @@ proc discrete*(n: var Lerp, t: float32) =
   if dist > 0.0:
     n.t = round(dist * t0) / dist
 
+# -- TODO: better naming --
 proc lerp*(n: var Lerp, t: float32) =
-  # Set Continious Parameter
+  # Set Continuous Parameter
   n.t = clamp(t, 0.0, 1.0)
+
+proc lorp*(n: var Lerp, v: float32) {.inline.} =
+  # Set Continuous Parameter
+  n.lerp n.toNormal(v)
 
 # -----------------
 # Dual Numeric Lerp
@@ -154,9 +159,14 @@ proc discrete*(n: var Lerp2, t: float32) =
   let v = round(n.toFloat)
   n.t = n.toNormal(v)
 
+# -- TODO: better naming --
 proc lerp*(n: var Lerp2, t: float32) =
-  # Set Continious Parameter
+  # Set Continuous Parameter
   n.t = clamp(t, 0.0, 1.0)
+
+proc lorp*(n: var Lerp2, v: float32) {.inline.} =
+  # Set Continuous Parameter
+  n.lerp n.toNormal(v)
 
 # --------------------
 # RGB/HSV Color Values
