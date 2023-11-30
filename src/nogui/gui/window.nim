@@ -613,7 +613,7 @@ proc setCursorCustom*(win: GUIWindow, custom: Cursor) =
   # Clear Cursor First
   win.freeCursor()
   # Change Window Cursor
-  if XDefineCursor(display, win.xID, custom) != 0:
+  if XDefineCursor(display, win.xID, custom) > 1:
     log(lvWarning, "failed loading cursor")
   # Set Current Cursor Handle
   win.xCursor = custom
