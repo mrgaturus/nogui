@@ -197,12 +197,6 @@ proc newGUIState*(display: PDisplay, win: Window): GUIState =
 
 proc translateXI2(state: var GUIState, event: PXEvent) =
   let evXI2 = cast[PXIDeviceEvent](event.xcookie.data)
-  # Get Device Coordinates
-  state.px = evXI2.event_x
-  state.py = evXI2.event_y
-  # Get Cursor Coordinates
-  state.mx = int32(state.px)
-  state.my = int32(state.py)
   # Get Event Kind
   case evXI2.evtype
   of XI_Motion:
@@ -215,8 +209,14 @@ proc translateXI2(state: var GUIState, event: PXEvent) =
     state.kind = evCursorRelease
     # Get Cursor Button Pressed
     state.key = cast[cuint](evXI2.detail)
-  # Impossible State, but handled
-  else: state.kind = evCursorMove
+  # Skip Not Handled Events
+  else: state.kind = evCursorMove; return
+  # Get Device Coordinates
+  state.px = evXI2.event_x
+  state.py = evXI2.event_y
+  # Get Cursor Coordinates
+  state.mx = int32(state.px)
+  state.my = int32(state.py)
   # Get key mods for all three events
   state.mods = cast[cuint](evXI2.mods.base)
   # Find Device that cause event

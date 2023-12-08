@@ -74,7 +74,12 @@ proc setlocale(category: cint, locale: cstring): cstring
 proc createXIM(win: GUIWindow) =
   if setlocale(LC_ALL, "").isNil or XSetLocaleModifiers("").isNil:
     log(lvWarning, "proper C locale not found")
+  # Try Create Default Input Method or use Fallback
   win.xim = XOpenIM(win.display, nil, nil, nil)
+  if win.xim == nil:
+    discard XSetLocaleModifiers("@im=none")
+    win.xim = XOpenIM(win.display, nil, nil, nil)
+  # Create Input Context
   win.xic = XCreateIC(win.xim, XNInputStyle, XIMPreeditNothing or
       XIMStatusNothing, XNClientWindow, win.xID, nil)
   if win.xic == nil:
