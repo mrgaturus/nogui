@@ -78,8 +78,8 @@ func vtableInject(name: NimNode): NimNode =
     nnkExprColonExpr.newTree(
       newIdentNode("emit"),
       nnkBracket.newTree(
-        tmp, newStrLitNode" = (*", ty,
-        newStrLitNode") &vtable__", name, newStrLitNode";"
+        tmp, newStrLitNode" = (", ty,
+        newStrLitNode"*) &vtable__", name, newStrLitNode";"
       )
     )
   )
@@ -97,8 +97,7 @@ func cbAttribute(self, cb: NimNode): NimNode =
   let 
     sym = cb[0]
     declare = cb[^2]
-  #debugEcho declare.treeRepr
-  let
+    # Attribute Lists
     defs = nnkIdentDefs.newTree()
     inject = nnkAsgn.newTree()
     # Attribute Definition
@@ -525,9 +524,9 @@ macro widget*(declare, body: untyped) =
   # Create Widget Structure
   let 
     info = # Check for Inheritance
-      if super == fallback:
-        vTableCreate()
-      else: mcObjects[super.strVal]
+      if super == fallback: vTableCreate()
+      else: mcObjects[super.strVal].copyNimTree
+    # Create Widget Structure
     struct = wStructure(idents, info, inject, body)
     magic = vtableMagic(name, info)
   # Return Widget Structure
@@ -546,7 +545,7 @@ macro controller*(declare, body: untyped) =
     info = # Check for Inheritance
       if super == dummy or super == ident"RootObj":
         nnkStmtList.newTree(inject.copyNimNode)
-      else: mcObjects[super.strVal]
+      else: mcObjects[super.strVal].copyNimTree
   # Return Controller Structure
   result = wStructure(idents, info, inject, body)
   mcObjects[name.strVal] = info
