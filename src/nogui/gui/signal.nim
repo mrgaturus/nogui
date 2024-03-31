@@ -38,9 +38,9 @@ type
   GUIOpaque* = object
   # GUI Callbacks Procs
   GUICallbackProc =
-    proc(sender, state: pointer) {.nimcall.}
+    proc(sender: pointer) {.nimcall.}
   GUICallbackProcEX = # With Parameter
-    proc(sender, state, extra: pointer) {.nimcall.}
+    proc(sender, extra: pointer) {.nimcall.}
   # GUI Callbacks
   GUICallback* = object
     sender, fn: pointer
@@ -49,17 +49,13 @@ type
   # GUI Signal and Queue
   GUISignal* = ptr Signal
   Queue = object
-    state: pointer
-    # Queue Endpoints
     back, front: GUISignal
   GUIQueue* = ptr Queue
 # Global GUI Queue
 var opaque: GUIQueue
 
-proc newGUIQueue*(state: pointer): GUIQueue =
+proc newGUIQueue*(): GUIQueue =
   result = create(Queue)
-  # Set Global State
-  result.state = state
   # GUI Queue Global
   opaque = result
 
@@ -208,13 +204,13 @@ proc force*(cb: GUICallback) =
   let fn = cast[GUICallbackProc](cb.fn)
   # Execute if is Valid
   if not isNil(fn):
-    fn(cb.sender, opaque.state)
+    fn(cb.sender)
 
 proc forceEX(cb: GUICallback, data: pointer) =
   let fn = cast[GUICallbackProcEX](cb.fn)
   # Execute if is Valid
   if not (fn.isNil or data.isNil):
-    fn(cb.sender, opaque.state, data)
+    fn(cb.sender, data)
 
 template force*[T](cb: GUICallbackEX[T], data: ptr T) =
   forceEX(cb.GUICallback, data)
@@ -227,14 +223,12 @@ proc call*(sig: GUISignal) =
   let
     kind = sig.kind
     cb = sig.cb
-    # Current Global State
-    state = opaque.state
   # Select Callback kind
   case kind
   of sCallback:
     let fn = cast[GUICallbackProc](cb.fn)
-    fn(cb.sender, state)
+    fn(cb.sender)
   of sCallbackEX:
     let fn = cast[GUICallbackProcEX](cb.fn)
-    fn(cb.sender, state, addr sig.data)
+    fn(cb.sender, addr sig.data)
   else: discard

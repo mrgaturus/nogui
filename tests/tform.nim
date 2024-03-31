@@ -115,7 +115,7 @@ controller CONLayout:
     result.dual0.peek[].lorp(-4)
 
 proc main() =
-  createApp(1024, 600, nil)
+  createApp(1024, 600)
   let test = conlayout()
   # Clear Color
   # Open Window

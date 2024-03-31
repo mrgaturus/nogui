@@ -265,7 +265,7 @@ controller CONPlayground:
 # ---------
 
 proc main() =
-  createApp(1024, 600, nil)
+  createApp(1024, 600)
   let test = conplayground(10, 20)
   # Clear Color
   # Open Window

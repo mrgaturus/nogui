@@ -98,7 +98,7 @@ proc createFont(ft2: FT2Library): GUIFont =
 # Application Creation
 # --------------------
 
-proc createApp*(w, h: int32, state: pointer) =
+proc createApp*(w, h: int32) =
   var ft2: FT2Library
   let result = addr app
   # Create Freetype
@@ -110,7 +110,7 @@ proc createApp*(w, h: int32, state: pointer) =
   result.font = createFont(ft2)
   # Create Queue, Atlas and then Window
   let 
-    queue = newGUIQueue(state)
+    queue = newGUIQueue()
     atlas = newCTXAtlas(result.font.face)
   result.window = newGUIWindow(w, h, queue, atlas)
   result.queue = queue

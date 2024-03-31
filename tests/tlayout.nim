@@ -39,7 +39,7 @@ controller CONLayout:
     result.widget = result.createWidget()
 
 proc main() =
-  createApp(1024, 600, nil)
+  createApp(1024, 600)
   let test = conlayout()
   # Clear Color
   # Open Window
