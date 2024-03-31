@@ -124,7 +124,7 @@ func cbAttribute(self, cb: NimNode): NimNode =
   # Return Attribute and Injector
   result = nnkExprColonExpr.newTree(defs, inject)
 
-func cbCallback(self, state, fn: NimNode): NimNode =
+func cbCallback(self, fn: NimNode): NimNode =
   let
     declare = fn[1]
     # Callback Proc Parameters
@@ -133,16 +133,6 @@ func cbCallback(self, state, fn: NimNode): NimNode =
   # Add Self Parameter
   params.add nnkIdentDefs.newTree(
     ident"self", self, newEmptyNode())
-  # Add State Parameter
-  let s = nnkIdentDefs.newTree(
-    ident"state", 
-    nnkPtrTy.newTree(state), 
-    newEmptyNode()
-  )
-  if state.kind == nnkEmpty:
-    s[0] = genSym(nskParam, "state")
-    s[1] = bindSym"pointer"
-  params.add s
   # Add Extra Parameter if exists
   var stmts = fn[2]
   if declare.kind == nnkObjConstr:
@@ -264,23 +254,12 @@ func wDefines(list, stmts: NimNode) =
     else: continue
 
 func wDeclare(declare, fallback: NimNode): NimNode =
-  # Pack idents as [name, super, state]
-  func wNames(n, fallback: NimNode): NimNode =
-    # Check if has a inherit or not
-    result = 
-      if n.kind == nnkInfix:
-        expectIdent(n[0], "of")
-        nnkIdentDefs.newTree(n[1], n[2])
-      else: nnkIdentDefs.newTree(n, fallback)
-    # Add Space for State
-    result.add newEmptyNode()
-  # Check if is ident or not
-  expectKind(declare, {nnkIdent, nnkInfix})
-  # Check Declare Indents
-  if declare.kind == nnkInfix and declare[0].eqIdent("->"):
-      result = wNames(declare[1], fallback)
-      result[2] = declare[2]
-  else: result = wNames(declare, fallback)
+  result = nnkIdentDefs.newTree(declare, fallback)
+  # Type has Inheritance
+  if declare.kind == nnkInfix:
+    expectIdent(declare[0], "of")
+    result[0] = declare[1]
+    result[1] = declare[2]
 
 func wType(name, super, defines: NimNode): NimNode =
   let recs = nnkRecList.newTree()
@@ -448,7 +427,6 @@ func wStructure(idents, inject, methods, body: NimNode): NimNode =
     # Unpack Idents
     name = idents[0]
     super = idents[1]
-    state = idents[2]
     # Collect Widget Objects
     defines = newTree(nnkStmtList)
     procs = newTree(nnkStmtList)
@@ -469,7 +447,7 @@ func wStructure(idents, inject, methods, body: NimNode): NimNode =
       case ty.strVal
       of "callback":
         let 
-          cb = cbCallback(name, state, child)
+          cb = cbCallback(name, child)
           attrib = cbAttribute(name, cb)
         # Add Callback Attribute
         defines.add attrib[0]
