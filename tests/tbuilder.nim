@@ -1,27 +1,33 @@
 from nogui/builder import controller, widget
-import nogui/ux/widgets/menu
+from nogui/gui/event import GUIState
 
 widget UXHelloWord:
   attributes:
     [a, b]: int
 
-widget UXHelloWord2:
+  callback cbTest:
+    echo "hello world"
+
+widget UXHelloWord2 of UXHelloWord:
   attributes:
-    [a, b]: int
+    [hola, mundo]: int
 
-template myPragma {.pragma.}
-
-controller Hello:
-  attributes:
-    z: int
-    {.public, bitsize: 8, myPragma.}: 
-      [a, b, c]: int
-    {.public.}: 
-      [e, f]: int
-    {.public.}: 
-      [zz, aa]: int
-
-  callback ex:
+  method event(state: ptr GUIState) =
     discard
 
-echo UXMenuBar.type
+controller CXTest of RootObj:
+  callback cbTest:
+    echo "hello world"
+
+  callback cbTost:
+    echo "hello world"
+
+controller CXTest2 of CXTest:
+  new cxprev():
+    echo "hello world"
+
+  callback cbA:
+    echo "hello world"
+
+  callback cbB:
+    echo "hello world"
