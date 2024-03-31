@@ -4,27 +4,26 @@ from gui/signal import
   GUICallback, GUICallbackEX, 
   unsafeCallback, unsafeCallbackEX
 import macros, macrocache
-from strformat import fmt
 
 # -------------------
 # Widget VTable Types
 # -------------------
 
 type
-  VMethodKind = enum
+  MethodKind = enum
     mkHandle
     mkEvent 
     mkUpdate
     mkLayout
     mkDraw
-    # Invalid Method
-    mkInvalid
+    # Secret Node
+    mkSecret
 
-proc Handle(obj: GUIWidget, kind: GUIHandle) {.noconv.} = discard
-proc Event(obj: GUIWidget, state: ptr GUIState) {.noconv.} = discard
-proc Update(obj: GUIWidget) {.noconv.} = discard
-proc Layout(obj: GUIWidget) {.noconv.} = discard
-proc Draw(obj: GUIWidget, ctx: ptr CTXRender) {.noconv.} = discard
+proc handle0(obj: GUIWidget, kind: GUIHandle) {.noconv.} = discard
+proc event0(obj: GUIWidget, state: ptr GUIState) {.noconv.} = discard
+proc update0(obj: GUIWidget) {.noconv.} = discard
+proc layout0(obj: GUIWidget) {.noconv.} = discard
+proc draw0(obj: GUIWidget, ctx: ptr CTXRender) {.noconv.} = discard
 # Tracking VTable Methods
 const mcMethods = CacheTable"vtables"
 
@@ -34,11 +33,11 @@ const mcMethods = CacheTable"vtables"
 
 func vtableCreate(): NimNode =
   result = nnkStmtList.newTree(
-    bindSym"Handle",
-    bindSym"Event", 
-    bindSym"Update", 
-    bindSym"Layout", 
-    bindSym"Draw",
+    bindSym"handle0",
+    bindSym"event0", 
+    bindSym"update0", 
+    bindSym"layout0", 
+    bindSym"draw0",
     # Dummy Value
     newEmptyNode()
   )
@@ -346,54 +345,41 @@ func wMethod(symbol, self, fn: NimNode): NimNode =
   )
 
 func wMethodCheck(fn, expect: NimNode) =
-  # Reusable Kind Error Message
-  func error(msg: string, exp, got: NimNode; lines: NimNode) =
-    error fmt"{msg} expected <{exp.repr}> got <{got.repr}>", lines
-  let # Parameters
-    params = fn[3]
-    formal = expect.getTypeImpl[0]
-    # Return Type
-    retFn = params[0]
-    retEx = formal[0]
-    # Parameters Count
-    lenFn = params.len - 1
-    lenEx = formal.len - 2
-  # Check Return Parameter
-  if retFn != retEx and not retFn.eqIdent(retEx):
-    error("invalid return type:", 
-      retEx, retFn, params)
-  # Check Each Parameter
-  var count = 2
-  for i in 1 .. lenFn:
-    let 
-      defs = params[i]
-      l = defs.len - 2
-      # Parameter Type
-      kindFn = defs[l]
-      kindEx = formal[count][^2]
-    # Hacky But Works
-    if kindFn.repr != kindEx.repr:
-      error("invalid parameter type:", 
-        kindEx, kindFn, defs)
-    # Step Parameter
-    count += l
-  # Check Parameters Count
-  count -= 2; if count != lenEx:
-    error("invalid parameter type:", 
-      ident $lenEx, ident $count, params)
+  let params0 = fn[3]
+  if expect.kind == nnkEmpty:
+    error("invalid method name", params0)
+  # Prepare Expected Signature
+  let params1 = expect.getTypeImpl[0]
+  params1.del(1)
+  # Check Method Equality
+  if params0.repr != params1.repr:
+    error("expected parameters: " & params1.repr, params0)
 
-func wMethodKind(fn: NimNode): VMethodKind =
+func wMethodKind(fn: NimNode): MethodKind =
   let
     id = fn[0]
     name = id.strVal
+    # Expected Method List
+    expects = [
+      bindSym"handle0",
+      bindSym"event0",
+      bindSym"update0",
+      bindSym"layout0",
+      bindSym"draw0",
+      # Invalid Method
+      newEmptyNode()
+    ]
   # Check Method Name Kind
   result = case name
-  of "handle": wMethodCheck(fn, bindSym"Handle"); mkHandle
-  of "event": wMethodCheck(fn, bindSym"Event"); mkEvent
-  of "update": wMethodCheck(fn, bindSym"Update"); mkUpdate
-  of "layout": wMethodCheck(fn, bindSym"Layout"); mkLayout
-  of "draw": wMethodCheck(fn, bindSym"Draw"); mkDraw
-  else: error("invalid method name", id); mkInvalid
+  of "handle": mkHandle
+  of "event": mkEvent
+  of "update": mkUpdate
+  of "layout": mkLayout
+  of "draw": mkDraw
+  else: mkSecret
+  # Lookup Method and Check
+  let expect = expects[ord result]
+  wMethodCheck(fn, expect)
 
 # ------------------
 # Widget Constructor
