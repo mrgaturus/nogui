@@ -1,12 +1,12 @@
 from nogui/pack import folders
 from nogui/data import newFont
-from nogui/gui/widget import GUIWidget
-from nogui/gui/timer import loop
-from nogui/gui/signal import 
+from nogui/core/widget import GUIWidget
+from nogui/core/timer import loop
+from nogui/core/signal import 
   GUIQueue, newGUIQueue, dispose
 
 import nogui/libs/ft2
-import nogui/gui/[window, atlas]
+import nogui/core/[window, atlas]
 import nogui/[logger, format, utf8]
 
 type

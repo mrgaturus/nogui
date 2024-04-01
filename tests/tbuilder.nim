@@ -1,5 +1,5 @@
 from nogui/builder import controller, widget
-from nogui/gui/event import GUIState
+from nogui/core/event import GUIState
 
 widget UXHelloWord:
   attributes:

@@ -1,8 +1,8 @@
 from ../builder import widget
 # Import Widget and Rendering
-import ../gui/[widget, event, render, atlas, signal, value]
+import ../core/[widget, event, render, atlas, signal, value]
 # Import Event and Callback Stuff
-from ../gui/timer import pushTimer, stopTimer
+from ../core/timer import pushTimer, stopTimer
 # Import Global App State
 from ../../nogui import getApp, width, index
 # Import Icon ID Helper

@@ -1,5 +1,5 @@
-import gui/[widget, event, render]
-from gui/signal import 
+import core/[widget, event, render]
+from core/signal import 
   GUICallback, GUICallbackEX, 
   unsafeCallback, unsafeCallbackEX
 import macros, macrocache

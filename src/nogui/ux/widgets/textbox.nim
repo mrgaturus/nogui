@@ -9,9 +9,9 @@ from ../../../nogui import
   setCursor, clearCursor
 # -----------------------
 import ../../utf8
-from ../../gui/event import 
+from ../../core/event import 
   UTF8Nothing, UTF8Keysym
-from ../../gui/signal import 
+from ../../core/signal import 
   WindowSignal, msgOpenIM, msgCloseIM
 
 widget UXTextBox:
