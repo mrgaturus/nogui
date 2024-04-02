@@ -16,7 +16,7 @@ widget UXHelloWord2 of UXHelloWord:
     discard
 
 controller CXTest of RootObj:
-  callback cbTest:
+  callback cbTest(x: cint):
     echo "hello world"
 
   callback cbTost:

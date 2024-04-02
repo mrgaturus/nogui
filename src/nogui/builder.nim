@@ -520,7 +520,6 @@ macro widget*(declare, body: untyped) =
   # Return Widget Structure
   mcObjects[name.strVal] = info
   result = nnkStmtList.newTree(struct, magic)
-  #echo result.repr
 
 macro controller*(declare, body: untyped) =
   let
@@ -537,7 +536,6 @@ macro controller*(declare, body: untyped) =
   # Return Controller Structure
   result = wStructure(idents, info, inject, body)
   mcObjects[name.strVal] = info
-  echo result.repr
 
 macro child(self: GUIWidget, body: untyped) =
   let hook = bindSym"add"
