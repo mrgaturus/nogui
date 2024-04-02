@@ -147,22 +147,10 @@ func cbCallback(self, fn: NimNode): NimNode =
     var
       name = extra[0]
       ty = extra[1]
-    # Simulate Pass by Copy
-    expectKind(ty, {nnkIdent, nnkCommand})
-    if ty.kind == nnkCommand:
-      let 
-        fresh = genSym(nskParam)
-        warped = quote do:
-          var `name` = `fresh`[]; `stmts`
-      # Remember Line
-      expectIdent(ty[0], "sink")
-      warped[0][0][0].copyLineInfo(declare)
-      # Replace Values
-      name = fresh
-      stmts = warped
-      ty = ty[1]
-    # Change Info Kind
+    # Wrap into pointer
+    expectKind(ty, nnkIdent)
     ty = nnkPtrTy.newTree ty
+    # Change Info Kind
     info.add(declare[0], ty[0])
     # Add Parameter and Store Extra Value Type
     params.add nnkIdentDefs.newTree(name, ty, newEmptyNode())
@@ -549,7 +537,7 @@ macro controller*(declare, body: untyped) =
   # Return Controller Structure
   result = wStructure(idents, info, inject, body)
   mcObjects[name.strVal] = info
-  #echo result.repr
+  echo result.repr
 
 macro child(self: GUIWidget, body: untyped) =
   let hook = bindSym"add"
