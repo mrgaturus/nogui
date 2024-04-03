@@ -51,14 +51,14 @@ widget UXMenuSeparatorLabel:
 
   method update =
     let
-      # TODO: allow customize margin
-      font = addr getApp().font
-      pad0 = font.asc shr 1
+      app = getApp()
+      # Application Padding
+      pad0 = app.space.pad
       pad1 = pad0 shl 1
       # Font Width
       m = addr self.metrics
       w = int16 width(self.label)
-      h = font.height
+      h = app.font.height
     # Set Minimun Size
     m.minW = w + pad1
     m.minH = h + pad0
@@ -141,8 +141,8 @@ widget UXMenuItem:
   method update =
     let
       m = addr self.metrics
-      # TODO: allow customize margin
-      pad0 = getApp().font.asc shr 1
+      # Application Padding
+      pad0 = getApp().space.pad
       pad1 = pad0 shl 1
       # Calculate Label Metrics
       lm = metricsMenu(self.label, self.icon)

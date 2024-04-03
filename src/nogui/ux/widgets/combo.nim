@@ -151,12 +151,14 @@ widget UXComboBox:
     self.opaque = true; self
 
   method update =
-    let # Calculate Label Metrics
-      font = addr getApp().font
+    let
+      app = getApp()
+      # Font Metrics
+      font = addr app.font
       m = addr self.metrics
       size = font.height
-      # TODO: allow customize margin
-      pad0 = font.asc shr 1
+      # Application Padding
+      pad0 = app.space.pad
       pad1 = pad0 shl 1
     # Change Min Size
     m.minW = size + pad1

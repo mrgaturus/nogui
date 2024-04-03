@@ -17,16 +17,16 @@ widget UXButton:
 
   method update =
     let
-      font = addr getApp().font
+      app = getApp()
       m = addr self.metrics
       # Calculate Sizes
       w = width(self.label)
-      h = font.height
-      # TODO: allow customize margin
-      pad = font.asc
-    # Change Min Size
-    m.minW = int16 w + pad
-    m.minH = h + (pad shr 1)
+      h = app.font.height
+      # Application Padding
+      pad = app.space.pad
+    # Calculate Min Size
+    m.minW = int16 w + (pad shl 1)
+    m.minH = h + pad
 
   method draw(ctx: ptr CTXRender) =
     let 
@@ -35,7 +35,8 @@ widget UXButton:
       colors = addr app.colors
       font = addr app.font
       # Font Metrics
-      ox = self.metrics.minW - font.asc
+      pad = app.space.pad
+      ox = self.metrics.minW - (pad shl 1)
       oy = font.height - font.baseline
     # Fill Button Background
     ctx.color self.itemColor()
@@ -83,8 +84,8 @@ widget UXIconButton of UXButton:
       # Calculate Label Metrics
       lm = metricsLabel(self.label, self.icon)
       extra = int16(lm.label > 0)
-      # TODO: allow customize margin
-      pad0 = getApp().font.asc shr 1
+      # Application Padding
+      pad0 = getApp().space.pad
       pad1 = pad0 shl extra
     # Change Min Size
     m.minW = lm.w + pad1
@@ -152,8 +153,8 @@ widget UXButtonOpaque:
       # Calculate Label Metrics
       lm = metricsLabel(self.label, icon)
       extra = int16(lm.label > 0)
-      # TODO: allow customize margin
-      pad0 = getApp().font.asc shr 1
+      # Application Padding
+      pad0 = getApp().space.pad
       pad1 = pad0 shl extra
     # Change Min Size
     m.minW = lm.w + pad1

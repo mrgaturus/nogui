@@ -67,12 +67,12 @@ var app: Application
 # -----------------------
 
 proc createSpace(): GUISpace =
-  result.margin = 0
-  result.pad = 10
+  result.margin = 4
+  result.pad = 6
   result.line = 2
   # Layout Separators
-  result.sepX = 8
-  result.sepY = 8
+  result.sepX = 2
+  result.sepY = 2
 
 proc createColors(): GUIColors =
   # TODO: create a module for config file

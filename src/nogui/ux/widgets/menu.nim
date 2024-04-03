@@ -142,14 +142,15 @@ widget UXMenuBarItem:
 
   method update =
     let
-      # TODO: allow customize margin
-      font = addr getApp().font
-      pad0 = font.size
+      app = getApp()
+      # Application Padding
+      pad = app.space.pad
+      pad0 = pad + (pad shr 1)
       pad1 = pad0 shl 1
       # Font Width
       m = addr self.metrics
       w = int16 width(self.menu.label)
-      h = font.height
+      h = app.font.height
     # Set Minimun Size
     m.minW = w + pad1
     m.minH = h + pad0
@@ -160,8 +161,11 @@ widget UXMenuBarItem:
       rect = addr self.rect
       colors = addr app.colors
       font = addr app.font
+      # Application Padding
+      pad = app.space.pad
+      pad0 = pad + (pad shr 1)
       # Font Metrics
-      ox = self.metrics.minW - (font.size shl 1)
+      ox = self.metrics.minW - (pad0 shl 1)
       oy = font.height - font.baseline
     # Fill Background
     if self.test(wHover) or self.portal[] == self:

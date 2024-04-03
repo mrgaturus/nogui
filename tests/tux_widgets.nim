@@ -239,7 +239,7 @@ controller CONPlayground:
               menuitem("World 2", cb)
           menuitem("Exit", cb)
 
-        menu("Other Menu").child:
+        menu("Edit").child:
           menuitem("The", cb)
           menuitem("Game", cb)
           # More More Menus
