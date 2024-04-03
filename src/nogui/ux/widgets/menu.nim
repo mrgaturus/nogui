@@ -166,7 +166,7 @@ widget UXMenuBarItem:
       pad0 = pad + (pad shr 1)
       # Font Metrics
       ox = self.metrics.minW - (pad0 shl 1)
-      oy = font.height - font.baseline
+      oy = font.baseline
     # Fill Background
     if self.test(wHover) or self.portal[] == self:
       ctx.color colors.item

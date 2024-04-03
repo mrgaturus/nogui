@@ -69,7 +69,7 @@ controller CONLayout:
       field("Opacity"): slider(self.valueB)
       field("Min Opacity"): half(self.valueB1)
       
-      button("lol equisde", cbHello)
+      button("lol equisde gggg", cbHello)
       label("", hoLeft, veMiddle)
 
       field(): button("Value A", self.a, 10)

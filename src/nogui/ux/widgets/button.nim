@@ -37,7 +37,7 @@ widget UXButton:
       # Font Metrics
       pad = app.space.pad
       ox = self.metrics.minW - (pad shl 1)
-      oy = font.height - font.baseline
+      oy = font.baseline
     # Fill Button Background
     ctx.color self.itemColor()
     ctx.fill rect(self.rect)

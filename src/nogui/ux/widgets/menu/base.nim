@@ -70,8 +70,7 @@ widget UXMenuSeparatorLabel:
       colors = addr app.colors
       font = addr app.font
       # Center Y Offset
-      offset = font.baseline
-      oy = font.height - offset
+      oy = font.baseline
     # Opacity Constants
     const 
       cAlpha = 0x7FFFFFFF'u32
@@ -82,7 +81,7 @@ widget UXMenuSeparatorLabel:
     # Draw Text Centered
     ctx.color(colors.text and cText)
     ctx.text(
-      rect.x + offset,
+      rect.x + oy,
       rect.y + (rect.h - oy) shr 1, 
       self.label)
 

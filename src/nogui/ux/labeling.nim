@@ -77,7 +77,7 @@ proc locate*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
     font = addr getApp().font
     xt = m.w - m.label
     # Vertical Positions
-    yt = (m.h - font.height + font.baseline) shr 1
+    yt = (m.h - font.baseline) shr 1
     yi = (m.h - m.icon) shr 1
   # Icon Position
   result.xi = cx
