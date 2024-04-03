@@ -10,6 +10,12 @@ import nogui/core/[window, atlas]
 import nogui/[logger, format, utf8]
 
 type
+  GUISpace = object
+    margin*: int16
+    pad*: int16
+    line*: int16
+    # Layout Separators
+    sepX*, sepY*: int16
   GUIColors = object
     text*: uint32
     # Widget Controls
@@ -33,6 +39,7 @@ type
     atlas*: CTXAtlas
     # Atlas Font Metrics
     font*: GUIFont
+    space*: GUISpace
     colors*: GUIColors
     # TODO: reuse it for event ut8buffer
     fmt0: CacheString
@@ -59,8 +66,16 @@ var app: Application
 # Private Common Creation
 # -----------------------
 
+proc createSpace(): GUISpace =
+  result.margin = 0
+  result.pad = 10
+  result.line = 2
+  # Layout Separators
+  result.sepX = 8
+  result.sepY = 8
+
 proc createColors(): GUIColors =
-  # TODO: create a module for colors and allow config file
+  # TODO: create a module for config file
   proc rgba(r, g, b, a: uint32): uint32 {.compileTime.} =
     result = r or (g shl 8) or (b shl 16) or (a shl 24)  
   # Text Colors
@@ -74,7 +89,6 @@ proc createColors(): GUIColors =
   result.tab = rgba(19, 21, 21, 255)
   result.darker = rgba(0, 0, 0, 255)
   result.background = rgba(23, 26, 26, 255)
-  echo result.repr
 
 proc createFont(ft2: FT2Library): GUIFont =
   const hardsize = 9
@@ -107,6 +121,7 @@ proc createApp*(w, h: int32) =
   # Create Private Common
   result.ft2 = ft2
   result.colors = createColors()
+  result.space = createSpace()
   result.font = createFont(ft2)
   # Create Queue, Atlas and then Window
   let 

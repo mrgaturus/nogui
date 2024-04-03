@@ -161,11 +161,11 @@ widget UXGridLayout:
           m = addr c.metrics
         register(self.wBand, c.x, c.w, m.minW)
         register(self.hBand, c.y, c.h, m.minH)
-    # TODO: allow customize margin
-    let margin = getApp().font.size shr 1
+    # Application Borders
+    let s = addr getApp().space
     # Prepare Grid Bands
-    prepare(self.wBand, margin)
-    prepare(self.hBand, margin)
+    prepare(self.wBand, s.sepX)
+    prepare(self.hBand, s.sepY)
     # Configure Min Size
     let m = addr self.metrics
     m.minW = self.wBand.minSize
@@ -174,11 +174,10 @@ widget UXGridLayout:
   method layout =
     let
       m = addr self.metrics
-      # TODO: allow customize margin
-      margin = getApp().font.size shr 1
+      s = addr getApp().space
     # Arrange Cells with Current Size
-    arrange(self.wBand, m.w, margin)
-    arrange(self.hBand, m.h, margin)
+    arrange(self.wBand, m.w, s.sepX)
+    arrange(self.hBand, m.h, s.sepY)
     # Locate Each Widget
     for w in forward(self.first):
       if w of UXGridCell:
