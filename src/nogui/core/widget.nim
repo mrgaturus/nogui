@@ -5,31 +5,26 @@ from signal import
 from render import 
   CTXRender, GUIRect, push, pop
 
-const # Widget Bit-Flags
-  wDirty* = uint8(1 shl 0) # C
-  # Hidden and Visibility Check
-  wHidden* = uint8(1 shl 1) # C
-  wVisible* = uint8(1 shl 2) # A
-  # Separated Enabled Status
-  wKeyboard* = uint8(1 shl 3) # C
-  wMouse* = uint8(1 shl 4) # C
-  # Focus, Hover and Grab
-  wFocus* = uint8(1 shl 5) # C
-  wHover* = uint8(1 shl 6) # A
-  wGrab* = uint8(1 shl 7) # A
-  # -- Initializing Masks
-  wMouseKeyboard* = wMouse or wKeyboard
-  # -- Status Checking Masks
-  wHoverGrab* = wHover or wGrab
-  wFocusCheck* = wVisible or wKeyboard
-  # -- Set/Clear Handle Masks
-  wHandleMask = wFocus or wDirty
-  wHandleClear = wFocus or wFocusCheck
-  wProtected = # Protect Automatics
-    not(wVisible or wHover or wGrab)
+type
+  GUIFlag* = enum
+    wVisible
+    wHidden
+    # Enabled Status
+    wMouse
+    wKeyboard
+    # Event Status
+    wFocus
+    wHover
+    wGrab
+  GUIFlags* = set[GUIFlag]
+
+const
+  wStandard* = {wMouse, wKeyboard}
+  # Event Status Checking
+  wFocusable* = {wVisible, wKeyboard}
+  wHoverGrab* = {wHover, wGrab}
 
 type
-  GUIFlags* = uint8
   GUIHandle* = enum
     inFocus, inHover, inFrame
     outFocus, outHover, outFrame
@@ -72,9 +67,9 @@ template update*(w: GUIWidget) = w.vtable.update(w)
 template layout*(w: GUIWidget) = w.vtable.layout(w)
 template draw*(w: GUIWidget, ctx: ptr CTXRender) = w.vtable.draw(w, ctx)
 
-# ----------------------------
-# WIDGET NEIGHTBORDS ITERATORS
-# ----------------------------
+# -------------------
+# WIDGET TREE WALKERS
+# -------------------
 
 # First -> Last
 iterator forward*(first: GUIWidget): GUIWidget =
@@ -94,46 +89,25 @@ iterator reverse*(last: GUIWidget): GUIWidget =
 # WIDGET SIGNAL & FLAGS HANDLING PROCS
 # ------------------------------------
 
-# -- Widget Signal Target
-proc target*(self: GUIWidget): GUITarget {.inline.} =
-  cast[GUITarget](self) # Avoid Ref Count Loosing
+proc contains*(flags, mask: GUIFlags): bool {.inline.} =
+  mask * flags == mask
 
-# -- Unsafe Flags Handling
-proc set*(flags: var GUIFlags, mask: GUIFlags) {.inline.} =
-  flags = flags or mask
+proc some*(flags, mask: GUIFlags): bool {.inline.} =
+  mask * flags != {}
 
-proc clear*(flags: var GUIFlags, mask: GUIFlags) {.inline.} =
-  flags = flags and not mask
-
-# -- Safe Flags Handling
-proc set*(self: GUIWidget, mask: GUIFlags) =
-  var delta = mask and not self.flags
-  # Check if mask needs handling
-  if (delta and wHandleMask) > 0:
-    let target = self.target
-    # Relayout Widget and Childrens
-    if (delta and wDirty) == wDirty:
-      pushSignal(target, msgDirty)
-    # Request Replace Window Focus
-    if (delta and wFocus) == wFocus:
-      pushSignal(target, msgFocus)
-  self.flags = # Merge Flags Mask
-    self.flags or (delta and wProtected)
-
-proc clear*(self: GUIWidget, mask: GUIFlags) =
-  let delta = mask and self.flags
-  # Check if mask needs handling
-  if (delta and wHandleClear) > 0:
-    pushSignal(self.target, msgCheck)
-  self.flags = # Clear Flags Mask
-    self.flags and not (delta and wProtected)
-
-# -- Flags Testing
-proc any*(self: GUIWidget, mask: GUIFlags): bool {.inline.} =
-  return (self.flags and mask) > 0
+# -- Widget Flags Testing
+proc test*(self: GUIWidget, flag: GUIFlag): bool {.inline.} =
+  contains(self.flags, flag)
 
 proc test*(self: GUIWidget, mask: GUIFlags): bool {.inline.} =
-  return (self.flags and mask) == mask
+  mask * self.flags == mask
+
+proc some*(self: GUIWidget, mask: GUIFlags): bool {.inline.} =
+  mask * self.flags != {}
+
+# -- Widget Weak Cursor
+proc target*(self: GUIWidget): GUITarget {.inline.} =
+  cast[GUITarget](self) # Avoid Ref Count Loosing
 
 # ----------------------------
 # WIDGET ADD CHILD NODES PROCS
@@ -223,7 +197,7 @@ proc maximum*(widget: GUIWidget, w, h: int32) =
 proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
   let rect = addr widget.rect
   # Check if is visible and point is on area
-  (widget.flags and wVisible) == wVisible and
+  wVisible in widget.flags and
     x >= rect.x and x <= rect.x + rect.w and
     y >= rect.y and y <= rect.y + rect.h
 
@@ -249,16 +223,16 @@ proc move*(widget: GUIWidget, x, y: int32) =
   if widget.kind > wgChild:
     widget.metrics.x = int16 x
     widget.metrics.y = int16 y
-    # Mark Widget as Dirty
-    widget.set(wDirty)
+    # TODO: defer this callback
+    pushSignal(widget.target, msgDirty)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
     let metrics = addr widget.metrics
     metrics.w = max(int16 w, metrics.minW)
     metrics.h = max(int16 h, metrics.minH)
-    # Mark Widget as Dirty
-    widget.set(wDirty)
+    # TODO: defer this callback
+    pushSignal(widget.target, msgDirty)
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE
@@ -305,13 +279,13 @@ proc find*(widget: GUIWidget, x, y: int32): GUIWidget =
 proc visible*(widget: GUIWidget): bool =
   var cursor = widget
   # Test Self Visibility
-  result = cursor.test(wVisible)
+  result = wVisible in cursor.flags
   # Walk to Outermost Parent
   while result:
     cursor = cursor.parent
     if isNil(cursor): break
     else: # Test Parent Visibility
-      result = cursor.test(wVisible)
+      result = wVisible in cursor.flags
 
 proc step*(widget: GUIWidget, back: bool): GUIWidget =
   result = widget
@@ -326,7 +300,7 @@ proc step*(widget: GUIWidget, back: bool): GUIWidget =
         if back: widget.parent.last
         else: widget.parent.first
     # Check if is Focusable or is the same again
-    if result.test(wFocusCheck) or 
+    if result.flags * wFocusable == wFocusable or 
       result == widget: break
 
 # --------------------------------
@@ -338,7 +312,7 @@ proc absolute(widget: GUIWidget) =
   let
     rect = addr widget.rect
     metrics = addr widget.metrics
-    flags = widget.flags
+  var flags = widget.flags
   # Calcule Absolute Position
   rect.x = metrics.x
   rect.y = metrics.y
@@ -352,14 +326,16 @@ proc absolute(widget: GUIWidget) =
   rect.x += pivot.x
   rect.y += pivot.y
   # Test Visibility Boundaries
-  let test = (flags and wHidden) == 0 and
+  let test = (wHidden notin flags) and
     rect.x <= pivot.x + pivot.w and
     rect.y <= pivot.y + pivot.h and
     rect.x + rect.w >= pivot.x and
     rect.y + rect.h >= pivot.y
   # Mark Visible if Passed Visibility Test
-  widget.flags = (flags and not wVisible) or 
-    (cast[uint8](test) shl 2) # See wVisible
+  flags.excl(wVisible)
+  if test: flags.incl(wVisible)
+  # Replace Flags
+  widget.flags = flags
 
 proc prepare(widget: GUIWidget) =
   var w {.cursor.} = widget
@@ -385,7 +361,7 @@ proc organize(widget: GUIWidget) =
   while true:
     w.absolute()
     # Is Visible?
-    if w.test(wVisible):
+    if wVisible in w.flags:
       w.vtable.layout(w)
       # Traverse Inside?
       if not isNil(w.first):
@@ -424,8 +400,8 @@ proc render*(widget: GUIWidget, ctx: ptr CTXRender) =
   ctx.push(w.rect)
   # Traverse Children
   while true:
-    # Push Clipping, TODO: Change to Nim sets
-    if (w.flags and wVisible) == wVisible:
+    # Push Clipping
+    if wVisible in w.flags:
       w.vtable.draw(w, ctx)
       # Traverse Inside?
       if not isNil(w.first):

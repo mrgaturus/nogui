@@ -25,7 +25,7 @@ widget UXMenu:
 
   new menu(label: string):
     result.kind = wgMenu
-    result.flags = wMouseKeyboard
+    result.flags = wStandard
     result.label = label
 
   method draw(ctx: ptr CTXRender) =
@@ -137,7 +137,7 @@ widget UXMenuBarItem:
     m.close()
 
   new menubar0(menu: UXMenuOpaque):
-    result.flags = wMouse
+    result.flags = {wMouse}
     result.menu = cast[UXMenu](menu)
 
   method update =
@@ -180,7 +180,7 @@ widget UXMenuBarItem:
 
   method event(state: ptr GUIState) =
     # Remove Grab Flags
-    self.flags.clear(wGrab)
+    self.flags.excl(wGrab)
     # Open or Close Menu with Click
     if state.kind == evCursorClick:
       let
@@ -215,7 +215,7 @@ widget UXMenuBar:
     selected: UXMenuBarItem
 
   new menubar():
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   method update =
     var x, height: int16

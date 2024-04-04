@@ -86,7 +86,7 @@ widget UXSlider:
 
   proc slider0(value: & Lerp, fn: LerpFmtProc, z0: bool) =
     # Widget Standard Flag
-    self.flags = wMouse
+    self.flags = {wMouse}
     self.value = value
     # Value Manipulation
     self.z0 = z0
@@ -160,7 +160,7 @@ widget UXDualSlider:
 
   proc dual0(value: & Lerp2, fn: Lerp2FmtProc, z0: bool) =
     # Widget Standard Flag
-    self.flags = wMouse
+    self.flags = {wMouse}
     self.value = value
     # Value Manipulation
     self.z0 = z0

@@ -12,7 +12,7 @@ widget UXScroll:
 
   new scrollbar(value: & Lerp, vertical: bool):
     # Widget Standard Flag
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Set Widget Attributes
     result.value = value
     result.vertical = vertical

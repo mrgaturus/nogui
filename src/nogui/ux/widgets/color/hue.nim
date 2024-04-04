@@ -13,7 +13,7 @@ widget UXHue0Bar:
 
   new hue0bar(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Minimun Width Size
     let w = getApp().font.height
     result.metrics.minW = w + w shr 2
@@ -59,7 +59,7 @@ widget UXHue0Bar:
     rect.y = calc - offset
     rect.yh = calc + offset
     # Fill Current Color
-    if self.any(wHoverGrab):
+    if self.some(wHoverGrab):
       const mask = uint32 0x3FFFFFFF
       ctx.color(color0.toPacked and mask)
       ctx.fill(rect)
@@ -103,7 +103,7 @@ widget UXHue0Circle:
 
   new hue0circle(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   proc drawHue(ctx: ptr CTXRender) =
     let

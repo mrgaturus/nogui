@@ -70,7 +70,7 @@ proc locate(self: GUIWidget, rect: GUIMetrics): GUIWidget =
 
 widget GUIDummy:
   new dummy():
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   method layout =
     for w in forward(self.first):
@@ -80,7 +80,7 @@ widget GUIDummy:
 
 widget GUIPanel:
   new panel():
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   method draw(ctx: ptr CTXRender) =
     ctx.color getApp().colors.panel

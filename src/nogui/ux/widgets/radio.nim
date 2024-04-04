@@ -9,7 +9,7 @@ widget UXRadio:
     check: & int32
 
   new radio(label: string, value: int32, check: & int32):
-    result.flags = wMouse
+    result.flags = {wMouse}
     result.label = label
     # Radio Attributes
     result.value = value

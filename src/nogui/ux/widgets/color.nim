@@ -9,12 +9,12 @@ widget UXColorCube:
   new colorcube(hsv: & HSVColor):
     result.add hue0bar(hsv)
     result.add sv0square(hsv)
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   new colorcube0triangle(hsv: & HSVColor):
     result.add hue0bar(hsv)
     result.add sv0triangle(hsv)
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   method layout =
     let 
@@ -47,12 +47,12 @@ widget UXColorWheel:
       wheel = hue0circle(hsv)
       square = sv0square(hsv)
     # Remove Widget Flags
-    wheel.flags = wHidden
-    square.flags = wHidden
+    wheel.flags = {wHidden}
+    square.flags = {wHidden}
     # Add Widgets
     result.add wheel
     result.add square
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   method draw(ctx: ptr CTXRender) =
     # Draw Two Widgets
@@ -82,7 +82,7 @@ widget UXColorWheel:
     square.h = int16(radius) shl 1
 
   method event(state: ptr GUIState) =
-    const wPropagate = wVisible or wMouse
+    const wPropagate = {wVisible, wMouse}
     # TODO: event propagation...
     if state.kind == evCursorClick:
       var hold: GUIWidget
@@ -91,7 +91,7 @@ widget UXColorWheel:
         widget.flags = wPropagate
         if widget.pointOnArea(state.mx, state.my):
           hold = widget
-        widget.flags = wHidden
+        widget.flags = {wHidden}
       # Replace Hold
       self.hold = hold
     elif state.kind == evCursorRelease:
@@ -102,7 +102,7 @@ widget UXColorWheel:
       # Execute Event
       hold.flags = self.flags
       hold.event(state)
-      hold.flags = wHidden
+      hold.flags = {wHidden}
 
 # --------------------
 # Color Wheel Triangle
@@ -117,12 +117,12 @@ widget UXColorWheel0Triangle:
       wheel = hue0circle(hsv)
       triangle = sv0triangle(hsv)
     # Remove Widget Flags
-    wheel.flags = wHidden
-    triangle.flags = wHidden
+    wheel.flags = {wHidden}
+    triangle.flags = {wHidden}
     # Add Widgets
     result.add wheel
     result.add triangle
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   method layout =
     let
@@ -189,4 +189,4 @@ widget UXColorWheel0Triangle:
       # Execute Event
       hold.flags = self.flags
       hold.event(state)
-      hold.flags = wHidden
+      hold.flags = {wHidden}

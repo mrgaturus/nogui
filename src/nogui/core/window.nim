@@ -174,10 +174,11 @@ proc newGUIWindow*(w, h: int32, queue: GUIQueue, atlas: CTXAtlas): GUIWindow =
 
 proc open*(win: GUIWindow, root: GUIWidget): bool =
   # Set First Widget and Last Frame
-  win.root = root; win.frame = root
+  win.root = root
+  win.frame = root
   # Set as Frame Kind
   root.kind = wgFrame
-  root.flags.set(wVisible)
+  root.flags.incl(wVisible)
   # Set to Global Dimensions
   root.metrics.w = int16 win.w
   root.metrics.h = int16 win.h
@@ -186,8 +187,8 @@ proc open*(win: GUIWindow, root: GUIWidget): bool =
   discard XSync(win.display, 0) # Wait for show it
   # Set Renderer Viewport Dimensions
   viewport(win.ctx, win.w, win.h)
-  # Mark root as Dirty
-  set(win.root, wDirty)
+  # TODO: defer this callback
+  pushSignal(root.target, msgDirty)
 
 proc close*(win: GUIWindow) =
   # Dispose UTF8Buffer
@@ -251,12 +252,12 @@ proc elevate(win: GUIWindow, widget: GUIWidget) =
 proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
   case state.kind
   of evCursorMove, evCursorClick, evCursorRelease:
-    if not isNil(win.hover) and test(win.hover, wGrab):
+    if not isNil(win.hover) and wGrab in win.hover.flags:
       result = win.hover
       # Check Grabbed Point On Area
       if pointOnArea(result, state.mx, state.my):
-        result.flags.set(wHover)
-      else: result.flags.clear(wHover)
+        result.flags.incl(wHover)
+      else: result.flags.excl(wHover)
       # Return Widget
       return result
     elif isNil(win.popup): # Find Frames
@@ -273,32 +274,32 @@ proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
     if isNil(result):
       if not isNil(win.hover):
         handle(win.hover, outHover)
-        clear(win.hover.flags, wHover)
+        excl(win.hover.flags, wHover)
         # Remove Hover
         win.hover = nil
     # Check if is Outside of a Popup
     elif result.kind == wgPopup and
     not pointOnArea(result, state.mx, state.my):
       # Remove Hover Flag
-      result.flags.clear(wHover)
+      result.flags.excl(wHover)
     # Check if is at the same frame
     elif not isNil(win.hover) and 
     result == win.hover.outside:
       result = # Find Interior Widget
         find(win.hover, state.mx, state.my)
       # Set Hovered Flag
-      result.flags.set(wHover)
+      result.flags.incl(wHover)
     else: # Not at the same frame
       result = # Find Interior Widget
         find(result, state.mx, state.my)
       # Set Hovered Flag
-      result.flags.set(wHover)
+      result.flags.incl(wHover)
     # Check if is not the same
     if result != win.hover:
       # Handle Hover Out
       if not isNil(win.hover):
         handle(win.hover, outHover)
-        clear(win.hover.flags, wHover)
+        excl(win.hover.flags, wHover)
       # Handle Hover In
       result.handle(inHover)
       # Replace Hover
@@ -313,23 +314,23 @@ proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
 proc prepare(win: GUIWindow, widget: GUIWidget, kind: GUIEvent): bool =
   case kind
   of evCursorMove:
-    widget.test(wMouse)
+    wMouse in widget.flags
   of evCursorClick:
     # Grab Current Widget
-    widget.flags.set(wGrab)
+    widget.flags.incl(wGrab)
     # Elevate if is a Frame
     let frame = widget.outside
     if frame.kind == wgFrame:
       elevate(win, frame)
     # Check if is able
-    widget.test(wMouse)
+    wMouse in widget.flags
   of evCursorRelease:
     # Ungrab Current Widget
-    widget.flags.clear(wGrab)
+    widget.flags.excl(wGrab)
     # Check if is able
-    widget.test(wMouse)
+    wMouse in widget.flags
   of evKeyDown, evKeyUp:
-    widget.test(wKeyboard)
+    wKeyboard in widget.flags
 
 # -- Step Focus
 proc step(win: GUIWindow, back: bool) =
@@ -338,37 +339,36 @@ proc step(win: GUIWindow, back: bool) =
     widget = step(widget, back)
     if widget != win.focus:
       # Handle Focus Out
-      clear(win.focus.flags, wFocus)
+      excl(win.focus.flags, wFocus)
       handle(win.focus, outFocus)
       # Handle Focus In
-      widget.flags.set(wFocus)
+      widget.flags.incl(wFocus)
       widget.handle(inFocus)
       # Change Focus
       win.focus = widget
 
 # -- Relayout Widget, TODO: change dirty
 proc dirty(win: GUIWindow, widget: GUIWidget) =
-  if widget.test(wVisible):
+  if wVisible in widget.flags:
     widget.arrange()
     # Check Focus Visibility
     if not isNil(win.focus) and 
     not win.focus.visible:
-      clear(win.focus.flags, wFocus)
+      excl(win.focus.flags, wFocus)
       handle(win.focus, outFocus)
       # Remove Focus
       win.focus = nil
-  widget.flags.clear(wDirty)
 
 # -- Focus Handling
 proc focus(win: GUIWindow, widget: GUIWidget) =
   if widget != win.root and
-  widget.test(wFocusCheck) and
+  wFocusable in widget.flags and
   widget != win.focus:
     if not isNil(win.focus):
-      clear(win.focus.flags, wFocus)
+      excl(win.focus.flags, wFocus)
       handle(win.focus, outFocus)
     # Handle Focus In
-    widget.flags.set(wFocus)
+    widget.flags.incl(wFocus)
     widget.handle(inFocus)
     # Replace Focus
     win.focus = widget
@@ -376,15 +376,15 @@ proc focus(win: GUIWindow, widget: GUIWidget) =
 proc check(win: GUIWindow, widget: GUIWidget) =
   # Check if is still focused
   if widget == win.focus and
-  not widget.test(wFocusCheck or wFocus):
-    widget.flags.clear(wFocus)
+  wFocusable + {wFocus} notin widget.flags:
+    widget.flags.excl(wFocus)
     widget.handle(outFocus)
     # Remove Focus
     win.focus = nil
 
 # -- Close any Frame/Popup/Tooltip
 proc close(win: GUIWindow, widget: GUIWidget) =
-  if widget.test(wVisible) and
+  if wVisible in widget.flags and
   widget.kind > wgChild and
   widget != win.root: # Avoid Root
     # is Last Frame?
@@ -408,11 +408,11 @@ proc close(win: GUIWindow, widget: GUIWidget) =
     # Remove from List
     widget.delete()
     # Remove Visible Flag
-    widget.flags.clear(wVisible)
+    widget.flags.excl(wVisible)
     # Unfocus Children Widget
     if not isNil(win.focus) and
     win.focus.outside == widget:
-      clear(win.focus.flags, wFocus)
+      excl(win.focus.flags, wFocus)
       handle(win.focus, outFocus)
       # Remove Focus
       win.focus = nil
@@ -420,7 +420,7 @@ proc close(win: GUIWindow, widget: GUIWidget) =
     if not isNil(win.hover) and
     win.hover.outside == widget:
       handle(win.hover, outHover)
-      clear(win.hover.flags, wHoverGrab)
+      excl(win.hover.flags, wHoverGrab)
       # Remove Hover
       win.hover = nil
     # Handle outFrame
@@ -429,18 +429,19 @@ proc close(win: GUIWindow, widget: GUIWidget) =
 # -- Open as Frame/Popup/Tooltip
 proc frame(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
-  not widget.test(wVisible):
+  wVisible notin widget.flags:
     insert(win.frame, widget)
     win.frame = widget
     # Remove Parent if has
     widget.parent = nil
     # Mark as Visible and Dirty
-    widget.flags.set(wVisible)
-    widget.set(wDirty)
+    widget.flags.incl(wVisible)
+    # TODO: defer this callback
+    pushSignal(widget.target, msgDirty)
 
 proc popup(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
-  not widget.test(wVisible):
+  wVisible notin widget.flags:
     # Insert Widget to List
     if isNil(win.popup):
       insert(win.frame, widget)
@@ -451,12 +452,13 @@ proc popup(win: GUIWindow, widget: GUIWidget) =
     # Remove Parent if has
     widget.parent = nil
     # Mark as Visible and Dirty
-    widget.flags.set(wVisible)
-    widget.set(wDirty)
+    widget.flags.incl(wVisible)
+    # TODO: defer this callback
+    pushSignal(widget.target, msgDirty)
 
 proc tooltip(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
-  not widget.test(wVisible):
+  wVisible notin widget.flags:
     # Inset Widget To List
     if not isNil(win.tooltip):
       insert(win.tooltip, widget)
@@ -469,8 +471,9 @@ proc tooltip(win: GUIWindow, widget: GUIWidget) =
     # Remove Parent if has
     widget.parent = nil
     # Mark as Visible and Dirty
-    widget.flags.set(wVisible)
-    widget.set(wDirty)
+    widget.flags.incl(wVisible)
+    # TODO: defer this callback
+    pushSignal(widget.target, msgDirty)
 
 # --------------------------
 # GUI WINDOW MAIN LOOP PROCS
@@ -499,8 +502,8 @@ proc handleEvents*(win: GUIWindow) =
         win.h = rect.h
         # Set Renderer Viewport
         viewport(win.ctx, rect.w, rect.h)
-        # Relayout Root Widget
-        set(win.root, wDirty)
+        # TODO: defer this callback
+        pushSignal(win.root.target, msgDirty)
     else: # Check if the event is valid for be processed by a widget
       if translateXEvent(win.state, win.display, addr event, win.xic):
         let # Avoids win.state everywhere
@@ -539,14 +542,14 @@ proc handleSignals*(win: GUIWindow): bool =
       of msgCloseIM: XUnsetICFocus(win.xic)
       of msgUnfocus: # Un Focus
         if not isNil(win.focus):
-          clear(win.focus.flags, wFocus)
+          excl(win.focus.flags, wFocus)
           handle(win.focus, outFocus)
           # Remove Focus
           win.focus = nil
       of msgUnhover: # Un Hover
         if not isNil(win.hover):
           handle(win.hover, outHover)
-          clear(win.hover.flags, wHoverGrab)
+          excl(win.hover.flags, wHoverGrab)
           # Remove Hover
           win.hover = nil
       of msgTerminate: 

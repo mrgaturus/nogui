@@ -144,7 +144,7 @@ widget UXComboBox:
     menu.metrics.w = int16 rect.w
 
   new combobox(model: ComboModel):
-    result.flags = wMouse
+    result.flags = {wMouse}
     result.model = model
 
   proc opaque*: UXComboBox {.inline.} =
@@ -186,5 +186,5 @@ widget UXComboBox:
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:
-      self.flags.clear(wGrab)
+      self.flags.excl(wGrab)
       push(self.cbOpenMenu)

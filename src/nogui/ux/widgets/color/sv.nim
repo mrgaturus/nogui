@@ -12,7 +12,7 @@ widget UXColor0Square:
     
   new sv0square(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Minimun Width Size
     let w = getApp().font.height
     result.minimum(w, w)
@@ -130,7 +130,7 @@ widget UXColor0Triangle:
 
   new sv0triangle(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Minimun Width Size
     let w = getApp().font.height
     result.minimum(w, w)

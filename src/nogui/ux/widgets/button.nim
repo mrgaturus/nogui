@@ -7,7 +7,7 @@ widget UXButton:
 
   proc init0(cb: GUICallback) =
     # Widget Standard Flag
-    self.flags = wMouse
+    self.flags = {wMouse}
     self.cb = cb
 
   new button(label: string, cb: GUICallback):
@@ -122,7 +122,7 @@ widget UXButtonOpaque:
     lm: GUILabelMetrics
 
   proc init0*(label: string, icon = CTXIconEmpty) =
-    self.flags = wMouse
+    self.flags = {wMouse}
     # Labeling Values
     self.icon = icon
     self.label = label

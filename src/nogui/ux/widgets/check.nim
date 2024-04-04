@@ -8,7 +8,7 @@ widget UXCheckBox:
     check: & bool
 
   new checkbox(label: string, check: & bool):
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Checkbox Attributes
     result.label = label
     result.check = check

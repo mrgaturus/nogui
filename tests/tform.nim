@@ -20,7 +20,7 @@ proc field(name: string, check: & bool, w: GUIWidget): GUIWidget =
   # Create Middle Checkbox
   let c = checkbox("", ck)
   if isNil(check):
-    c.flags = wHidden
+    c.flags = {wHidden}
   # Level Widget
   let l = level().child:
     label(name, hoLeft, veMiddle)

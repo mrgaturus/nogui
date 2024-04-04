@@ -21,7 +21,7 @@ widget UXTextBox:
     [wc, wo, wl]: int32
 
   new textbox(input: ptr UTF8Input):
-    result.flags = wMouse or wKeyboard
+    result.flags = wStandard
     # Widget Attributes
     result.input = input
 
@@ -68,7 +68,7 @@ widget UXTextBox:
     ctx.color(colors.darker)
     ctx.fill rect(self.rect)
     # Draw Textbox Status
-    if self.any(wHover or wFocus):
+    if self.some({wHover, wFocus}):
       if self.test(wFocus):
         # Focused Outline Color
         ctx.color(colors.text)
@@ -99,8 +99,9 @@ widget UXTextBox:
       of XK_Left: input.prev()
       of XK_Home: input.jump(low int32)
       of XK_End: input.jump(high int32)
-      of XK_Return, XK_Escape: 
-        self.clear(wFocus)
+      of XK_Return, XK_Escape:
+        # TODO: defer this callback
+        pushSignal(msgUnfocus)
       else: # Add UTF8 Char
         case state.utf8state
         of UTF8Nothing, UTF8Keysym: discard
@@ -113,7 +114,8 @@ widget UXTextBox:
         state.mx - self.rect.x - size + self.wo)
       # Focus Textbox
       if state.kind == evCursorClick:
-        self.set(wFocus)
+        # TODO: defer this callback
+        pushSignal(self.target, msgFocus)
     # Mark Text Input used By This Widget
     if state.kind in {evKeyDown, evCursorClick, evCursorMove}:
       self.calculateOffsets()

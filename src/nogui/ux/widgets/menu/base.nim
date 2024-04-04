@@ -112,7 +112,7 @@ widget UXMenuItem:
     self.portal[] = self
 
   proc init0*(label: string, icon = CTXIconEmpty) =
-    self.flags = wMouseKeyboard
+    self.flags = wStandard
     # Labeling Attributes
     self.icon = icon
     self.label = label
@@ -132,7 +132,7 @@ widget UXMenuItem:
     
   proc event0*(state: ptr GUIState): bool =
     # Remove Grab Flag
-    self.flags.clear(wGrab)
+    self.flags.excl(wGrab)
     # Check if was actioned and send ondone callback
     result = state.kind == evCursorRelease and self.test(wHover)
     if result: push(self.ondone)
