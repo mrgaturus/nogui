@@ -49,17 +49,16 @@ type
     eglCfg: EGLConfig
     eglCtx: EGLContext
     eglSur: EGLSurface
-    # Main Window
+    # Window State
     ctx: CTXRender
     state: GUIState
     queue: GUIQueue
-    # Root Widget
+    # Window Widgets
     root: GUIWidget
-    # Last Widgets
     frame: GUIWidget
     popup: GUIWidget
     tooltip: GUIWidget
-    # Cache Widgets
+    # Status Widgets
     focus: GUIWidget
     hover: GUIWidget
 
@@ -206,27 +205,6 @@ proc close*(win: GUIWindow) =
 # -----------------------------
 # WINDOW FLOATING PRIVATE PROCS
 # -----------------------------
-
-# -- Add Helper
-proc insert(pivot, widget: GUIWidget) =
-  # Add to left of widget next
-  widget.next = pivot.next
-  if not isNil(pivot.next):
-    pivot.next.prev = widget
-  # Add to right of widget
-  widget.prev = pivot
-  pivot.next = widget
-
-# -- Delete Helper
-proc delete(widget: GUIWidget) =
-  # Check if next is not nil
-  if not isNil(widget.next):
-    widget.next.prev = widget.prev
-  # Prev Widget is allways not nil
-  widget.prev.next = widget.next
-  # Remove next and prev
-  widget.next = nil
-  widget.prev = nil
 
 # --- Mark As Top Level ---
 proc elevate(win: GUIWindow, widget: GUIWidget) =
@@ -406,7 +384,7 @@ proc close(win: GUIWindow, widget: GUIWidget) =
         win.tooltip = nil
       else: win.tooltip = prev
     # Remove from List
-    widget.delete()
+    widget.detach()
     # Remove Visible Flag
     widget.flags.excl(wVisible)
     # Unfocus Children Widget
@@ -430,7 +408,7 @@ proc close(win: GUIWindow, widget: GUIWidget) =
 proc frame(win: GUIWindow, widget: GUIWidget) =
   if widget.kind > wgChild and
   wVisible notin widget.flags:
-    insert(win.frame, widget)
+    attachNext(win.frame, widget)
     win.frame = widget
     # Remove Parent if has
     widget.parent = nil
@@ -444,9 +422,9 @@ proc popup(win: GUIWindow, widget: GUIWidget) =
   wVisible notin widget.flags:
     # Insert Widget to List
     if isNil(win.popup):
-      insert(win.frame, widget)
+      attachNext(win.frame, widget)
     else: # Change Last Popup
-      insert(win.popup, widget)
+      attachNext(win.popup, widget)
     # Change Last Popup
     win.popup = widget
     # Remove Parent if has
@@ -461,11 +439,11 @@ proc tooltip(win: GUIWindow, widget: GUIWidget) =
   wVisible notin widget.flags:
     # Inset Widget To List
     if not isNil(win.tooltip):
-      insert(win.tooltip, widget)
+      attachNext(win.tooltip, widget)
     elif not isNil(win.popup):
-      insert(win.popup, widget)
+      attachNext(win.popup, widget)
     else: # Insert at Frame
-      insert(win.frame, widget)
+      attachNext(win.frame, widget)
     # Change Last Tooltip
     win.tooltip = widget
     # Remove Parent if has
@@ -562,10 +540,7 @@ proc handleTimers*(win: GUIWindow) =
 proc render*(win: GUIWindow) =
   begin(win.ctx) # -- Begin GUI Rendering
   for widget in forward(win.root):
-    widget.draw(addr win.ctx)
-    # Render Widget Childrens
-    if not isNil(widget.first):
-      render(widget, addr win.ctx)
+    render(widget, addr win.ctx)
     # Draw Commands
     render(win.ctx)
   finish() # -- End GUI Rendering

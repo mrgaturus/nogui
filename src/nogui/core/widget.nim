@@ -109,9 +109,9 @@ proc some*(self: GUIWidget, mask: GUIFlags): bool {.inline.} =
 proc target*(self: GUIWidget): GUITarget {.inline.} =
   cast[GUITarget](self) # Avoid Ref Count Loosing
 
-# ----------------------------
-# WIDGET ADD CHILD NODES PROCS
-# ----------------------------
+# ---------------------
+# WIDGET CHILDREN PROCS
+# ---------------------
 
 proc add*(self, widget: GUIWidget) =
   widget.parent = self
@@ -126,11 +126,13 @@ proc add*(self, widget: GUIWidget) =
   # Set Kind as Children
   widget.kind = wgChild
 
+# ----------------------------------------------
+# WIDGET SLIBINGS PROCS
+# TODO: CHECK IF ATTACHED TO AVOID DOUBLE ATTACH
+# ----------------------------------------------
+
 proc replace*(self, widget: GUIWidget) =
   var w {.cursor.}: GUIWidget
-  # Debug Check
-  assert self.kind == widget.kind
-  assert widget.kind == wgChild
   # Replace Prev
   if not isNil(self.prev):
     w = self.prev
@@ -144,23 +146,56 @@ proc replace*(self, widget: GUIWidget) =
   # Replace Parent
   w = self.parent
   widget.parent = w
-  if not isNil(self.parent):
+  if not isNil(w):
     if w.first == self:
       w.first = widget
     if w.last == self:
       w.last = widget
 
+proc attachNext*(self, widget: GUIWidget) =
+  var w {.cursor.}: GUIWidget
+  # Replace Next Previous
+  w = self.next
+  if not isNil(w):
+    w.prev = widget
+  # Replace Sides
+  widget.next = w
+  widget.prev = self
+  # Replace Next
+  self.next = widget
+  # Replace Parent
+  w = self.parent
+  if not isNil(w) and w.last == self:
+    w.last = widget
+  widget.parent = w
+
+proc attachPrev*(self, widget: GUIWidget) =
+  var w {.cursor.}: GUIWidget
+  # Replace Previous Next
+  w = self.prev
+  if not isNil(w):
+    w.next = widget
+  # Replace Sides
+  widget.next = self
+  widget.prev = w
+  # Replace Prev
+  self.prev = widget
+  # Replace Parent
+  w = self.parent
+  if not isNil(w) and w.first == self:
+    w.first = widget
+  widget.parent = w
+
 proc detach*(self: GUIWidget) =
-  assert self.kind == wgChild
   # Replace Prev
   if not isNil(self.prev):
     self.prev.next = self.next
   # Replace Next
   if not isNil(self.next):
     self.next.prev = self.prev
-  # Replace Parent Extremuns
+  # Replace Parent Endpoints
   let w {.cursor.} = self.parent
-  if not isNil(self.parent):
+  if not isNil(w):
     if w.first == self:
       w.first = self.next
     if w.last == self:
