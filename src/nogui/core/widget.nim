@@ -57,16 +57,6 @@ type
     rect*: GUIRect
     metrics*: GUIMetrics
 
-# -----------------------------------------------
-# WIDGET ABSTRACT METHODS - TODO: GET RID OF THIS
-# -----------------------------------------------
-
-template handle*(w: GUIWidget, kind: GUIHandle) = w.vtable.handle(w, kind)
-template event*(w: GUIWidget, state: ptr GUIState) = w.vtable.event(w, state)
-template update*(w: GUIWidget) = w.vtable.update(w)
-template layout*(w: GUIWidget) = w.vtable.layout(w)
-template draw*(w: GUIWidget, ctx: ptr CTXRender) = w.vtable.draw(w, ctx)
-
 # -------------------
 # WIDGET TREE WALKERS
 # -------------------

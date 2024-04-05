@@ -275,6 +275,35 @@ proc close(win: GUIWindow, widget: GUIWidget) =
   widget.flags.excl(wVisible)
   widget.vtable.handle(widget, outFrame)
 
+# ---------------------------
+# Window Keyboard Event Procs
+# ---------------------------
+
+proc findFocus(win: GUIWindow, state: ptr GUIState): GUIWidget =
+  let
+    focus {.cursor.} = win.focus
+    # Check Tab Key Pressed
+    tab = state.key == RightTab
+    back = state.key == LeftTab
+    check = state.kind == evKeyDown and (tab or back)
+  # TODO: Check focus step in state translation
+  # Check Focus Step Key Pressed
+  if not check or isNil(focus):
+    return focus
+  # Step Focus Widget
+  var widget {.cursor.} = focus
+  if not isNil(widget.parent):
+    widget = step(widget, back)
+    if widget != focus:
+      # Handle Focus Out
+      focus.flags.excl(wFocus)
+      focus.vtable.handle(focus, outFocus)
+      # Handle Focus In
+      widget.flags.incl(wFocus)
+      widget.vtable.handle(widget, inFocus)
+      # Change Focus
+      win.focus = widget
+
 # -------------------------
 # Window Cursor Event Procs
 # -------------------------
@@ -339,60 +368,31 @@ proc prepareClick(win: GUIWindow, found: GUIWidget, state: ptr GUIState) =
     found.flags.excl(wGrab)
 
 # ---------------------------
-# Window Keyboard Event Procs
-# ---------------------------
-
-proc findFocus(win: GUIWindow, state: ptr GUIState): GUIWidget =
-  let
-    focus {.cursor.} = win.focus
-    # Check Tab Key Pressed
-    tab = state.key == RightTab
-    back = state.key == LeftTab
-    check = state.kind == evKeyDown and (tab or back)
-  # Check Focus Step Key Pressed
-  if not check or isNil(focus):
-    return focus
-  # Step Focus Widget
-  var widget {.cursor.} = focus
-  if not isNil(widget.parent):
-    widget = step(widget, back)
-    if widget != focus:
-      # Handle Focus Out
-      focus.flags.excl(wFocus)
-      focus.vtable.handle(focus, outFocus)
-      # Handle Focus In
-      widget.flags.incl(wFocus)
-      widget.vtable.handle(widget, inFocus)
-      # Change Focus
-      win.focus = widget
-
-# ---------------------------
 # Window Event Dispatch Procs
 # ---------------------------
 
-proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
-  case state.kind
-  of evCursorMove, evCursorClick, evCursorRelease:
-    result = win.findHover(state)
-  of evKeyDown, evKeyUp:
-    # TODO: dispatch callback based hotkeys instead root
-    result = win.findFocus(state)
-
-proc dispatch(win: GUIWindow, found: GUIWidget, state: ptr GUIState) =
-  var enabled: bool
+proc widgetEvent(win: GUIWindow, state: ptr GUIState) =
+  var
+    found {.cursor.}: GUIWidget
+    enabled: bool
   # Dispatch Check
   case state.kind
   of evCursorMove, evCursorClick, evCursorRelease:
+    found = win.findHover(state)
     win.prepareHover(found, state)
+    # Check if widget is Enabled
     enabled = wMouse in found.flags
     # Prepare Widget Grab
     if enabled:
       win.prepareClick(found, state)
   of evKeyDown, evKeyUp:
+    found = win.findFocus(state)
+    if isNil(found):
+      return
     # TODO: dispatch callback based hotkeys instead root
-    # Check if Step Focus Key is Pressed
-    if not isNil(found):
-      enabled = wKeyboard in found.flags
+    # TODO: Check focus step in state translation
+    # Check if widget is enabled
+    enabled = wKeyboard in found.flags
   # Dispatch Widget Event
   if enabled:
     found.vtable.event(found, state)
@@ -424,11 +424,7 @@ proc handleEvents*(win: GUIWindow) =
         pushSignal(win.root.target, msgDirty)
     else: # Check if the event is valid for be processed by a widget
       if translateXEvent(win.state, win.display, addr event, win.xic):
-        let
-          state = addr win.state
-          found = find(win, state)
-        # Dispatch Widget Event
-        win.dispatch(found, state)
+        win.widgetEvent(addr win.state)
 
 # ------------------------------
 # Window Callback Dispatch Procs
@@ -485,15 +481,17 @@ proc handleSignals*(win: GUIWindow): bool =
       of msgOpenIM: XSetICFocus(win.xic)
       of msgCloseIM: XUnsetICFocus(win.xic)
       of msgUnfocus: # Un Focus
-        if not isNil(win.focus):
-          excl(win.focus.flags, wFocus)
-          handle(win.focus, outFocus)
+        let focus {.cursor.} = win.focus
+        if not isNil(focus):
+          focus.flags.excl(wFocus)
+          focus.vtable.handle(focus, outFocus)
           # Remove Focus
           win.focus = nil
       of msgUnhover: # Un Hover
-        if not isNil(win.hover):
-          handle(win.hover, outHover)
-          excl(win.hover.flags, wHoverGrab)
+        let hover {.cursor.} = win.hover
+        if not isNil(hover):
+          hover.flags.excl(wHoverGrab)
+          hover.vtable.handle(hover, outHover)
           # Remove Hover
           win.hover = nil
       of msgTerminate: 
@@ -501,7 +499,7 @@ proc handleSignals*(win: GUIWindow): bool =
 
 proc handleTimers*(win: GUIWindow) =
   for widget in walkTimers():
-    widget.update()
+    widget.vtable.update(widget)
 
 # -------------------
 # GUI Rendering Procs

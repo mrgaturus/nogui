@@ -97,7 +97,7 @@ widget UXMenu:
       if not isNil(top) and 
         self.vtable != top.vtable:
           # TODO: event propagation
-          top.event(state)
+          top.vtable.event(top, state)
       elif isNil(top) and state.kind == evCursorClick:
         # This is Top Level
         self.close()
@@ -265,10 +265,11 @@ widget UXMenuBar:
   method event(state: ptr GUIState) =
     # Find Inner Widget
     if not isNil(self.selected):
+      # TODO: event propagation
       let w = self.find(state.mx, state.my)
       if w.parent == self:
-        w.handle(inHover)
-        w.event(state)
+        w.vtable.handle(w, inHover)
+        w.vtable.event(w, state)
       # Close Cursor When Clicked Outside
       elif state.kind == evCursorClick:
         let prev {.cursor.} = self.selected

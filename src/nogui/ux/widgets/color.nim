@@ -56,8 +56,8 @@ widget UXColorWheel:
 
   method draw(ctx: ptr CTXRender) =
     # Draw Two Widgets
-    self.first.draw(ctx)
-    self.last.draw(ctx)
+    self.first.vtable.draw(self.first, ctx)
+    self.last.vtable.draw(self.last, ctx)
 
   method layout =
     let
@@ -101,7 +101,7 @@ widget UXColorWheel:
       let hold = self.hold
       # Execute Event
       hold.flags = self.flags
-      hold.event(state)
+      hold.vtable.event(hold, state)
       hold.flags = {wHidden}
 
 # --------------------
@@ -146,9 +146,10 @@ widget UXColorWheel0Triangle:
     triangle.w = int16(radius) shl 1
     triangle.h = int16(radius) shl 1
 
-  method draw(ctx: ptr CTXRender) = 
-    self.first.draw(ctx)
-    self.last.draw(ctx)
+  method draw(ctx: ptr CTXRender) =
+    # TODO: those hacks will be gone thanks to event propagation
+    self.first.vtable.draw(self.first, ctx)
+    self.last.vtable.draw(self.last, ctx)
 
   proc collide(x, y: float32): bool =
     let 
@@ -188,5 +189,5 @@ widget UXColorWheel0Triangle:
       let hold = self.hold
       # Execute Event
       hold.flags = self.flags
-      hold.event(state)
+      hold.vtable.event(hold, state)
       hold.flags = {wHidden}
