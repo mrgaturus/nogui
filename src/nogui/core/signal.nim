@@ -8,10 +8,12 @@ type
     sWidget
     sWindow
   WidgetSignal* = enum
-    msgDirty, msgFocus
-    msgCheck, msgClose
-    # Widget Window Open
-    msgFrame, msgPopup, msgTooltip
+    msgDirty
+    msgFocus
+    msgCheck
+    # Widget Framing
+    msgOpen
+    msgClose
   WindowSignal* = enum
     msgOpenIM
     msgCloseIM

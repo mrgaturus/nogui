@@ -33,6 +33,9 @@ let
   ]
 
 type
+  GUILayer = object
+    first: GUIWidget
+    last {.cursor.}: GUIWidget
   GUIWindow* = ref object
     # X11 Display & Window
     display: PDisplay
@@ -55,9 +58,10 @@ type
     queue: GUIQueue
     # Window Widgets
     root: GUIWidget
-    frame: GUIWidget
-    popup: GUIWidget
-    tooltip: GUIWidget
+    # Window Layers
+    frame: GUILayer
+    popup: GUILayer
+    tooltip: GUILayer
     # Status Widgets
     focus: GUIWidget
     hover: GUIWidget
@@ -167,17 +171,16 @@ proc newGUIWindow*(w, h: int32, queue: GUIQueue, atlas: CTXAtlas): GUIWindow =
   atlas.createTexture()
   result.ctx = newCTXRender(atlas)
 
-# -----------------------
-# WINDOW OPEN/CLOSE PROCS
-# -----------------------
+# ----------------------
+# Window Execution Procs
+# ----------------------
 
-proc open*(win: GUIWindow, root: GUIWidget): bool =
-  # Set First Widget and Last Frame
+proc execute*(win: GUIWindow, root: GUIWidget): bool =
   win.root = root
-  win.frame = root
   # Set as Frame Kind
-  root.kind = wgFrame
-  root.flags.incl(wVisible)
+  root.kind = wgRoot
+  #root.flags.incl(wVisible)
+  root.flags = {wMouse, wKeyboard, wVisible}
   # Set to Global Dimensions
   root.metrics.w = int16 win.w
   root.metrics.h = int16 win.h
@@ -189,7 +192,7 @@ proc open*(win: GUIWindow, root: GUIWidget): bool =
   # TODO: defer this callback
   pushSignal(root.target, msgDirty)
 
-proc close*(win: GUIWindow) =
+proc destroy*(win: GUIWindow) =
   # Dispose UTF8Buffer
   dealloc(win.state.utf8str)
   # Dispose EGL
@@ -202,25 +205,77 @@ proc close*(win: GUIWindow) =
   discard XDestroyWindow(win.display, win.xID)
   discard XCloseDisplay(win.display)
 
+# ------------------
+# Window Layer Procs
+# ------------------
+
+proc attach(layer: var GUILayer, widget: GUIWidget) =
+  if isNil(layer.last):
+    layer.first = widget
+    layer.last = widget
+    # Remove Endpoints
+    widget.next = nil
+    widget.prev = nil
+    widget.parent = nil
+  else: # Attach Last
+    attachNext(layer.last, widget)
+    layer.last = widget
+
+proc detach(layer: var GUILayer, widget: GUIWidget) =
+  # Replace First or Last
+  if widget == layer.first:
+    layer.first = widget.next
+  if widget == layer.last:
+    layer.last = widget.prev
+  # Detach Widget
+  widget.detach()
+  # Remove Endpoints
+  widget.next = nil
+  widget.prev = nil
+
+proc elevate(layer: var GUILayer, widget: GUIWidget) =
+  # Nothing to Elevate
+  if widget == layer.last:
+    return
+  # Replace First
+  if widget == layer.first:
+    layer.first = widget.next
+  # Detach Widget
+  widget.detach()
+  # Attach to Last
+  attachNext(layer.last, widget)
+  layer.last = widget
+
 # -----------------------------
-# WINDOW FLOATING PRIVATE PROCS
+# Window Layer Open/Close Procs
 # -----------------------------
 
-# --- Mark As Top Level ---
-proc elevate(win: GUIWindow, widget: GUIWidget) =
-  if widget != win.root and widget != win.frame:
-    # Remove frame from it's position
-    widget.prev.next = widget.next
-    widget.next.prev = widget.prev
-    # Move frame to last frame
-    widget.prev = win.frame
-    widget.next = win.frame.next
-    # Change Prev Last Next
-    if not isNil(widget.next):
-      widget.next.prev = widget
-    # Change Last Frame
-    win.frame.next = widget
-    win.frame = widget
+proc layer(win: GUIWindow, widget: GUIWidget): ptr GUILayer =
+  case widget.kind
+  of wgFrame: addr win.frame
+  of wgPopup, wgMenu: addr win.popup
+  of wgTooltip: addr win.tooltip
+  # Not Belongs to Layer
+  else: nil
+
+proc open(win: GUIWindow, widget: GUIWidget) =
+  if wVisible in widget.flags: return
+  # Attach Widget to Layer
+  let la = win.layer(widget)
+  la[].attach(widget)
+  # Handle Widget Attach
+  widget.flags.incl(wVisible)
+  widget.vtable.handle(widget, inFrame)
+  widget.arrange()
+  echo "opened: ", cast[pointer](widget).repr
+
+proc close(win: GUIWindow, widget: GUIWidget) =
+  let la = win.layer(widget)
+  la[].detach(widget)
+  # Handle Widget Detach
+  widget.flags.excl(wVisible)
+  widget.vtable.handle(widget, outFrame)
+  echo "closed: ", cast[pointer](widget).repr
 
 # ---------------------------------
 # GUI WINDOW MAIN LOOP HELPER PROCS
@@ -238,16 +293,19 @@ proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
       else: result.flags.excl(wHover)
       # Return Widget
       return result
-    elif isNil(win.popup): # Find Frames
-      for widget in reverse(win.frame):
+    elif not isNil(win.popup.last):
+      # TODO: event propagation to just lookup first popup for menus
+      for widget in reverse(win.popup.last):
+        if widget.kind == wgPopup or pointOnArea(widget, state.mx, state.my):
+          result = widget
+          break # Popup Found
+    elif not isNil(win.frame.last): # Find Frames
+      for widget in reverse(win.frame.last):
         if pointOnArea(widget, state.mx, state.my):
-          result = widget; break # Frame Found
-    else: # TODO: event propagation
-      for widget in reverse(win.popup):
-        if widget == win.frame: break # Not Found
-        if widget.kind == wgPopup or pointOnArea(
-            widget, state.mx, state.my):
-          result = widget; break # Popup Found
+          result = widget
+          break # Frame Found
+    # Fallback to Root
+    else: result = win.root
     # Check if Not Found
     if isNil(result):
       if not isNil(win.hover):
@@ -284,7 +342,7 @@ proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
       win.hover = result
   of evKeyDown, evKeyUp:
     result = # Focus Root if there is no popup
-      if isNil(win.focus) and isNil(win.popup):
+      if isNil(win.focus) and isNil(win.popup.first):
         win.root # Fallback
       else: win.focus # Use Focus
 
@@ -299,7 +357,7 @@ proc prepare(win: GUIWindow, widget: GUIWidget, kind: GUIEvent): bool =
     # Elevate if is a Frame
     let frame = widget.outside
     if frame.kind == wgFrame:
-      elevate(win, frame)
+      elevate(win.frame, frame)
     # Check if is able
     wMouse in widget.flags
   of evCursorRelease:
@@ -325,17 +383,14 @@ proc step(win: GUIWindow, back: bool) =
       # Change Focus
       win.focus = widget
 
-# -- Relayout Widget, TODO: change dirty
-proc dirty(win: GUIWindow, widget: GUIWidget) =
-  if wVisible in widget.flags:
-    widget.arrange()
-    # Check Focus Visibility
-    if not isNil(win.focus) and 
-    not win.focus.visible:
-      excl(win.focus.flags, wFocus)
-      handle(win.focus, outFocus)
-      # Remove Focus
-      win.focus = nil
+proc check(win: GUIWindow, widget: GUIWidget) =
+  # Check if is still focused
+  if widget == win.focus and
+  wFocusable + {wFocus} notin widget.flags:
+    widget.flags.excl(wFocus)
+    widget.handle(outFocus)
+    # Remove Focus
+    win.focus = nil
 
 # -- Focus Handling
 proc focus(win: GUIWindow, widget: GUIWidget) =
@@ -351,111 +406,16 @@ proc focus(win: GUIWindow, widget: GUIWidget) =
     # Replace Focus
     win.focus = widget
 
-proc check(win: GUIWindow, widget: GUIWidget) =
-  # Check if is still focused
-  if widget == win.focus and
-  wFocusable + {wFocus} notin widget.flags:
-    widget.flags.excl(wFocus)
-    widget.handle(outFocus)
-    # Remove Focus
-    win.focus = nil
+# -- Relayout Widget, TODO: change dirty naming
+proc dirty(win: GUIWindow, widget: GUIWidget) =
+  if wVisible in widget.flags:
+    # Arrange Widget and Check Focus
+    widget.arrange()
+    win.check(widget)
 
-# -- Close any Frame/Popup/Tooltip
-proc close(win: GUIWindow, widget: GUIWidget) =
-  if wVisible in widget.flags and
-  widget.kind > wgChild and
-  widget != win.root: # Avoid Root
-    # is Last Frame?
-    if widget == win.frame:
-      win.frame = widget.prev
-    # is Last Popup?
-    elif widget == win.popup:
-      let prev = widget.prev
-      # No more popups?
-      if prev == win.frame:
-        win.popup = nil
-      else: win.popup = prev
-    # is Last Tooltip?
-    elif widget == win.tooltip:
-      let prev = widget.prev
-      # No more tooltips?
-      if prev == win.popup or
-         prev == win.frame:
-        win.tooltip = nil
-      else: win.tooltip = prev
-    # Remove from List
-    widget.detach()
-    # Remove Visible Flag
-    widget.flags.excl(wVisible)
-    # Unfocus Children Widget
-    if not isNil(win.focus) and
-    win.focus.outside == widget:
-      excl(win.focus.flags, wFocus)
-      handle(win.focus, outFocus)
-      # Remove Focus
-      win.focus = nil
-    # Unhover Children Widget
-    if not isNil(win.hover) and
-    win.hover.outside == widget:
-      handle(win.hover, outHover)
-      excl(win.hover.flags, wHoverGrab)
-      # Remove Hover
-      win.hover = nil
-    # Handle outFrame
-    widget.handle(outFrame)
-
-# -- Open as Frame/Popup/Tooltip
-proc frame(win: GUIWindow, widget: GUIWidget) =
-  if widget.kind > wgChild and
-  wVisible notin widget.flags:
-    attachNext(win.frame, widget)
-    win.frame = widget
-    # Remove Parent if has
-    widget.parent = nil
-    # Mark as Visible and Dirty
-    widget.flags.incl(wVisible)
-    # TODO: defer this callback
-    pushSignal(widget.target, msgDirty)
-
-proc popup(win: GUIWindow, widget: GUIWidget) =
-  if widget.kind > wgChild and
-  wVisible notin widget.flags:
-    # Insert Widget to List
-    if isNil(win.popup):
-      attachNext(win.frame, widget)
-    else: # Change Last Popup
-      attachNext(win.popup, widget)
-    # Change Last Popup
-    win.popup = widget
-    # Remove Parent if has
-    widget.parent = nil
-    # Mark as Visible and Dirty
-    widget.flags.incl(wVisible)
-    # TODO: defer this callback
-    pushSignal(widget.target, msgDirty)
-
-proc tooltip(win: GUIWindow, widget: GUIWidget) =
-  if widget.kind > wgChild and
-  wVisible notin widget.flags:
-    # Inset Widget To List
-    if not isNil(win.tooltip):
-      attachNext(win.tooltip, widget)
-    elif not isNil(win.popup):
-      attachNext(win.popup, widget)
-    else: # Insert at Frame
-      attachNext(win.frame, widget)
-    # Change Last Tooltip
-    win.tooltip = widget
-    # Remove Parent if has
-    widget.parent = nil
-    # Mark as Visible and Dirty
-    widget.flags.incl(wVisible)
-    # TODO: defer this callback
-    pushSignal(widget.target, msgDirty)
-
-# --------------------------
-# GUI WINDOW MAIN LOOP PROCS
-# --------------------------
+# ------------------------
+# GUI EVENT HANDLING PROCS
+# ------------------------
 
 proc handleEvents*(win: GUIWindow) =
   var event: XEvent
@@ -510,10 +470,9 @@ proc handleSignals*(win: GUIWindow): bool =
       of msgDirty: dirty(win, widget)
       of msgFocus: focus(win, widget)
       of msgCheck: check(win, widget)
+      # Window Layer Widget
+      of msgOpen: open(win, widget)
       of msgClose: close(win, widget)
-      of msgFrame: frame(win, widget)
-      of msgPopup: popup(win, widget)
-      of msgTooltip: tooltip(win, widget)
     of sWindow:
       case signal.wsg
       of msgOpenIM: XSetICFocus(win.xic)
@@ -537,14 +496,29 @@ proc handleTimers*(win: GUIWindow) =
   for widget in walkTimers():
     widget.update()
 
+# -------------------
+# GUI RENDERING PROCS
+# -------------------
+
+proc renderLayer(ctx: ptr CTXRender, layer: GUILayer) =
+  if isNil(layer.first): return
+  # Render Widgets
+  for w in forward(layer.first):
+    w.render(ctx)
+    ctx[].render()
+
 proc render*(win: GUIWindow) =
   begin(win.ctx) # -- Begin GUI Rendering
-  for widget in forward(win.root):
-    render(widget, addr win.ctx)
-    # Draw Commands
-    render(win.ctx)
+  let ctx = addr win.ctx
+  # Render Root
+  render(win.root, ctx)
+  ctx[].render()
+  # Render Window Layers
+  ctx.renderLayer(win.frame)
+  ctx.renderLayer(win.popup)
+  ctx.renderLayer(win.tooltip)
   finish() # -- End GUI Rendering
-  # Present Frame to X11/EGL
+  # Present Frame to EGL
   discard eglSwapBuffers(win.eglDsp, win.eglSur)
 
 # -----------------------------------------------

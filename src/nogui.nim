@@ -53,7 +53,7 @@ type
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
   # Close Window and Queue
-  close(app.window)
+  destroy(app.window)
   dispose(app.queue)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
@@ -145,7 +145,7 @@ proc getApp*(): GUIApplication =
 
 template executeApp*(root: GUIWidget, body: untyped) =
   let win {.cursor.} = app.window
-  if win.open(root):
+  if win.execute(root):
     # TODO: allow configure ms
     loop(16):
       # TODO: unify all into one queue

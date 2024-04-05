@@ -29,7 +29,7 @@ type
     inFocus, inHover, inFrame
     outFocus, outHover, outFrame
   GUIKind* = enum
-    wgChild, wgFrame # Basic
+    wgRoot, wgChild, wgFrame # Basic
     wgPopup, wgMenu, wgTooltip
   # Widget VTable Methods
   GUIMethods* {.pure.} = object
@@ -240,16 +240,8 @@ proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
 # WIDGET FRAMED Move and Resize
 # -----------------------------
 
-proc open*(widget: GUIWidget) =
-  let target = widget.target
-  case widget.kind
-  of wgFrame: # Subwindow
-    pushSignal(target, msgFrame)
-  of wgPopup, wgMenu: # Stacked
-    pushSignal(target, msgPopup)
-  of wgTooltip: # Tooltip
-    pushSignal(target, msgTooltip)
-  of wgChild: discard # Invalid
+proc open*(widget: GUIWidget) {.inline.} =
+  pushSignal(widget.target, msgOpen)
 
 proc close*(widget: GUIWidget) {.inline.} =
   pushSignal(widget.target, msgClose)
