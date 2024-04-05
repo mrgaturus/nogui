@@ -205,9 +205,9 @@ proc destroy*(win: GUIWindow) =
   discard XDestroyWindow(win.display, win.xID)
   discard XCloseDisplay(win.display)
 
-# ------------------
-# Window Layer Procs
-# ------------------
+# --------------------------
+# Window Layer Attach/Detach
+# --------------------------
 
 proc attach(layer: var GUILayer, widget: GUIWidget) =
   if isNil(layer.last):
@@ -246,9 +246,9 @@ proc elevate(layer: var GUILayer, widget: GUIWidget) =
   attachNext(layer.last, widget)
   layer.last = widget
 
-# -----------------------------
-# Window Layer Open/Close Procs
-# -----------------------------
+# -----------------------
+# Window Layer Open/Close
+# -----------------------
 
 proc layer(win: GUIWindow, widget: GUIWidget): ptr GUILayer =
   case widget.kind
@@ -267,7 +267,6 @@ proc open(win: GUIWindow, widget: GUIWidget) =
   widget.flags.incl(wVisible)
   widget.vtable.handle(widget, inFrame)
   widget.arrange()
-  echo "opened: ", cast[pointer](widget).repr
 
 proc close(win: GUIWindow, widget: GUIWidget) =
   let la = win.layer(widget)
@@ -275,147 +274,128 @@ proc close(win: GUIWindow, widget: GUIWidget) =
   # Handle Widget Detach
   widget.flags.excl(wVisible)
   widget.vtable.handle(widget, outFrame)
-  echo "closed: ", cast[pointer](widget).repr
 
-# ---------------------------------
-# GUI WINDOW MAIN LOOP HELPER PROCS
-# ---------------------------------
+# -------------------------
+# Window Cursor Event Procs
+# -------------------------
 
-# -- Find Widget by State
-proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
-  case state.kind
-  of evCursorMove, evCursorClick, evCursorRelease:
-    if not isNil(win.hover) and wGrab in win.hover.flags:
-      result = win.hover
-      # Check Grabbed Point On Area
-      if pointOnArea(result, state.mx, state.my):
-        result.flags.incl(wHover)
-      else: result.flags.excl(wHover)
-      # Return Widget
-      return result
-    elif not isNil(win.popup.last):
-      # TODO: event propagation to just lookup first popup for menus
-      for widget in reverse(win.popup.last):
-        if widget.kind == wgPopup or pointOnArea(widget, state.mx, state.my):
-          result = widget
-          break # Popup Found
-    elif not isNil(win.frame.last): # Find Frames
-      for widget in reverse(win.frame.last):
-        if pointOnArea(widget, state.mx, state.my):
-          result = widget
-          break # Frame Found
-    # Fallback to Root
-    else: result = win.root
-    # Check if Not Found
-    if isNil(result):
-      if not isNil(win.hover):
-        handle(win.hover, outHover)
-        excl(win.hover.flags, wHover)
-        # Remove Hover
-        win.hover = nil
-    # Check if is Outside of a Popup
-    elif result.kind == wgPopup and
-    not pointOnArea(result, state.mx, state.my):
-      # Remove Hover Flag
-      result.flags.excl(wHover)
-    # Check if is at the same frame
-    elif not isNil(win.hover) and 
-    result == win.hover.outside:
-      result = # Find Interior Widget
-        find(win.hover, state.mx, state.my)
-      # Set Hovered Flag
-      result.flags.incl(wHover)
-    else: # Not at the same frame
-      result = # Find Interior Widget
-        find(result, state.mx, state.my)
-      # Set Hovered Flag
-      result.flags.incl(wHover)
-    # Check if is not the same
-    if result != win.hover:
-      # Handle Hover Out
-      if not isNil(win.hover):
-        handle(win.hover, outHover)
-        excl(win.hover.flags, wHover)
-      # Handle Hover In
-      result.handle(inHover)
-      # Replace Hover
-      win.hover = result
-  of evKeyDown, evKeyUp:
-    result = # Focus Root if there is no popup
-      if isNil(win.focus) and isNil(win.popup.first):
-        win.root # Fallback
-      else: win.focus # Use Focus
+proc findHover(win: GUIWindow, state: ptr GUIState): GUIWidget =
+  if not isNil(win.hover) and wGrab in win.hover.flags:
+    return win.hover
+  # Find Popups
+  elif not isNil(win.popup.last):
+    # TODO: event propagation to just lookup last popup for menus
+    for widget in reverse(win.popup.last):
+      result = widget
+      if widget.kind == wgPopup or pointOnArea(widget, state.mx, state.my):
+        break # Popup Found
+  # Find Frames
+  elif not isNil(win.frame.last):
+    for widget in reverse(win.frame.last):
+      if pointOnArea(widget, state.mx, state.my):
+        result = widget
+        break # Frame Found
+  # Fallback to Root
+  if isNil(result):
+    result = win.root
+  # Find at the Outermost if Hover is not inside
+  var pivot {.cursor.} = win.hover
+  if isNil(pivot) or pivot.outside() != result:
+    pivot = result
+  # Find Inside Widget
+  result = pivot.find(state.mx, state.my)
 
-# -- Prepare Widget before event
-proc prepare(win: GUIWindow, widget: GUIWidget, kind: GUIEvent): bool =
-  case kind
-  of evCursorMove:
-    wMouse in widget.flags
-  of evCursorClick:
-    # Grab Current Widget
-    widget.flags.incl(wGrab)
+proc prepareHover(win: GUIWindow, found: GUIWidget, state: ptr GUIState) =
+  if (wGrab in found.flags) or found.kind in {wgPopup, wgMenu}:
+    # Mark if is Inside Widget
+    if found.pointOnArea(state.mx, state.my):
+      found.flags.incl(wHover)
+    else: found.flags.excl(wHover)
+    # Hover Prepared
+    return
+  # Prepare Widget Hover
+  let hover {.cursor.} = win.hover
+  if found != hover:
+    # Handle Remove Hover
+    if not isNil(hover):
+      hover.flags.excl(wHover)
+      hover.vtable.handle(hover, outHover)
+    # Handle Change Hover
+    found.flags.incl(wHover)
+    found.vtable.handle(found, inHover)
+    # Change Previous Hover
+    win.hover = found
+
+proc prepareClick(win: GUIWindow, found: GUIWidget, state: ptr GUIState) =
+  let kind = state.kind
+  if kind == evCursorClick:
+    found.flags.incl(wGrab)
     # Elevate if is a Frame
-    let frame = widget.outside
+    let frame = found.outside()
     if frame.kind == wgFrame:
       elevate(win.frame, frame)
-    # Check if is able
-    wMouse in widget.flags
-  of evCursorRelease:
-    # Ungrab Current Widget
-    widget.flags.excl(wGrab)
-    # Check if is able
-    wMouse in widget.flags
-  of evKeyDown, evKeyUp:
-    wKeyboard in widget.flags
+  # Remove Widget Grab
+  elif kind == evCursorRelease:
+    found.flags.excl(wGrab)
 
-# -- Step Focus
-proc step(win: GUIWindow, back: bool) =
-  var widget = win.focus
+# ---------------------------
+# Window Keyboard Event Procs
+# ---------------------------
+
+proc findFocus(win: GUIWindow, state: ptr GUIState): GUIWidget =
+  let
+    focus {.cursor.} = win.focus
+    # Check Tab Key Pressed
+    tab = state.key == RightTab
+    back = state.key == LeftTab
+    check = state.kind == evKeyDown and (tab or back)
+  # Check Focus Step Key Pressed
+  if not check or isNil(focus):
+    return focus
+  # Step Focus Widget
+  var widget {.cursor.} = focus
   if not isNil(widget.parent):
     widget = step(widget, back)
-    if widget != win.focus:
+    if widget != focus:
       # Handle Focus Out
-      excl(win.focus.flags, wFocus)
-      handle(win.focus, outFocus)
+      focus.flags.excl(wFocus)
+      focus.vtable.handle(focus, outFocus)
       # Handle Focus In
       widget.flags.incl(wFocus)
-      widget.handle(inFocus)
+      widget.vtable.handle(widget, inFocus)
       # Change Focus
       win.focus = widget
 
-proc check(win: GUIWindow, widget: GUIWidget) =
-  # Check if is still focused
-  if widget == win.focus and
-  wFocusable + {wFocus} notin widget.flags:
-    widget.flags.excl(wFocus)
-    widget.handle(outFocus)
-    # Remove Focus
-    win.focus = nil
+# ---------------------------
+# Window Event Dispatch Procs
+# ---------------------------
 
-# -- Focus Handling
-proc focus(win: GUIWindow, widget: GUIWidget) =
-  if widget != win.root and
-  wFocusable in widget.flags and
-  widget != win.focus:
-    if not isNil(win.focus):
-      excl(win.focus.flags, wFocus)
-      handle(win.focus, outFocus)
-    # Handle Focus In
-    widget.flags.incl(wFocus)
-    widget.handle(inFocus)
-    # Replace Focus
-    win.focus = widget
+proc find(win: GUIWindow, state: ptr GUIState): GUIWidget =
+  case state.kind
+  of evCursorMove, evCursorClick, evCursorRelease:
+    result = win.findHover(state)
+  of evKeyDown, evKeyUp:
+    # TODO: dispatch callback based hotkeys instead root
+    result = win.findFocus(state)
 
-# -- Relayout Widget, TODO: change dirty naming
-proc dirty(win: GUIWindow, widget: GUIWidget) =
-  if wVisible in widget.flags:
-    # Arrange Widget and Check Focus
-    widget.arrange()
-    win.check(widget)
-
-# ------------------------
-# GUI EVENT HANDLING PROCS
-# ------------------------
+proc dispatch(win: GUIWindow, found: GUIWidget, state: ptr GUIState) =
+  var enabled: bool
+  # Dispatch Check
+  case state.kind
+  of evCursorMove, evCursorClick, evCursorRelease:
+    win.prepareHover(found, state)
+    enabled = wMouse in found.flags
+    # Prepare Widget Grab
+    if enabled:
+      win.prepareClick(found, state)
+  of evKeyDown, evKeyUp:
+    # TODO: dispatch callback based hotkeys instead root
+    # Check if Step Focus Key is Pressed
+    if not isNil(found):
+      enabled = wKeyboard in found.flags
+  # Dispatch Widget Event
+  if enabled:
+    found.vtable.event(found, state)
 
 proc handleEvents*(win: GUIWindow) =
   var event: XEvent
@@ -444,19 +424,46 @@ proc handleEvents*(win: GUIWindow) =
         pushSignal(win.root.target, msgDirty)
     else: # Check if the event is valid for be processed by a widget
       if translateXEvent(win.state, win.display, addr event, win.xic):
-        let # Avoids win.state everywhere
+        let
           state = addr win.state
-          tabbed = state.kind == evKeyDown and
-            (state.key == RightTab or state.key == LeftTab)
-        # Find Widget for Process Event
-        if tabbed and not isNil(win.focus):
-          step(win, state.key == LeftTab)
-        else: # Process Event
-          let found = find(win, state)
-          # Check if can handle
-          if not isNil(found) and
-          win.prepare(found, state.kind):
-            event(found, state)
+          found = find(win, state)
+        # Dispatch Widget Event
+        win.dispatch(found, state)
+
+# ------------------------------
+# Window Callback Dispatch Procs
+# ------------------------------
+
+proc check(win: GUIWindow, widget: GUIWidget) =
+  # Check if is still focused
+  if widget == win.focus and
+  wFocusable + {wFocus} notin widget.flags:
+    widget.flags.excl(wFocus)
+    widget.vtable.handle(widget, outFocus)
+    # Remove Focus
+    win.focus = nil
+
+proc focus(win: GUIWindow, widget: GUIWidget) =
+  let focus {.cursor.} = win.focus
+  if widget != win.root and
+  wFocusable in widget.flags and
+  widget != focus:
+    # Handle Focus Out
+    if not isNil(focus):
+      focus.flags.excl(wFocus)
+      focus.vtable.handle(focus, outFocus)
+    # Handle Focus In
+    widget.flags.incl(wFocus)
+    widget.vtable.handle(widget, inFocus)
+    # Replace Focus
+    win.focus = widget
+
+# -- TODO: change dirty naming
+proc dirty(win: GUIWindow, widget: GUIWidget) =
+  if wVisible in widget.flags:
+    # Arrange Widget and Check Focus
+    widget.arrange()
+    win.check(widget)
 
 proc handleSignals*(win: GUIWindow): bool =
   for signal in poll(win.queue):
@@ -497,7 +504,7 @@ proc handleTimers*(win: GUIWindow) =
     widget.update()
 
 # -------------------
-# GUI RENDERING PROCS
+# GUI Rendering Procs
 # -------------------
 
 proc renderLayer(ctx: ptr CTXRender, layer: GUILayer) =

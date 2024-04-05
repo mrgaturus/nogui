@@ -273,7 +273,8 @@ proc outside*(widget: GUIWidget): GUIWidget =
 
 proc inside(widget: GUIWidget, x, y: int32): GUIWidget =
   result = widget.last
-  while true: # Find Children
+  # Find Children
+  while true:
     if pointOnArea(result, x, y):
       if isNil(result.last):
         return result
@@ -288,13 +289,12 @@ proc inside(widget: GUIWidget, x, y: int32): GUIWidget =
 proc find*(widget: GUIWidget, x, y: int32): GUIWidget =
   # Initial Widget
   result = widget
-  # Initial Cursor
-  var cursor = widget
+  var w {.cursor.} = widget
   # Point Inside All Parents?
-  while cursor.parent != nil:
-    if not pointOnArea(cursor, x, y):
-      result = cursor.parent
-    cursor = cursor.parent
+  while w.parent != nil:
+    if not w.pointOnArea(x, y):
+      result = w.parent
+    w = w.parent
   # Find Inside of Outside
   if not isNil(result.last):
     result = inside(result, x, y)
