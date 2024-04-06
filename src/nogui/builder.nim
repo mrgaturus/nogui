@@ -535,7 +535,9 @@ macro controller*(declare, body: untyped) =
       else: mcObjects[super.strVal].copyNimTree
   # Return Controller Structure
   result = wStructure(idents, info, inject, body)
-  mcObjects[name.strVal] = info
+  # Store Callbacks if has Inheritance
+  if super != dummy:
+    mcObjects[name.strVal] = info
 
 macro child(self: GUIWidget, body: untyped) =
   let hook = bindSym"add"
