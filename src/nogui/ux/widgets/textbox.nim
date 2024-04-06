@@ -12,7 +12,7 @@ import ../../utf8
 from ../../core/event import 
   UTF8Nothing, UTF8Keysym
 from ../../core/signal import 
-  WindowSignal, msgOpenIM, msgCloseIM
+  WindowSignal, wsOpenIM, wsCloseIM
 
 widget UXTextBox:
   attributes:
@@ -101,7 +101,7 @@ widget UXTextBox:
       of XK_End: input.jump(high int32)
       of XK_Return, XK_Escape:
         # TODO: defer this callback
-        pushSignal(msgUnfocus)
+        send(wsFocusOut)
       else: # Add UTF8 Char
         case state.utf8state
         of UTF8Nothing, UTF8Keysym: discard
@@ -115,7 +115,7 @@ widget UXTextBox:
       # Focus Textbox
       if state.kind == evCursorClick:
         # TODO: defer this callback
-        pushSignal(self.target, msgFocus)
+        send(self.target, wsFocus)
     # Mark Text Input used By This Widget
     if state.kind in {evKeyDown, evCursorClick, evCursorMove}:
       self.calculateOffsets()
@@ -126,9 +126,9 @@ widget UXTextBox:
     of inFocus:
       # Change Current Widget
       self.input.focus cast[pointer](self)
-      pushSignal(msgOpenIM)
+      send(wsOpenIM)
     of outFocus: 
-      pushSignal(msgCloseIM)
+      send(wsCloseIM)
     of inHover:
       getApp().setCursor(XC_xterm)
     of outHover:

@@ -1,55 +1,61 @@
-# TODO: unify with event
-
 type
-  # GUI Signal Private
-  SKind* = enum
-    sCallback
-    sCallbackEX
-    sWidget
-    sWindow
-  WidgetSignal* = enum
-    msgDirty
-    msgFocus
-    msgCheck
-    # Widget Framing
-    msgOpen
-    msgClose
-  WindowSignal* = enum
-    msgOpenIM
-    msgCloseIM
-    # Remove State
-    msgUnfocus
-    msgUnhover
-    # Close Program
-    msgTerminate
-  Signal = object
-    next: GUISignal
-    # Signal or Callback
-    case kind*: SKind
-    of sCallback, sCallbackEX:
-      cb*: GUICallback
-    of sWidget:
-      id*: GUITarget
-      msg*: WidgetSignal
-    of sWindow:
-      wsg*: WindowSignal
-    # Signal Data
-    data*: GUIOpaque
-  # Signal Generic Data
+  # Callback Generic Data
   GUITarget* = distinct pointer
   GUIOpaque* = object
-  # GUI Callbacks Procs
+  # Callback Generic Proc
   GUICallbackProc =
     proc(sender: pointer) {.nimcall.}
   GUICallbackProcEX = # With Parameter
     proc(sender, extra: pointer) {.nimcall.}
-  # GUI Callbacks
+  # Signal Callback
   GUICallback* = object
     sender, fn: pointer
   GUICallbackEX*[T] = 
     distinct GUICallback
-  # GUI Signal and Queue
+
+type
+  # Signal Mode
+  SignalKind* = enum
+    sCallback
+    sCallbackEX
+    # Special Kinds
+    sWidget, sWindow
+  # Signal Special
+  WidgetSignal* = enum
+    wsLayout
+    wsFocus
+    # Toplevel
+    wsOpen
+    wsClose
+  WindowSignal* = enum
+    wsTerminate
+    wsFocusOut
+    wsHoverOut
+    # Input Method
+    wsOpenIM
+    wsCloseIM
+  # Signal Object
+  Signal = object
+    next: GUISignal
+    # Signal Mode
+    case kind*: SignalKind
+    of sCallback, sCallbackEX:
+      cb*: GUICallback
+    of sWidget:
+      target*: GUITarget
+      ws*: WidgetSignal
+    of sWindow:
+      msg*: WindowSignal
+    # Signal Data
+    data*: GUIOpaque
   GUISignal* = ptr Signal
+
+# ---------------------
+# Signal Queue Creation
+# ---------------------
+
+type
+  # GUI Signal and Queue
   Queue = object
     back, front: GUISignal
   GUIQueue* = ptr Queue
@@ -66,12 +72,12 @@ proc newSignal(size: Natural = 0): GUISignal {.inline.} =
   # This is Latest
   result.next = nil
 
-# --------------------
-# SIGNAL RUNTIME PROCS
-# --------------------
+# -------------------------
+# Signal Queue Manipulation
+# -------------------------
 
 proc push(queue: GUIQueue, signal: GUISignal) =
-  if queue.front.isNil:
+  if isNil(queue.front):
     queue.back = signal
     queue.front = signal
   else:
@@ -101,36 +107,37 @@ proc dispose*(queue: GUIQueue) =
   # Dealloc Queue
   dealloc(queue)
 
-# ---------------------------
-# SIGNAL UNSAFE PUSHING PROCS
-# ---------------------------
+# ----------------------
+# Signal Special Sending
+# ----------------------
 
-proc pushSignal*(id: GUITarget, msg: WidgetSignal) =
-  assert(not cast[pointer](id).isNil)
+proc send*(target: GUITarget, ws: WidgetSignal) =
+  assert(not cast[pointer](target).isNil)
   # Get Queue Pointer from Global
   let 
     queue = opaque
     signal = newSignal()
   # Widget Signal Kind
   signal.kind = sWidget
-  signal.id = id
+  signal.target = target
+  signal.ws = ws
+  # Add new signal to Front
+  queue.push(signal)
+
+proc send*(msg: WindowSignal) =
+  # Get Queue Pointer from Global
+  let
+    queue = opaque
+    signal = newSignal()
+  # Application Signal Kind
+  signal.kind = sWindow
   signal.msg = msg
   # Add new signal to Front
   queue.push(signal)
 
-proc pushSignal(msg: WindowSignal, data: pointer, size: Natural) =
-  # Get Queue Pointer from Global
-  let
-    queue = opaque
-    signal = newSignal(size)
-  # Window Signal Kind
-  signal.kind = sWindow
-  signal.wsg = msg
-  # Copy Optionally Data
-  if size > 0 and not isNil(data):
-    copyMem(addr signal.data, data, size)
-  # Add new signal to Front
-  queue.push(signal)
+# -----------------------
+# Signal Callback Sending
+# -----------------------
 
 proc pushCallback(cb: GUICallback) =
   if isNil(cb.fn): return
@@ -145,7 +152,7 @@ proc pushCallback(cb: GUICallback) =
   queue.push(signal)
 
 proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
-  if isNil(cb.fn) and isNil(data): return
+  if isNil(cb.fn) or isNil(data): return
   # Get Queue Pointer from Global
   let
     queue = opaque
@@ -159,48 +166,19 @@ proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
   # Add new signal to Front
   queue.push(signal)
 
-# ------------------------
-# UNSAFE CALLBACK CREATION
-# ------------------------
+# -----------------------
+# Signal Callback Sending
+# -----------------------
 
-template unsafeCallback*(self: pointer, call: proc): GUICallback =
-  GUICallback(
-    sender: self, 
-    fn: cast[pointer](call)
-  )
-
-template unsafeCallbackEX*[T](self: pointer, call: proc): GUICallbackEX[T] =
-  GUICallbackEX[T](unsafeCallback(self, call))
-
-# ----------------------------------
-# GUI WIDGET SIGNAL PUSHER TEMPLATES
-# ----------------------------------
-
-template pushSignal*(msg: WindowSignal, data: typed) =
-  pushSignal(msg, addr data, sizeof data)
-
-template pushSignal*(msg: WindowSignal) =
-  pushSignal(msg, nil, 0)
-
-# ------------------------------------
-# GUI CALLBACK SIGNAL PUSHER TEMPLATES
-# ------------------------------------
-
-template push*(cb: GUICallback) =
+template send*(cb: GUICallback) =
   pushCallback(cb)
 
-template push*[T](cb: GUICallbackEX[T], data: sink T) =
+template send*[T](cb: GUICallbackEX[T], data: sink T) =
   GUICallback(cb).pushCallback(addr data, sizeof T)
 
-proc valid*(cb: GUICallback): bool {.inline.} =
-  not isNil(cb.fn) and not isNil(cb.sender)
-
-template valid*[T](cb: GUICallbackEX[T]): bool =
-  GUICallback(cb).valid
-
-# --------------------------
-# GUI CALLBACK FORCE CALLERS
-# --------------------------
+# -----------------------
+# Signal Callback Forcing
+# -----------------------
 
 proc force*(cb: GUICallback) =
   let fn = cast[GUICallbackProc](cb.fn)
@@ -217,9 +195,29 @@ proc forceEX(cb: GUICallback, data: pointer) =
 template force*[T](cb: GUICallbackEX[T], data: ptr T) =
   forceEX(cb.GUICallback, data)
 
-# ---------------------------------
-# GUI SIGNAL DATA POINTER CONVERTER
-# ---------------------------------
+# -------------------------------
+# Signal Callback Unsafe Creation
+# -------------------------------
+
+template unsafeCallback*(self: pointer, call: proc): GUICallback =
+  GUICallback(sender: self, fn: cast[pointer](call))
+
+template unsafeCallbackEX*[T](self: pointer, call: proc): GUICallbackEX[T] =
+  GUICallbackEX[T](unsafeCallback(self, call))
+
+# --------------------------
+# Signal Callback Validation
+# --------------------------
+
+proc valid*(cb: GUICallback): bool {.inline.} =
+  not isNil(cb.fn) and not isNil(cb.sender)
+
+template valid*[T](cb: GUICallbackEX[T]): bool =
+  GUICallback(cb).valid()
+
+# ------------------------
+# Signal Callback Dispatch
+# ------------------------
 
 proc call*(sig: GUISignal) =
   let

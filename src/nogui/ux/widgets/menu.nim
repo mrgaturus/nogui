@@ -19,7 +19,7 @@ widget UXMenu:
     let top = self.top
     if not isNil(top) and top.vtable == self.vtable:
       let m = cast[UXMenu](top)
-      push(m.cbClose)
+      send(m.cbClose)
     # Remove Selected
     self.selected = nil
 
@@ -105,7 +105,7 @@ widget UXMenu:
   method handle(kind: GUIHandle) =
     let s = self.selected
     if kind == outFrame and not isNil(s):
-      push(s.onportal)
+      send(s.onportal)
       # Remove Selected
       self.selected = nil
 

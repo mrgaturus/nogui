@@ -151,7 +151,6 @@ template executeApp*(root: GUIWidget, body: untyped) =
       # TODO: unify all into one queue
       handleEvents(win)
       if handleSignals(win): break
-      handleTimers(win)
       # Execute Body
       body; render(win)
 

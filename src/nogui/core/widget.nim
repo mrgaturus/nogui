@@ -1,7 +1,7 @@
 from event import GUIState
 from signal import
   GUISignal, GUITarget,
-  WidgetSignal, pushSignal
+  WidgetSignal, send
 from render import 
   CTXRender, GUIRect, push, pop
 
@@ -231,17 +231,17 @@ proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
 # -----------------------------
 
 proc open*(widget: GUIWidget) {.inline.} =
-  pushSignal(widget.target, msgOpen)
+  send(widget.target, wsOpen)
 
 proc close*(widget: GUIWidget) {.inline.} =
-  pushSignal(widget.target, msgClose)
+  send(widget.target, wsClose)
 
 proc move*(widget: GUIWidget, x, y: int32) =
   if widget.kind > wgChild:
     widget.metrics.x = int16 x
     widget.metrics.y = int16 y
     # TODO: defer this callback
-    pushSignal(widget.target, msgDirty)
+    send(widget.target, wsLayout)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
@@ -249,7 +249,7 @@ proc resize*(widget: GUIWidget, w, h: int32) =
     metrics.w = max(int16 w, metrics.minW)
     metrics.h = max(int16 h, metrics.minH)
     # TODO: defer this callback
-    pushSignal(widget.target, msgDirty)
+    send(widget.target, wsLayout)
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE

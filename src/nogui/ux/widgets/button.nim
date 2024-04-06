@@ -50,7 +50,7 @@ widget UXButton:
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      push(self.cb) # Emit Callback
+      send(self.cb) # Emit Callback
 
 # ---------------
 # GUI Icon Button

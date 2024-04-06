@@ -20,7 +20,7 @@ widget UXMenuItemCB of UXMenuItem:
 
   method event(state: ptr GUIState) =
     if self.event0(state):
-      push(self.cb)
+      send(self.cb)
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)

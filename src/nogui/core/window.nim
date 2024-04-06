@@ -5,8 +5,7 @@ import x11/xlib, x11/x
 # Import Modules
 from atlas import CTXAtlas, createTexture
 import widget, event, signal, render
-# Import Somes
-from timer import walkTimers
+# Import OpenGL Loader
 from ../libs/gl import gladLoadGL
 # TODO: Split EGL and native platform from window
 
@@ -190,7 +189,7 @@ proc execute*(win: GUIWindow, root: GUIWidget): bool =
   # Set Renderer Viewport Dimensions
   viewport(win.ctx, win.w, win.h)
   # TODO: defer this callback
-  pushSignal(root.target, msgDirty)
+  send(root.target, wsLayout)
 
 proc destroy*(win: GUIWindow) =
   # Dispose UTF8Buffer
@@ -311,13 +310,10 @@ proc findFocus(win: GUIWindow, state: ptr GUIState): GUIWidget =
 proc findHover(win: GUIWindow, state: ptr GUIState): GUIWidget =
   if not isNil(win.hover) and wGrab in win.hover.flags:
     return win.hover
-  # Find Popups
+  # Find Last Popup
   elif not isNil(win.popup.last):
-    # TODO: event propagation to just lookup last popup for menus
-    for widget in reverse(win.popup.last):
-      result = widget
-      if widget.kind == wgPopup or pointOnArea(widget, state.mx, state.my):
-        break # Popup Found
+    # TODO: event propagation to make implementation better for menus
+    result = win.popup.last
   # Find Frames
   elif not isNil(win.frame.last):
     for widget in reverse(win.frame.last):
@@ -421,7 +417,7 @@ proc handleEvents*(win: GUIWindow) =
         # Set Renderer Viewport
         viewport(win.ctx, rect.w, rect.h)
         # TODO: defer this callback
-        pushSignal(win.root.target, msgDirty)
+        send(win.root.target, wsLayout)
     else: # Check if the event is valid for be processed by a widget
       if translateXEvent(win.state, win.display, addr event, win.xic):
         win.widgetEvent(addr win.state)
@@ -468,38 +464,33 @@ proc handleSignals*(win: GUIWindow): bool =
       signal.call()
     of sWidget:
       let widget =
-        cast[GUIWidget](signal.id)
-      case signal.msg
-      of msgDirty: dirty(win, widget)
-      of msgFocus: focus(win, widget)
-      of msgCheck: check(win, widget)
+        cast[GUIWidget](signal.target)
+      case signal.ws
+      of wsLayout: dirty(win, widget)
+      of wsFocus: focus(win, widget)
       # Window Layer Widget
-      of msgOpen: open(win, widget)
-      of msgClose: close(win, widget)
+      of wsOpen: open(win, widget)
+      of wsClose: close(win, widget)
     of sWindow:
-      case signal.wsg
-      of msgOpenIM: XSetICFocus(win.xic)
-      of msgCloseIM: XUnsetICFocus(win.xic)
-      of msgUnfocus: # Un Focus
+      case signal.msg
+      of wsOpenIM: XSetICFocus(win.xic)
+      of wsCloseIM: XUnsetICFocus(win.xic)
+      of wsFocusOut: # Un Focus
         let focus {.cursor.} = win.focus
         if not isNil(focus):
           focus.flags.excl(wFocus)
           focus.vtable.handle(focus, outFocus)
           # Remove Focus
           win.focus = nil
-      of msgUnhover: # Un Hover
+      of wsHoverOut: # Un Hover
         let hover {.cursor.} = win.hover
         if not isNil(hover):
           hover.flags.excl(wHoverGrab)
           hover.vtable.handle(hover, outHover)
           # Remove Hover
           win.hover = nil
-      of msgTerminate: 
+      of wsTerminate: 
         return true
-
-proc handleTimers*(win: GUIWindow) =
-  for widget in walkTimers():
-    widget.vtable.update(widget)
 
 # -------------------
 # GUI Rendering Procs

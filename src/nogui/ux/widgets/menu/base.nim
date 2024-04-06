@@ -105,9 +105,9 @@ widget UXMenuItem:
     # Notify Prev Portal
     let prev = self.portal[]
     if not isNil(prev):
-      push(prev.onportal)
+      send(prev.onportal)
     # Notify Self Portal
-    push(self.onportal)
+    send(self.onportal)
     # Change Portal
     self.portal[] = self
 
@@ -135,7 +135,7 @@ widget UXMenuItem:
     self.flags.excl(wGrab)
     # Check if was actioned and send ondone callback
     result = state.kind == evCursorRelease and self.test(wHover)
-    if result: push(self.ondone)
+    if result: send(self.ondone)
 
   method update =
     let

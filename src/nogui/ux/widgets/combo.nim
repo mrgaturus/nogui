@@ -79,7 +79,7 @@ controller ComboModel:
   callback cbMenuDone:
     close(self.menu)
     # Send User Defined Callback
-    push(self.onchange)
+    send(self.onchange)
 
   proc select*(value: int) =
     var found: UXComboItem
@@ -187,4 +187,4 @@ widget UXComboBox:
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:
       self.flags.excl(wGrab)
-      push(self.cbOpenMenu)
+      send(self.cbOpenMenu)
