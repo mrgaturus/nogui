@@ -457,40 +457,45 @@ proc dirty(win: GUIWindow, widget: GUIWidget) =
     widget.arrange()
     win.check(widget)
 
+proc handleSignal*(win: GUIWindow, signal: GUISignal): bool =
+  case signal.kind
+  of sCallback, sCallbackEX:
+    signal.call()
+  of sWidget:
+    let widget =
+      cast[GUIWidget](signal.target)
+    case signal.ws
+    of wsLayout: dirty(win, widget)
+    of wsFocus: focus(win, widget)
+    # Window Layer Widget
+    of wsOpen: open(win, widget)
+    of wsClose: close(win, widget)
+  of sWindow:
+    case signal.msg
+    of wsOpenIM: XSetICFocus(win.xic)
+    of wsCloseIM: XUnsetICFocus(win.xic)
+    of wsFocusOut: # Un Focus
+      let focus {.cursor.} = win.focus
+      if not isNil(focus):
+        focus.flags.excl(wFocus)
+        focus.vtable.handle(focus, outFocus)
+        # Remove Focus
+        win.focus = nil
+    of wsHoverOut: # Un Hover
+      let hover {.cursor.} = win.hover
+      if not isNil(hover):
+        hover.flags.excl(wHoverGrab)
+        hover.vtable.handle(hover, outHover)
+        # Remove Hover
+        win.hover = nil
+    of wsTerminate: 
+      return true
+
 proc handleSignals*(win: GUIWindow): bool =
   for signal in poll(win.queue):
-    case signal.kind
-    of sCallback, sCallbackEX:
-      signal.call()
-    of sWidget:
-      let widget =
-        cast[GUIWidget](signal.target)
-      case signal.ws
-      of wsLayout: dirty(win, widget)
-      of wsFocus: focus(win, widget)
-      # Window Layer Widget
-      of wsOpen: open(win, widget)
-      of wsClose: close(win, widget)
-    of sWindow:
-      case signal.msg
-      of wsOpenIM: XSetICFocus(win.xic)
-      of wsCloseIM: XUnsetICFocus(win.xic)
-      of wsFocusOut: # Un Focus
-        let focus {.cursor.} = win.focus
-        if not isNil(focus):
-          focus.flags.excl(wFocus)
-          focus.vtable.handle(focus, outFocus)
-          # Remove Focus
-          win.focus = nil
-      of wsHoverOut: # Un Hover
-        let hover {.cursor.} = win.hover
-        if not isNil(hover):
-          hover.flags.excl(wHoverGrab)
-          hover.vtable.handle(hover, outHover)
-          # Remove Hover
-          win.hover = nil
-      of wsTerminate: 
-        return true
+    if win.handleSignal(signal): return true
+  for signal in pending(win.queue):
+    if win.handleSignal(signal): return true
 
 # -------------------
 # GUI Rendering Procs

@@ -37,6 +37,7 @@ type
   # Signal Object
   Signal = object
     next: GUISignal
+    bytes: int
     # Signal Mode
     case kind*: SignalKind
     of sCallback, sCallbackEX:
@@ -57,7 +58,8 @@ type
 type
   # GUI Signal and Queue
   Queue = object
-    back, front: GUISignal
+    first, last: GUISignal
+    undo, once: GUISignal
   GUIQueue* = ptr Queue
 # Global GUI Queue
 var opaque: GUIQueue
@@ -67,43 +69,109 @@ proc newGUIQueue*(): GUIQueue =
   # GUI Queue Global
   opaque = result
 
-proc newSignal(size: Natural = 0): GUISignal {.inline.} =
-  result = cast[GUISignal](alloc0(Signal.sizeof + size))
-  # This is Latest
+proc newSignal(size = 0): GUISignal =
+  let bytes = Signal.sizeof + size
+  result = cast[GUISignal](alloc0 bytes)
+  # Define Fundamental Header
   result.next = nil
+  result.bytes = bytes
 
-# -------------------------
-# Signal Queue Manipulation
-# -------------------------
+# -----------------
+# Signal Queue Push
+# -----------------
 
 proc push(queue: GUIQueue, signal: GUISignal) =
-  if isNil(queue.front):
-    queue.back = signal
-    queue.front = signal
-  else:
-    queue.front.next = signal
-    queue.front = signal
+  if isNil(queue.first):
+    queue.first = signal
+    queue.last = signal
+    return
+  # Insert to Signal Queue
+  let last = queue.last
+  signal.next = last.next
+  last.next = signal
+  # Replace Last Signal
+  queue.last = signal
+  queue.undo = last
 
 iterator poll*(queue: GUIQueue): GUISignal =
-  var signal = queue.back
+  var signal = queue.first
+  # Poll Signals
   while signal != nil:
+    queue.last = signal
     yield signal
-    # Use back as prev
-    queue.back = signal
+    # Use First as Previous
+    queue.first = signal
     signal = signal.next
-    # dealloc prev
-    dealloc(queue.back)
-  queue.back = nil
-  queue.front = nil
+    # Dealloc Previous
+    dealloc(queue.first)
+  # Clear Queue
+  queue.first = nil
+  queue.last = nil
 
-proc dispose*(queue: GUIQueue) =
-  var signal = queue.back
+# ---------------------
+# Signal Queue Postpone
+# ---------------------
+
+proc delay(queue: GUIQueue, signal: GUISignal) =
+  var
+    once = queue.once
+    last = once
+  # Add when has Nothing
+  if isNil(once):
+    queue.once = signal
+    return
+  # Check if is already postponed
+  let bytes = signal.bytes
+  while once != nil:
+    # Compare if is actually the same
+    if equalMem(signal, once, bytes):
+      dealloc(signal)
+      return
+    # Next Pending Signal
+    last = once
+    once = once.next
+  # Add To Last
+  last.next = signal
+
+proc cherry(queue: GUIQueue) =
+  let
+    undo = queue.undo
+    last = queue.last
+  # Consume Cherry Peek
+  undo.next = last.next
+  queue.last = queue.undo
+  queue.undo = nil
+  # Delay Callback
+  last.next = nil
+  queue.delay(last)
+
+iterator pending*(queue: GUIQueue): GUISignal =
+  assert isNil(queue.first)
+  # Consume Pending Queue
+  queue.first = queue.once
+  queue.once = nil
+  # Poll Pending Queue
+  for signal in queue.poll():
+    yield signal
+
+# --------------------
+# Signal Queue Destroy
+# --------------------
+
+proc destroy(first: GUISignal) =
+  var
+    signal = first
+    prev = first
   while signal != nil:
-    # Use back as prev
-    queue.back = signal
+    # Use First as Previous
+    prev = signal
     signal = signal.next
-    # dealloc prev
-    dealloc(queue.back)
+    # Dealloc Previous
+    dealloc(prev)
+
+proc destroy*(queue: GUIQueue) =
+  destroy(queue.first)
+  destroy(queue.once)
   # Dealloc Queue
   dealloc(queue)
 
@@ -135,11 +203,21 @@ proc send*(msg: WindowSignal) =
   # Add new signal to Front
   queue.push(signal)
 
+# --------------------
+# Signal Special Delay
+# --------------------
+
+proc delay*(target: GUITarget, ws: WidgetSignal) =
+  target.send(ws); opaque.cherry()
+
+proc delay*(msg: WindowSignal) =
+  msg.send(); opaque.cherry()
+
 # -----------------------
 # Signal Callback Sending
 # -----------------------
 
-proc pushCallback(cb: GUICallback) =
+proc send*(cb: GUICallback) =
   if isNil(cb.fn): return
   # Get Queue Pointer from Global
   let 
@@ -151,7 +229,7 @@ proc pushCallback(cb: GUICallback) =
   # Add new signal to Front
   queue.push(signal)
 
-proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
+proc send(cb: GUICallback, data: pointer, size: Natural) =
   if isNil(cb.fn) or isNil(data): return
   # Get Queue Pointer from Global
   let
@@ -166,15 +244,21 @@ proc pushCallback(cb: GUICallback, data: pointer, size: Natural) =
   # Add new signal to Front
   queue.push(signal)
 
-# -----------------------
-# Signal Callback Sending
-# -----------------------
-
-template send*(cb: GUICallback) =
-  pushCallback(cb)
-
 template send*[T](cb: GUICallbackEX[T], data: sink T) =
-  GUICallback(cb).pushCallback(addr data, sizeof T)
+  GUICallback(cb).send(addr data, sizeof T)
+
+# ---------------------
+# Signal Callback Delay
+# ---------------------
+
+proc delay*(cb: GUICallback) =
+  cb.send(); opaque.cherry()
+
+proc delay(cb: GUICallback, data: pointer, size: Natural) =
+  cb.send(data, size); opaque.cherry()
+
+template delay*[T](cb: GUICallbackEX[T], data: sink T) =
+  GUICallback(cb).delay(addr data, sizeof T)
 
 # -----------------------
 # Signal Callback Forcing

@@ -90,6 +90,46 @@ widget GUIPanel:
 # Controller Playground
 # ---------------------
 
+controller CXCallstackTest:
+  callback cbPostpone0:
+    echo "!! postpone0"
+    send(self.cbFirst0)
+
+  callback cbPostpone1:
+    echo "!! postpone1"
+
+  callback cbFirst00:
+    echo "-- -- first00 call"
+
+  callback cbFirst0:
+    echo "-- first0 call"
+    send(self.cbFirst00)
+
+  callback cbFirst1:
+    echo "-- first1 call"
+
+  callback cbFirst2:
+    echo "-- first2 call"
+
+  callback cbFirst:
+    echo "first call"
+    send(self.cbFirst0)
+    send(self.cbFirst1)
+    send(self.cbFirst2)
+
+  callback cbSecond:
+    echo "second call"
+
+  callback cbInit:
+    delay(self.cbPostpone0)
+    delay(self.cbPostpone0)
+    delay(self.cbPostpone1)
+    send(self.cbFirst)
+    send(self.cbSecond)
+
+  new cxcallstacktest():
+    discard
+
 controller CONPlayground:
   attributes:
     [a, b]: @ int32
@@ -100,6 +140,8 @@ controller CONPlayground:
     color: RGBColor
     hsv0: @ HSVColor
     selected: ComboModel
+    # Callstack Test
+    cbtest: CXCallstackTest
 
   callback cbHelloWorld:
     echo "hello world"
@@ -157,7 +199,7 @@ controller CONPlayground:
     # Arrange Each Widget
     dummy().child:
       combobox(self.selected).opaque.locateW(20, 30, 200)
-      button("Hello World 2", cb).locate(20, 55)
+      button("Hello World 2", self.cbtest.cbInit).locate(20, 55)
       # Locate Nested Buttons
       panel().locate(20, 80, 128, 128).child:
         button("Nested World", cb).locate(20, 10)
@@ -258,6 +300,7 @@ controller CONPlayground:
     result.v1 = value lerp(20, 123)
     result.v2 = value lerp(500, 268 * 8)
     # Create New Widget
+    result.cbtest = cxcallstacktest()
     result.widget = result.createWidget()
 
 # ---------

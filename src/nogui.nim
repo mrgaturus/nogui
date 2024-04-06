@@ -3,7 +3,7 @@ from nogui/data import newFont
 from nogui/core/widget import GUIWidget
 from nogui/core/timer import loop
 from nogui/core/signal import 
-  GUIQueue, newGUIQueue, dispose
+  GUIQueue, newGUIQueue, destroy
 
 import nogui/libs/ft2
 import nogui/core/[window, atlas]
@@ -54,7 +54,7 @@ proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
   # Close Window and Queue
   destroy(app.window)
-  dispose(app.queue)
+  destroy(app.queue)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
     log(lvError, "failed closing FreeType2")
