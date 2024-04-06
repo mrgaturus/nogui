@@ -138,9 +138,10 @@ proc cherry(queue: GUIQueue) =
     undo = queue.undo
     last = queue.last
   # Consume Cherry Peek
-  undo.next = last.next
-  queue.last = queue.undo
-  queue.undo = nil
+  queue.last = undo
+  if not isNil(undo):
+    undo.next = last.next
+    queue.undo = nil
   # Delay Callback
   last.next = nil
   queue.delay(last)
