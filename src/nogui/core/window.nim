@@ -245,10 +245,6 @@ proc elevate(layer: var GUILayer, widget: GUIWidget) =
   attachNext(layer.last, widget)
   layer.last = widget
 
-# -----------------------
-# Window Layer Open/Close
-# -----------------------
-
 proc layer(win: GUIWindow, widget: GUIWidget): ptr GUILayer =
   case widget.kind
   of wgFrame: addr win.frame
@@ -256,6 +252,10 @@ proc layer(win: GUIWindow, widget: GUIWidget): ptr GUILayer =
   of wgTooltip: addr win.tooltip
   # Not Belongs to Layer
   else: nil
+
+# -------------------------
+# Window Signal Event Procs
+# -------------------------
 
 proc open(win: GUIWindow, widget: GUIWidget) =
   if wVisible in widget.flags: return
@@ -273,6 +273,66 @@ proc close(win: GUIWindow, widget: GUIWidget) =
   # Handle Widget Detach
   widget.flags.excl(wVisible)
   widget.vtable.handle(widget, outFrame)
+
+proc layout(win: GUIWindow, widget: GUIWidget) =
+  if wVisible in widget.flags:
+    widget.arrange()
+    # Check if is still focused
+    if widget == win.focus and
+    wFocusable + {wFocus} notin widget.flags:
+      widget.flags.excl(wFocus)
+      widget.vtable.handle(widget, outFocus)
+      # Remove Focus
+      win.focus = nil
+
+proc focus(win: GUIWindow, widget: GUIWidget) =
+  let focus {.cursor.} = win.focus
+  if widget != win.root and
+  wFocusable in widget.flags and
+  widget != focus:
+    # Handle Focus Out
+    if not isNil(focus):
+      focus.flags.excl(wFocus)
+      focus.vtable.handle(focus, outFocus)
+    # Handle Focus In
+    widget.flags.incl(wFocus)
+    widget.vtable.handle(widget, inFocus)
+    # Replace Focus
+    win.focus = widget
+
+proc signalEvent(win: GUIWindow, signal: GUISignal): bool =
+  case signal.kind
+  of sCallback, sCallbackEX:
+    signal.call()
+  of sWidget:
+    let widget =
+      cast[GUIWidget](signal.target)
+    case signal.ws
+    of wsLayout: layout(win, widget)
+    of wsFocus: focus(win, widget)
+    # Window Layer Widget
+    of wsOpen: open(win, widget)
+    of wsClose: close(win, widget)
+  of sWindow:
+    case signal.msg
+    of wsOpenIM: XSetICFocus(win.xic)
+    of wsCloseIM: XUnsetICFocus(win.xic)
+    of wsFocusOut: # Un Focus
+      let focus {.cursor.} = win.focus
+      if not isNil(focus):
+        focus.flags.excl(wFocus)
+        focus.vtable.handle(focus, outFocus)
+        # Remove Focus
+        win.focus = nil
+    of wsHoverOut: # Un Hover
+      let hover {.cursor.} = win.hover
+      if not isNil(hover):
+        hover.flags.excl(wHoverGrab)
+        hover.vtable.handle(hover, outHover)
+        # Remove Hover
+        win.hover = nil
+    of wsTerminate: 
+      return true
 
 # ---------------------------
 # Window Keyboard Event Procs
@@ -393,9 +453,15 @@ proc widgetEvent(win: GUIWindow, state: ptr GUIState) =
   if enabled:
     found.vtable.event(found, state)
 
-proc handleEvents*(win: GUIWindow) =
+proc handleEvents*(win: GUIWindow): bool =
   var event: XEvent
-  # Input Event Handing
+  # Process Current Signals
+  # TODO: create an initial event
+  for signal in poll(win.queue):
+    if win.signalEvent(signal):
+      return true
+  # TODO: change to native platforms
+  #       use GUIState directly
   while XPending(win.display) != 0:
     discard XNextEvent(win.display, addr event)
     if XFilterEvent(addr event, 0) != 0:
@@ -416,86 +482,19 @@ proc handleEvents*(win: GUIWindow) =
         win.h = rect.h
         # Set Renderer Viewport
         viewport(win.ctx, rect.w, rect.h)
-        # TODO: defer this callback
-        send(win.root.target, wsLayout)
+        delay(win.root.target, wsLayout)
     else: # Check if the event is valid for be processed by a widget
       if translateXEvent(win.state, win.display, addr event, win.xic):
         win.widgetEvent(addr win.state)
-
-# ------------------------------
-# Window Callback Dispatch Procs
-# ------------------------------
-
-proc check(win: GUIWindow, widget: GUIWidget) =
-  # Check if is still focused
-  if widget == win.focus and
-  wFocusable + {wFocus} notin widget.flags:
-    widget.flags.excl(wFocus)
-    widget.vtable.handle(widget, outFocus)
-    # Remove Focus
-    win.focus = nil
-
-proc focus(win: GUIWindow, widget: GUIWidget) =
-  let focus {.cursor.} = win.focus
-  if widget != win.root and
-  wFocusable in widget.flags and
-  widget != focus:
-    # Handle Focus Out
-    if not isNil(focus):
-      focus.flags.excl(wFocus)
-      focus.vtable.handle(focus, outFocus)
-    # Handle Focus In
-    widget.flags.incl(wFocus)
-    widget.vtable.handle(widget, inFocus)
-    # Replace Focus
-    win.focus = widget
-
-# -- TODO: change dirty naming
-proc dirty(win: GUIWindow, widget: GUIWidget) =
-  if wVisible in widget.flags:
-    # Arrange Widget and Check Focus
-    widget.arrange()
-    win.check(widget)
-
-proc handleSignal*(win: GUIWindow, signal: GUISignal): bool =
-  case signal.kind
-  of sCallback, sCallbackEX:
-    signal.call()
-  of sWidget:
-    let widget =
-      cast[GUIWidget](signal.target)
-    case signal.ws
-    of wsLayout: dirty(win, widget)
-    of wsFocus: focus(win, widget)
-    # Window Layer Widget
-    of wsOpen: open(win, widget)
-    of wsClose: close(win, widget)
-  of sWindow:
-    case signal.msg
-    of wsOpenIM: XSetICFocus(win.xic)
-    of wsCloseIM: XUnsetICFocus(win.xic)
-    of wsFocusOut: # Un Focus
-      let focus {.cursor.} = win.focus
-      if not isNil(focus):
-        focus.flags.excl(wFocus)
-        focus.vtable.handle(focus, outFocus)
-        # Remove Focus
-        win.focus = nil
-    of wsHoverOut: # Un Hover
-      let hover {.cursor.} = win.hover
-      if not isNil(hover):
-        hover.flags.excl(wHoverGrab)
-        hover.vtable.handle(hover, outHover)
-        # Remove Hover
-        win.hover = nil
-    of wsTerminate: 
-      return true
-
-proc handleSignals*(win: GUIWindow): bool =
-  for signal in poll(win.queue):
-    if win.handleSignal(signal): return true
+    # Process Current Signals
+    for signal in poll(win.queue):
+      if win.signalEvent(signal):
+        return true
+  # Process Pending Signals
+  # TODO: create an event kind for swap pending queue
   for signal in pending(win.queue):
-    if win.handleSignal(signal): return true
+    if win.signalEvent(signal):
+      return true
 
 # -------------------
 # GUI Rendering Procs

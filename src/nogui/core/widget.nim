@@ -1,7 +1,7 @@
 from event import GUIState
 from signal import
   GUISignal, GUITarget,
-  WidgetSignal, send
+  WidgetSignal, send, delay
 from render import 
   CTXRender, GUIRect, push, pop
 
@@ -240,16 +240,16 @@ proc move*(widget: GUIWidget, x, y: int32) =
   if widget.kind > wgChild:
     widget.metrics.x = int16 x
     widget.metrics.y = int16 y
-    # TODO: defer this callback
-    send(widget.target, wsLayout)
+    # Send Layout Signal
+    delay(widget.target, wsLayout)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
     let metrics = addr widget.metrics
     metrics.w = max(int16 w, metrics.minW)
     metrics.h = max(int16 h, metrics.minH)
-    # TODO: defer this callback
-    send(widget.target, wsLayout)
+    # Send Layout Signal
+    delay(widget.target, wsLayout)
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE

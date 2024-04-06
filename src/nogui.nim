@@ -148,10 +148,8 @@ template executeApp*(root: GUIWidget, body: untyped) =
   if win.execute(root):
     # TODO: allow configure ms
     loop(16):
-      # TODO: unify all into one queue
-      handleEvents(win)
-      if handleSignals(win): break
-      # Execute Body
+      # Handle Events and Execute Body
+      if handleEvents(win): break
       body; render(win)
 
 # ---------------------------------------------
