@@ -1622,11 +1622,6 @@ proc load_GL_VERSION_3_2(load: proc) =
   glGetMultisamplefv = cast[type glGetMultisamplefv](load("glGetMultisamplefv"))
   glSampleMaski = cast[type glSampleMaski](load("glSampleMaski"))
 
-
-proc findExtensionsGL() =
-  discard
-
-
 proc findCoreGL(glVersion: string) =
   # Thank you @elmindreda
   # https://github.com/elmindreda/greg/blob/master/templates/greg.c.in#L176
@@ -1670,7 +1665,5 @@ proc gladLoadGL*(load: proc): bool =
   load_GL_VERSION_3_0(load)
   load_GL_VERSION_3_1(load)
   load_GL_VERSION_3_2(load)
-
-  findExtensionsGL()
 
   return glVersionMajor != 0 or glVersionMinor != 0
