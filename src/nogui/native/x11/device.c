@@ -128,21 +128,22 @@ static void x11_xinput2_enable(nogui_native_t* native) {
 }
 
 void x11_xinput2_init(nogui_native_t* native) {
-  int check, major, minor;
+  int check = 0;
+  int major, minor;
 
   // Check if XInput is present
   check = XQueryExtension(
     native->display, 
     "XInputExtension",
     &native->xi2_opcode,
-    NULL, NULL
+    &check, &check
   );
 
   if (!check)
     goto XINPUT_NOT_FOUND;
 
   // Check if is XInput2
-  major = 0; minor = 2;
+  major = 2; minor = 0;
   check = XIQueryVersion(
     native->display, &major, &minor);
 
@@ -180,6 +181,7 @@ void x11_xinput2_event(nogui_state_t* state, XEvent* event) {
   switch (ev->evtype) {
     case XI_Motion:
       state->kind = evCursorMove;
+      break;
     case XI_ButtonPress:
       state->kind = evCursorClick;
       state->key = ev->detail;
@@ -197,7 +199,7 @@ void x11_xinput2_event(nogui_state_t* state, XEvent* event) {
       return;
     // Invalid Event
     default:
-      state->kind = evInvalid;
+      state->kind = evUnknown;
       return;
   }
 

@@ -6,8 +6,11 @@ from nogui/core/signal import
   GUIQueue, newGUIQueue, destroy
 
 import nogui/libs/ft2
+import nogui/native/native
 import nogui/core/[window, atlas]
 import nogui/[logger, format, utf8]
+# OpenGL Pointer Loader
+from nogui/libs/gl import gladLoadGL
 
 type
   GUISpace = object
@@ -32,8 +35,9 @@ type
   # Global Application Handle
   Application = object
     window: GUIWindow
+    native: ptr GUINative
+    state: ptr GUIState
     queue: GUIQueue
-    state: pointer
     # Text Layout
     ft2*: FT2Library
     atlas*: CTXAtlas
@@ -53,7 +57,6 @@ type
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
   # Close Window and Queue
-  destroy(app.window)
   destroy(app.queue)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
@@ -123,11 +126,17 @@ proc createApp*(w, h: int32) =
   result.colors = createColors()
   result.space = createSpace()
   result.font = createFont(ft2)
-  # Create Queue, Atlas and then Window
-  let 
+  # Create Native Platform
+  let
+    native = nogui_native_init(w, h)
+    info = nogui_native_info(native)
+  if not gladLoadGL(info.gl_loader):
+    log(lvError, "failed load OpenGL")
+  # Create Queue, Atlas, Window
+  let
     queue = newGUIQueue()
     atlas = newCTXAtlas(result.font.face)
-  result.window = newGUIWindow(w, h, queue, atlas)
+  result.window = newGUIWindow(native, queue, atlas)
   result.queue = queue
   result.atlas = atlas
   # Create Shallow String
@@ -151,14 +160,6 @@ template executeApp*(root: GUIWidget, body: untyped) =
       # Handle Events and Execute Body
       if handleEvents(win): break
       body; render(win)
-
-# ---------------------------------------------
-# TODO: create proper api to lookup window info
-# ---------------------------------------------
-
-proc windowSize*(app: GUIApplication): tuple[w, h: int32] =
-  result.w = app.window.w
-  result.h = app.window.h
 
 # ------------
 # Font Metrics
@@ -197,20 +198,3 @@ proc index*(str: string, w: int32): int32 =
       if w + (advance shr 1) > 0:
         result = i
       break
-
-# -----------------------------------------
-# TODO: expose public apis for window after
-#       rewriting x11 platforms to C
-# -----------------------------------------
-
-proc setCursor*(app: GUIApplication, code: int) =
-  setCursor(app.window, code)
-
-proc setCursor*(app: GUIApplication, name: cstring) =
-  setCursor(app.window, name)
-
-proc setCursorCustom*(app: GUIApplication, custom: Cursor) =
-  setCursorCustom(app.window, custom)
-
-proc clearCursor*(app: GUIApplication) =
-  clearCursor(app.window)

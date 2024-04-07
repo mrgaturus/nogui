@@ -15,7 +15,7 @@ static void x11_event_utf8buffer(nogui_state_t* state, int cap) {
 
 static void x11_event_translate(nogui_state_t* state, XEvent* event) {
   nogui_native_t* native = state->native;
-  state->kind = evInvalid;
+  state->kind = evUnknown;
   // Skip Taken Events
   if (XFilterEvent(event, 0) != 0)
     return;
@@ -30,8 +30,16 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
       // Reflect Window Size
       XConfigureEvent* config = &event->xconfigure;
       nogui_info_t* info = &native->info;
-      info->width = config->width;
-      info->height = config->height;
+      // Check Window Change
+      int w = config->width;
+      int h = config->height;
+
+      // Check if Actually Resized
+      if (info->width == w && info->height == h)
+        state->kind = evUnknown;
+      // Reflect Window Size
+      info->width = w;
+      info->height = h;
 
       break;
     case ClientMessage:
@@ -55,8 +63,9 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
     case KeyPress:
       state->kind = evKeyDown;
       state->mods = event->xkey.state;
-      // Lookup UTF8 String or Char
-      XKeyPressedEvent* press = (XKeyPressedEvent*) &event;
+
+      // Lookup UTF8 String or Keysym
+      XKeyPressedEvent* press = (XKeyPressedEvent*) event;
       state->utf8size = Xutf8LookupString(
         native->xic, press,
         state->utf8str, state->utf8cap, 
@@ -91,7 +100,7 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
             peek.xkey.time == event->xkey.time &&
             peek.xkey.keycode == event->xkey.keycode)
           // Skip Event if Repeated
-          state->kind = evInvalid;
+          state->kind = evUnknown;
           return;
       }
 
@@ -112,9 +121,12 @@ void nogui_state_poll(nogui_state_t* state) {
 }
 
 int nogui_state_next(nogui_state_t* state) {
-  // Check Queue Flushing
-  int pending = nogui_state_flush(state);
-  if (pending) return pending;
+  int pending = !! *state->queue;
+  // Check Signal Queue
+  if (pending) {
+    state->kind = evFlush;
+    return pending;
+  }
 
   Display* display = state->native->display;
   pending = XPending(display);
@@ -122,8 +134,9 @@ int nogui_state_next(nogui_state_t* state) {
   if (pending) {
     XEvent event;
     XNextEvent(display, &event);
-    nogui_state_translate(state, &event);
-  }
+    x11_event_translate(state, &event);
+  } else if (pending = !! *state->cherry)
+    state->kind = evPending;
 
   return pending;
 }

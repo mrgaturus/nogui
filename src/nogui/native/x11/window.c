@@ -76,6 +76,9 @@ static void x11_create_egl(nogui_native_t* native, Window XID) {
     egl_surface,
     egl_context
   );
+  
+  // Disable V-Sync
+  eglSwapInterval(egl_display, 0);
 
   // Store EGL Session
   native->egl_display = egl_display;
@@ -157,16 +160,22 @@ nogui_native_t* nogui_native_init(int w, int h) {
   x11_create_egl(native, XID);
   native->XID = XID;
 
+  // Initialize XInput2
+  x11_xinput2_init(native);
+
   // Register Window Close
   Atom window_close = XInternAtom(
     native->display, "WM_DELETE_WINDOW", False);
   XSetWMProtocols(native->display, XID, &window_close, 1);
+  native->window_close = window_close;
 
   // Initial Native State
   native->info.width = w;
   native->info.height = h;
   // TODO: first class IME support
-  native->state.utf8str = NULL;
+  native->state.native = native;
+  native->state.utf8str = malloc(16);
+  native->state.utf8cap = 16;
 
   return native;
 }
@@ -179,6 +188,10 @@ int nogui_native_execute(nogui_native_t* native) {
   // Flush Window Open Command
   XSync(native->display, 0);
   return result;
+}
+
+void nogui_native_frame(nogui_native_t* native) {
+  eglSwapBuffers(native->egl_display, native->egl_surface);
 }
 
 nogui_info_t* nogui_native_info(nogui_native_t* native) {

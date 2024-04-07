@@ -1,4 +1,5 @@
 from ../builder import widget
+from ../native/native import GUIEvent, GUITool, GUIState
 # Import Widget and Rendering
 import ../core/[widget, event, render, atlas, signal, value]
 # Import Event and Callback Stuff
@@ -49,6 +50,12 @@ proc itemColor*(self: GUIWidget): uint32 =
 # Exporting Prelude
 # -----------------
 
+export 
+  GUIEvent,
+  GUITool,
+  GUIState
+export event
+
 export builder.widget
 export widget
 export render except 
@@ -63,10 +70,6 @@ export atlas except
   createTexture,
   checkTexture
 # Export Event and Callback Stuff
-export event except
-  newGUIState,
-  translateX11Event,
-  utf8state
 export signal except newGUIQueue
 export pushTimer, stopTimer
 # Export Relevant Global State

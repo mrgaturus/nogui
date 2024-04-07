@@ -76,9 +76,13 @@ proc newSignal(size = 0): GUISignal =
   result.next = nil
   result.bytes = bytes
 
-# -----------------
-# Signal Queue Push
-# -----------------
+proc expose*(queue: GUIQueue): tuple[queue, cherry: ptr pointer] =
+  result.queue = cast[ptr pointer](addr queue.first)
+  result.cherry = cast[ptr pointer](addr queue.once)
+
+# -------------------------
+# Signal Queue Manipulation
+# -------------------------
 
 proc push(queue: GUIQueue, signal: GUISignal) =
   if isNil(queue.first):
@@ -146,14 +150,11 @@ proc cherry(queue: GUIQueue) =
   last.next = nil
   queue.delay(last)
 
-iterator pending*(queue: GUIQueue): GUISignal =
+proc pending*(queue: GUIQueue) =
   assert isNil(queue.first)
-  # Consume Pending Queue
+  # Consume Delayed Queues
   queue.first = queue.once
   queue.once = nil
-  # Poll Pending Queue
-  for signal in queue.poll():
-    yield signal
 
 # --------------------
 # Signal Queue Destroy

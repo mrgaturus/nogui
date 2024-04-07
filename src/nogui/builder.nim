@@ -1,4 +1,5 @@
-import core/[widget, event, render]
+import native/native
+import core/[widget, render]
 from core/signal import 
   GUICallback, GUICallbackEX, 
   unsafeCallback, unsafeCallbackEX

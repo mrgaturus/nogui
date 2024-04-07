@@ -39,7 +39,7 @@ typedef enum {
 } nogui_tool_t;
 
 typedef enum {
-  evInvalid,
+  evUnknown,
   evFlush,
   evPending,
   // Cursor Events
@@ -88,6 +88,7 @@ typedef struct {
 // GUI Native Object
 nogui_native_t* nogui_native_init(int w, int h);
 int nogui_native_execute(nogui_native_t* native);
+void nogui_native_frame(nogui_native_t* native);
 nogui_info_t* nogui_native_info(nogui_native_t* native);
 void nogui_native_destroy(nogui_native_t* native);
 
@@ -99,22 +100,5 @@ int nogui_state_next(nogui_state_t* state);
 // GUI Native Properties
 void nogui_window_title(nogui_native_t* native, char* title);
 void nogui_window_cursor(nogui_native_t* native, nogui_cursor_t* cursor);
-
-// -----------------------
-// GUI Native Common Procs
-// -----------------------
-
-static int nogui_state_flush(nogui_state_t* state) {
-  void* queue = *state->queue;
-  void* cherry = *state->cherry;
-
-  if (queue)
-    state->kind = evFlush;
-  else if (cherry)
-    state->kind = evPending;
-
-  // There are Pending Signals
-  return queue || cherry;
-}
 
 #endif // NOGUI_NATIVE_H

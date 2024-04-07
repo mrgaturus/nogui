@@ -1,5 +1,21 @@
+# Avoid import os.parentDir
+proc includePath(): string {.compileTime.} =
+  result = currentSourcePath()
+  var l = result.len
+  # Remove File Name
+  while l > 0:
+    let c = result[l - 1]
+    if c == '/' or c == '\\':
+      break
+    # Next Char
+    dec(l)
+  # Remove Chars
+  result.setLen(l)
+  
+# Include Native Folder
+{.passC: "-I" & includePath().}
 {.compile: "logger.c".}
-{.push header: "nogui/native/native.h".}
+{.push header: "native.h".}
 
 type
   # GUI State Enums
@@ -8,7 +24,7 @@ type
     devEraser
     devMouse
   GUIEvent* {.pure, importc: "nogui_event_t".} = enum
-    evInvalid
+    evUnknown
     evFlush
     evPending
     # Cursor Events
@@ -23,12 +39,14 @@ type
     # Window Events
     evWindowExpose
     evWindowResize
+    evWindowEnter
     evWindowLeave
     evWindowClose
   # GUI Native State Object
   GUINative* {.importc: "nogui_native_t".} = object
   GUIState* {.importc: "nogui_state_t".} = object
     native: ptr GUINative
+    queue*, cherry*: ptr pointer
     # Kind State
     kind*: GUIEvent
     tool*: GUITool
@@ -60,7 +78,8 @@ type
 
 # GUI Native Object
 proc nogui_native_init*(w, h: int32): ptr GUINative
-proc nogui_native_execute*(native: ptr GUINative)
+proc nogui_native_execute*(native: ptr GUINative): int32
+proc nogui_native_frame*(native: ptr GUINative)
 proc nogui_native_info*(native: ptr GUINative): ptr GUINativeInfo
 proc nogui_native_destroy*(native: ptr GUINative)
 
@@ -80,7 +99,7 @@ proc nogui_window_cursor*(native: ptr GUINative, cursor: GUINativeCursor)
 # BSD is not supported
 # Wayland has awful governance
 when defined(linux):
-  {.passL: "-lX11 -lEGL".}
+  {.passL: "-lX11 -lXi -lEGL".}
   # Compile X11 Native Platform
   {.compile: "x11/cursor.c".}
   {.compile: "x11/device.c".}

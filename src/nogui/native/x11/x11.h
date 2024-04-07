@@ -1,11 +1,14 @@
 #ifndef NOGUI_X11_H
 #define NOGUI_X11_H
-#include "nogui/native/native.h"
+#include "../native.h"
 // Include X11 and EGL
 #include <X11/Xlib.h>
 #include <EGL/egl.h>
 
-typedef struct {
+struct xi2_device_t;
+typedef struct xi2_device_t xi2_device_t;
+
+struct xi2_device_t {
   xi2_device_t* next;
   // Device Identifier
   int id;
@@ -13,7 +16,7 @@ typedef struct {
   // Pressure Info
   int number;
   float min, max, last;
-} xi2_device_t;
+};
 
 // ---------------------------
 // GUI X11 Forward Declaration

@@ -1,9 +1,10 @@
-from event import GUIState
 from signal import
   GUISignal, GUITarget,
   WidgetSignal, send, delay
 from render import 
   CTXRender, GUIRect, push, pop
+# Native Platform State
+from ../native/native import GUIState
 
 type
   GUIFlag* = enum
