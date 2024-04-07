@@ -1,4 +1,4 @@
-import native/native
+import native/ffi
 import core/[widget, render]
 from core/signal import 
   GUICallback, GUICallbackEX, 

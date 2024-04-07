@@ -1,7 +1,7 @@
 import widget, signal, render
 from atlas import CTXAtlas, createTexture
 # Native Platform
-import ../native/native
+import ../native/ffi
 
 type
   GUILayer = object

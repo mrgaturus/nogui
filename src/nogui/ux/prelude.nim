@@ -1,5 +1,5 @@
 from ../builder import widget
-from ../native/native import GUIEvent, GUITool, GUIState
+from ../native/ffi import GUIEvent, GUITool, GUIState
 # Import Widget and Rendering
 import ../core/[widget, event, render, atlas, signal, value]
 # Import Event and Callback Stuff

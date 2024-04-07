@@ -4,7 +4,7 @@ from signal import
 from render import 
   CTXRender, GUIRect, push, pop
 # Native Platform State
-from ../native/native import GUIState
+from ../native/ffi import GUIState
 
 type
   GUIFlag* = enum

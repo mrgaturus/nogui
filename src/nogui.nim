@@ -6,7 +6,7 @@ from nogui/core/signal import
   GUIQueue, newGUIQueue, destroy
 
 import nogui/libs/ft2
-import nogui/native/native
+import nogui/native/ffi
 import nogui/core/[window, atlas]
 import nogui/[logger, format, utf8]
 # OpenGL Pointer Loader
