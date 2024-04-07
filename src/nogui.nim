@@ -56,8 +56,9 @@ type
 
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
-  # Close Window and Queue
+  # Destroy Queue and Native
   destroy(app.queue)
+  nogui_native_destroy(app.native)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
     log(lvError, "failed closing FreeType2")
@@ -127,9 +128,10 @@ proc createApp*(w, h: int32) =
   result.space = createSpace()
   result.font = createFont(ft2)
   # Create Native Platform
-  let
-    native = nogui_native_init(w, h)
-    info = nogui_native_info(native)
+  let native = nogui_native_init(w, h)
+  result.native = native
+  # Load OpenGL Functions
+  let info = nogui_native_info(native)
   if not gladLoadGL(info.gl_loader):
     log(lvError, "failed load OpenGL")
   # Create Queue, Atlas, Window
