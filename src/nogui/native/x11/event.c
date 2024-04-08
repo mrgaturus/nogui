@@ -9,8 +9,8 @@ static void x11_event_utf8buffer(nogui_state_t* state, int cap) {
   if (state->utf8str)
     free(state->utf8str);
   // Allocate New Buffer With New Capacity
-  state->utf8str = malloc(cap);
-  state->utf8cap = cap;
+  state->utf8str = malloc(cap + 1);
+  state->utf8cap = cap + 1;
 }
 
 static void x11_event_translate(nogui_state_t* state, XEvent* event) {
@@ -68,7 +68,7 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
       XKeyPressedEvent* press = (XKeyPressedEvent*) event;
       state->utf8size = Xutf8LookupString(
         native->xic, press,
-        state->utf8str, state->utf8cap, 
+        state->utf8str, state->utf8cap - 1,
         &state->key, &state->utf8state);
 
       // Expand Buffer if is Not Enough
@@ -77,9 +77,12 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
         // Try Lookup UTF8 String Again
         state->utf8size = Xutf8LookupString(
           native->xic, press,
-          state->utf8str, state->utf8cap, 
+          state->utf8str, state->utf8cap - 1,
           &state->key, &state->utf8state);
       }
+
+      // Add null-terminated to UTF8 Buffer
+      state->utf8str[state->utf8size] = '\0';
 
       // Override Focus Cycle
       if (state->key == 0xff09)

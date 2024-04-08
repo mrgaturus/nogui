@@ -104,9 +104,10 @@ static void x11_create_xim(nogui_native_t* native, Window XID) {
 
   // Try Create Input Method
   xim = XOpenIM(display, NULL, NULL, NULL);
-  if (!xim)
+  if (!xim) {
     XSetLocaleModifiers("@im=none");
     xim = XOpenIM(display, NULL, NULL, NULL);
+  }
 
   // Create Input Context
   const long mask = XIMPreeditNothing | XIMStatusNothing;
@@ -169,10 +170,10 @@ nogui_native_t* nogui_native_init(int w, int h) {
   XSetWMProtocols(native->display, XID, &window_close, 1);
   native->window_close = window_close;
 
-  // Initial Native State
+  // Initial Native Info
   native->info.width = w;
   native->info.height = h;
-  // TODO: first class IME support
+  // Initial Native State
   native->state.native = native;
   native->state.utf8str = malloc(16);
   native->state.utf8cap = 16;
