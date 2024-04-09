@@ -221,9 +221,10 @@ void x11_xinput2_event(nogui_state_t* state, XEvent* event) {
     state->tool = dev->tool;
 
     // Use Last Pressure to Avoid Discontinues
-    if (XIMaskIsSet(mask, dev->number) == 0)
+    if (XIMaskIsSet(mask, dev->number) == 0) {
       state->pressure = dev->last;
       return;
+    }
 
     int value = 0;
     // Find Raw Pressure Valuator
