@@ -146,6 +146,8 @@ proc cherry(queue: GUIQueue) =
   if not isNil(undo):
     undo.next = last.next
     queue.undo = nil
+  # Consume Unique Signal
+  else: queue.first = undo
   # Delay Callback
   last.next = nil
   queue.delay(last)
