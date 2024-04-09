@@ -62,4 +62,8 @@ void x11_xinput2_init(nogui_native_t* native);
 void x11_xinput2_destroy(nogui_native_t* native);
 void x11_xinput2_event(nogui_state_t* state, XEvent* event);
 
+// Platform Independent Keycode Translation
+nogui_keymask_t x11_keymask_lookup(unsigned int state);
+nogui_keycode_t x11_keycode_lookup(KeySym code);
+
 #endif // NOGUI_X11_H

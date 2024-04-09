@@ -9,3 +9,6 @@ tests/data
 # Ignore Generated List
 icons.list
 paths.list
+
+# Ignore Generated Keymaps
+keymap/output

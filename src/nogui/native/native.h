@@ -1,5 +1,7 @@
 #ifndef NOGUI_NATIVE_H
 #define NOGUI_NATIVE_H
+// Platform Independent Keycodes
+#include "keymap.h"
 
 void log_error(const char* format, ... );
 void log_warning(const char* format, ... );
@@ -62,16 +64,17 @@ typedef enum {
 typedef struct {
   nogui_native_t* native;
   void **queue, **cherry;
-  // Kind State
+  // State Kind and Tool
   nogui_event_t kind;
   nogui_tool_t tool;
   // Cursor State
   int mx, my;
   float px, py;
   float pressure;
-  // Key State
-  unsigned int key;
-  unsigned int mods;
+  // Keyboard State
+  nogui_keycode_t key;
+  nogui_keymask_t mask;
+  unsigned int scan;
   // Input Method Dummy
   // TODO: first class IME support
   int utf8state;

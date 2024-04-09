@@ -16,6 +16,9 @@ proc includePath(): string {.compileTime.} =
 {.passC: "-I" & includePath().}
 {.compile: "logger.c".}
 {.push header: "native.h".}
+# Export Keymap Objects
+import keymap
+export keymap
 
 type
   # GUI State Enums
@@ -54,9 +57,10 @@ type
     mx*, my*: int32
     px*, py*: float32
     pressure*: float32
-    # Key State
-    key*: uint32
-    mods*: uint32
+    # Keyboard State
+    key*: GUIKeycode
+    mask: GUIKeymask
+    scan*: uint32
     # Input Method Dummy
     # TODO: first class IME support
     utf8status*: int32
@@ -95,6 +99,13 @@ proc nogui_window_cursor*(native: ptr GUINative, cursor: GUINativeCursor)
 {.pop.} # importc
 {.pop.} # header
 
+proc mods*(state: ptr GUIState): GUIKeymods {.inline.} =
+  cast[GUIKeymods](state.mask)
+
+# ------------------------
+# Platform Native Compiler
+# ------------------------
+
 # Linux / X11
 # BSD is not supported
 # Wayland has awful governance
@@ -104,4 +115,5 @@ when defined(linux):
   {.compile: "x11/cursor.c".}
   {.compile: "x11/device.c".}
   {.compile: "x11/event.c".}
+  {.compile: "x11/keymap.c".}
   {.compile: "x11/window.c".}

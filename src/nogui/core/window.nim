@@ -294,6 +294,7 @@ proc widgetEvent(win: GUIWindow, state: ptr GUIState) =
       win.prepareClick(found, state)
   # Keyboard Event Dispatch
   of evKeyDown, evKeyUp, evNextFocus, evPrevFocus:
+    echo state.key
     let prev = win.focus
     found = win.findFocus(state)
     # TODO: dispatch callback based hotkeys instead root
@@ -315,6 +316,7 @@ proc handleEvents*(win: GUIWindow): bool =
   nogui_state_poll(state)
   # Process Pending Events
   while nogui_state_next(state) != 0:
+    echo state.key
     case state.kind
     of evUnknown: continue
     of evFlush: discard

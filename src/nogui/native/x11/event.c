@@ -72,14 +72,13 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
     // -- Keyboard Events --
     // TODO: create a first class IME
     case KeyPress:
-      state->kind = evKeyDown;
-      state->mods = event->xkey.state;
+      KeySym key;
 
       // Lookup UTF8 String or Keysym
       state->utf8size = Xutf8LookupString(
         native->xic, &event->xkey,
         state->utf8str, state->utf8cap - 1,
-        &state->key, &state->utf8state);
+        &key, &state->utf8state);
 
       // Expand Buffer if is Not Enough
       if (state->utf8state == XBufferOverflow) {
@@ -88,24 +87,30 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
         state->utf8size = Xutf8LookupString(
           native->xic, &event->xkey,
           state->utf8str, state->utf8cap - 1,
-          &state->key, &state->utf8state);
+          &key, &state->utf8state);
       }
 
       // Add null-terminated to UTF8 Buffer
       state->utf8str[state->utf8size] = '\0';
 
       // Override Focus Cycle
-      if (state->key == 0xff09)
+      if (key == 0xff09)
         state->kind = evNextFocus;
-      else if (state->key == 0xfe20)
+      else if (key == 0xfe20)
         state->kind = evPrevFocus;
-      // HACK: Handle Numpad Keys thanks to Xutf8LookupString Keysym
-      else if (state->key < 0xff80 || state->key > 0xffb9)
-        state->key = XkbKeycodeToKeysym(
+      // HACK: Avoid Lookup Raw Numpad Keys
+      else if (key < 0xff80 || key > 0xffb9)
+        key = XkbKeycodeToKeysym(
           native->display,
           event->xkey.keycode, 
           0, 0
         );
+
+      state->kind = evKeyDown;
+      state->scan = key;
+      // Translate Key to nogui Keycode
+      state->key = x11_keycode_lookup(key);
+      state->mask = x11_keymask_lookup(event->xkey.state);
 
       break;
     case KeyRelease:
@@ -123,7 +128,7 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
       unsigned int mods = event->xkey.state;
       KeyCode code = event->xkey.keycode;
       // Lookup True Released Key
-      KeySym key = XkbKeycodeToKeysym(
+      key = XkbKeycodeToKeysym(
         native->display, code, 0, 0);
 
       // HACK: Handle Left Tabulation
@@ -136,8 +141,10 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
           (mods & Mod2Mask) != 0);
 
       state->kind = evKeyUp;
-      state->key = key;
-      state->mods = mods;
+      state->scan = key;
+      // Translate Keys to nogui
+      state->key = x11_keycode_lookup(key);
+      state->mask = x11_keymask_lookup(mods);
 
       break;
   }

@@ -1,7 +1,7 @@
 from ../builder import widget
 from ../native/ffi import GUIEvent, GUITool, GUIState
 # Import Widget and Rendering
-import ../core/[widget, event, render, atlas, signal, value]
+import ../core/[widget, render, atlas, signal, value]
 # Import Event and Callback Stuff
 from ../core/timer import pushTimer, stopTimer
 # Import Global App State
@@ -50,11 +50,10 @@ proc itemColor*(self: GUIWidget): uint32 =
 # Exporting Prelude
 # -----------------
 
-export 
+export
   GUIEvent,
   GUITool,
   GUIState
-export event
 
 export builder.widget
 export widget
