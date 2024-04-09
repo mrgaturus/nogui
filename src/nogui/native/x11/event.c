@@ -1,9 +1,16 @@
 #include "x11.h"
 #include <stdlib.h>
 
-// --------------------------
-// X11 State Event Processing
-// --------------------------
+// -------------------
+// X11 State Event Key
+// -------------------
+
+extern	KeySym XkbKeycodeToKeysym(
+		Display *	/* display */,
+		KeyCode 	/* kc */,
+		int 		/* group */,
+		int		/* level */
+);
 
 static void x11_event_utf8buffer(nogui_state_t* state, int cap) {
   if (state->utf8str)
@@ -12,6 +19,10 @@ static void x11_event_utf8buffer(nogui_state_t* state, int cap) {
   state->utf8str = malloc(cap + 1);
   state->utf8cap = cap + 1;
 }
+
+// --------------------------
+// X11 State Event Processing
+// --------------------------
 
 static void x11_event_translate(nogui_state_t* state, XEvent* event) {
   nogui_native_t* native = state->native;
@@ -65,9 +76,8 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
       state->mods = event->xkey.state;
 
       // Lookup UTF8 String or Keysym
-      XKeyPressedEvent* press = (XKeyPressedEvent*) event;
       state->utf8size = Xutf8LookupString(
-        native->xic, press,
+        native->xic, &event->xkey,
         state->utf8str, state->utf8cap - 1,
         &state->key, &state->utf8state);
 
@@ -76,7 +86,7 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
         x11_event_utf8buffer(state, state->utf8size);
         // Try Lookup UTF8 String Again
         state->utf8size = Xutf8LookupString(
-          native->xic, press,
+          native->xic, &event->xkey,
           state->utf8str, state->utf8cap - 1,
           &state->key, &state->utf8state);
       }
@@ -89,12 +99,16 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
         state->kind = evNextFocus;
       else if (state->key == 0xfe20)
         state->kind = evPrevFocus;
+      // HACK: Handle Numpad Keys thanks to Xutf8LookupString Keysym
+      else if (state->key < 0xff80 || state->key > 0xffb9)
+        state->key = XkbKeycodeToKeysym(
+          native->display,
+          event->xkey.keycode, 
+          0, 0
+        );
 
       break;
     case KeyRelease:
-      state->kind = evKeyUp;
-      state->mods = event->xkey.state;
-
       // Handle Key Repeat Properly
       if (XEventsQueued(native->display, QueuedAfterReading)) {
         XEvent peek;
@@ -103,13 +117,27 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
             peek.xkey.time == event->xkey.time &&
             peek.xkey.keycode == event->xkey.keycode)
           // Skip Event if Repeated
-          state->kind = evUnknown;
           return;
       }
 
-      unsigned int mods = state->mods;
-      mods = (mods & ShiftMask) | (mods & LockMask);
-      state->key = XLookupKeysym(&event->xkey, mods);
+      unsigned int mods = event->xkey.state;
+      KeyCode code = event->xkey.keycode;
+      // Lookup True Released Key
+      KeySym key = XkbKeycodeToKeysym(
+        native->display, code, 0, 0);
+
+      // HACK: Handle Left Tabulation
+      if (key == 0xff09 && (mods & ShiftMask))
+        key = 0xfe20;
+      // HACK: Handle Numpad Keys
+      else if (key >= 0xff80 && key <= 0xffb9)
+        key = XkbKeycodeToKeysym(
+          native->display, code, 0, 
+          (mods & Mod2Mask) != 0);
+
+      state->kind = evKeyUp;
+      state->key = key;
+      state->mods = mods;
 
       break;
   }
