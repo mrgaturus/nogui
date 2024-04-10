@@ -86,7 +86,7 @@ static void x11_create_egl(nogui_native_t* native, Window XID) {
   native->egl_context = egl_context;
   native->egl_surface = egl_surface;
   // Store EGL GetProcAddress Function
-  native->info.gl_loader = eglGetProcAddress;
+  native->info.gl_loader = (nogui_getProcAddress_t) eglGetProcAddress;
 
   // -- Logging EGL & OpenGL Version --
   GLGETSTRING glGetString = (GLGETSTRING) eglGetProcAddress("glGetString");
@@ -107,6 +107,8 @@ static void x11_create_xim(nogui_native_t* native, Window XID) {
   if (!xim) {
     XSetLocaleModifiers("@im=none");
     xim = XOpenIM(display, NULL, NULL, NULL);
+    // Warns About Fallback Context Created
+    log_warning("fallback XIM context used");
   }
 
   // Create Input Context

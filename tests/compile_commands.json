@@ -1,0 +1,800 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@slogger.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/logger.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/logger.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@slogger.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@scursor.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/cursor.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/cursor.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@scursor.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@sdevice.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/device.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/device.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@sdevice.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@skeymap.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/keymap.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/keymap.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@skeymap.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@skeymap.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/keymap.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/keymap.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@skeymap.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@sevent.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/event.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/event.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@sevent.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sexceptions.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sexceptions.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sexceptions.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sexceptions.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@swindow.c.o",
+      "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/window.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/Programming/novice/nogui/src/nogui/native/x11/window.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@snative@sx11@swindow.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sdigitsutils.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sdigitsutils.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sdigitsutils.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sdigitsutils.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sassertions.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sassertions.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sassertions.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sassertions.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sdollars.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sdollars.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sdollars.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem@sdollars.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@ssyncio.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@ssyncio.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@ssyncio.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@ssyncio.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slibs@sgl.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slibs@sgl.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slibs@sgl.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slibs@sgl.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@ssystem.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@smath.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@smath.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@smath.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@smath.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sstrutils.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sstrutils.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sstrutils.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sstrutils.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@spathnorm.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@spathnorm.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@spathnorm.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@spathnorm.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@soscommon.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@soscommon.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@soscommon.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@soscommon.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sospaths2.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sospaths2.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sospaths2.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@sprivate@sospaths2.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@stimes.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@stimes.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@stimes.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@stimes.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@senvvars.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@senvvars.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@senvvars.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@senvvars.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@scmdline.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@scmdline.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@scmdline.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@scmdline.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sos.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sos.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sos.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@spure@sos.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slogger.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slogger.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slogger.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@slogger.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sdata.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sdata.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sdata.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sdata.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@ssignal.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@ssignal.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@ssignal.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@ssignal.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@svalues.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@svalues.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@svalues.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@svalues.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@satlas.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@satlas.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@satlas.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@satlas.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@srender.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@srender.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@srender.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@srender.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swidget.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swidget.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swidget.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swidget.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@smonotimes.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@smonotimes.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@smonotimes.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@s..@s..@s..@s.choosenim@stoolchains@snim-2.0.0@slib@sstd@smonotimes.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@stimer.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@stimer.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@stimer.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@stimer.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swindow.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swindow.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swindow.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@score@swindow.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sbuilder.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sbuilder.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sbuilder.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sbuilder.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@sprelude.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@sprelude.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@sprelude.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@sprelude.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slabeling.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slabeling.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slabeling.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slabeling.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@swidgets@sbutton.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@swidgets@sbutton.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@swidgets@sbutton.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@swidgets@sbutton.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbase.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbase.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbase.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbase.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@smisc.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@smisc.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@smisc.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@smisc.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbox.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbox.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbox.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@m..@ssrc@snogui@sux@slayouts@sbox.nim.c.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-w",
+      "-fmax-errors=3",
+      "-pthread",
+      "-I/home/mrgaturus/Programming/novice/nogui/src/nogui/native/",
+      "-msse4.1",
+      "-I/home/mrgaturus/.choosenim/toolchains/nim-2.0.0/lib",
+      "-I/home/mrgaturus/Programming/novice/nogui/tests",
+      "-o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@mtlayout.nim.c.o",
+      "/home/mrgaturus/.cache/nim/tlayout_d/@mtlayout.nim.c"
+    ],
+    "directory": "/home/mrgaturus/Programming/novice/nogui/tests",
+    "file": "/home/mrgaturus/.cache/nim/tlayout_d/@mtlayout.nim.c",
+    "output": "/home/mrgaturus/.cache/nim/tlayout_d/@mtlayout.nim.c.o"
+  }
+]
