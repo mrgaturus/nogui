@@ -4,7 +4,7 @@
 
 static void log_base(const char* base, const char* format, va_list args) {
   // Print Log Format
-  printf(base);
+  printf("%s", base);
   vprintf(format, args);
   // Line Jump
   putchar('\n');

@@ -42,7 +42,7 @@ const char* nogui_keycode_name(nogui_keycode_t keycode) {
   // Check if is an ASCII Keycode
   if (keycode > 32 && keycode < 0xFF) {
     ascii[0] = (char) toupper(keycode);
-    return &ascii;
+    return (const char*) &ascii;
   }
 
   // Lookup Special Keycode
