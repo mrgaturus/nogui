@@ -369,6 +369,26 @@ proc arrangeAtlas(atlas: CTXAtlas) =
   # Replace Buffer Atlas
   atlas.buffer = move img
 
+proc createTexture(atlas: CTXAtlas) =
+  glGenTextures(1, addr atlas.texID)
+  glBindTexture(GL_TEXTURE_2D, atlas.texID)
+  # Clamp Atlas UV Maping to Edge
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, cast[GLint](GL_CLAMP_TO_EDGE))
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, cast[GLint](GL_CLAMP_TO_EDGE))
+  # Use Nearest Pixel Filter
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, cast[GLint](GL_NEAREST))
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, cast[GLint](GL_NEAREST))
+  # Swizzle pixel components to RED-RED-RED-RED
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, cast[GLint](GL_RED))
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, cast[GLint](GL_RED))
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, cast[GLint](GL_RED))
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, cast[GLint](GL_RED))
+  # Copy Arranged Bitmap Buffer to Texture
+  glTexImage2D(GL_TEXTURE_2D, 0, cast[int32](GL_R8), atlas.w, atlas.h,
+    0, GL_RED, GL_UNSIGNED_BYTE, addr atlas.buffer[0])
+  # Unbind New Atlas Texture
+  glBindTexture(GL_TEXTURE_2D, 0)
+
 proc newCTXAtlas*(face: FT2Face): CTXAtlas =
   new result
   # Prepare Handles
@@ -386,32 +406,11 @@ proc newCTXAtlas*(face: FT2Face): CTXAtlas =
   result.renderCharset(csLatin)
   # Arrange Attlas Elements
   result.arrangeAtlas()
+  result.createTexture()
 
 # ---------------------------
 # ATLAS TEXTURE UPDATING PROC
 # ---------------------------
-
-proc createTexture*(atlas: CTXAtlas) =
-  # TODO: move to newCTXAtlas
-  # Copy Buffer to a New Texture
-  glGenTextures(1, addr atlas.texID)
-  glBindTexture(GL_TEXTURE_2D, atlas.texID)
-  # Clamp Atlas to Edge
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, cast[GLint](GL_CLAMP_TO_EDGE))
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, cast[GLint](GL_CLAMP_TO_EDGE))
-  # Use Nearest Pixel Filter
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, cast[GLint](GL_NEAREST))
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, cast[GLint](GL_NEAREST))
-  # Swizzle pixel components to RED-RED-RED-RED
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, cast[GLint](GL_RED))
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, cast[GLint](GL_RED))
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, cast[GLint](GL_RED))
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, cast[GLint](GL_RED))
-  # Copy Arranged Bitmap Buffer to Texture
-  glTexImage2D(GL_TEXTURE_2D, 0, cast[int32](GL_R8), atlas.w, atlas.h,
-    0, GL_RED, GL_UNSIGNED_BYTE, addr atlas.buffer[0])
-  # Unbind New Atlas Texture
-  glBindTexture(GL_TEXTURE_2D, 0)
 
 proc checkTexture*(atlas: CTXAtlas): bool =
   case atlas.status:
