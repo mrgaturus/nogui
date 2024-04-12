@@ -1,5 +1,5 @@
 import widget, signal, render
-from atlas import CTXAtlas, createTexture
+from atlas import CTXAtlas
 # Native Platform
 import ../native/ffi
 
@@ -9,9 +9,8 @@ type
     last {.cursor.}: GUIWidget
   GUIWindow* = ref object
     native: ptr GUINative
-    queue: GUIQueue
     ctx: CTXRender
-    # Window Widgets
+    # Window Root
     root: GUIWidget
     # Window Layers
     frame: GUILayer
@@ -20,24 +19,42 @@ type
     # Status Widgets
     focus: GUIWidget
     hover: GUIWidget
+    # Status Execution
+    running: bool
+
+# -------------------------
+# Window Native Queue Procs
+# -------------------------
+
+proc procSignal(win: GUIWindow, signal: GUISignal)
+proc procEvent(win: GUIWindow, signal: pointer)
+
+proc useQueue(win: GUIWindow, native: ptr GUINative) =
+  let
+    self = cast[pointer](win)
+    queue = nogui_native_queue(native)
+  var cbEvent, cbSignal: GUINativeCallback
+  # Define Native Callbacks
+  cbEvent.fn = cast[GUINativeProc](procEvent)
+  cbSignal.fn = cast[GUINativeProc](procSignal)
+  cbEvent.self = self
+  cbSignal.self = self
+  # Prepare Native Callbacks
+  queue.cb_event = cbEvent
+  queue.cb_signal = cbSignal
+  # Prepare Signal Queue
+  signal.useQueue(queue)
 
 # ---------------------
 # Window Creation Procs
 # ---------------------
 
-proc newGUIWindow*(native: ptr GUINative, queue: GUIQueue, atlas: CTXAtlas): GUIWindow =
+proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   new result
-  # Set Attributes
+  # Define Window Native
   result.native = native
-  result.queue = queue
-  # Bind Queue to State
-  let
-    state = nogui_native_state(native)
-    expose = queue.expose()
-  state.queue = expose.queue
-  state.cherry = expose.cherry
-  # Create Graphics Context
-  atlas.createTexture()
+  # Define Window Queue
+  result.useQueue(native)
   result.ctx = newCTXRender(atlas)
 
 proc execute*(win: GUIWindow, root: GUIWidget): bool =
@@ -49,8 +66,9 @@ proc execute*(win: GUIWindow, root: GUIWidget): bool =
   let info = nogui_native_info(win.native)
   root.metrics.w = int16 info.width
   root.metrics.h = int16 info.height
-  # Execute Native Program
-  result = nogui_native_execute(win.native) != 0
+  # Open Program Native Window
+  result = nogui_native_open(win.native) != 0
+  win.running = result
   # Set Renderer Viewport Dimensions
   viewport(win.ctx, info.width, info.height)
   delay(root.target, wsLayout)
@@ -151,7 +169,7 @@ proc focus(win: GUIWindow, widget: GUIWidget) =
     # Replace Focus
     win.focus = widget
 
-proc signalEvent(win: GUIWindow, signal: GUISignal): bool =
+proc procSignal(win: GUIWindow, signal: GUISignal) =
   case signal.kind
   of sCallback, sCallbackEX:
     signal.call()
@@ -164,27 +182,6 @@ proc signalEvent(win: GUIWindow, signal: GUISignal): bool =
     # Window Layer Widget
     of wsOpen: open(win, widget)
     of wsClose: close(win, widget)
-  of sWindow:
-    case signal.msg
-    # TODO: first class IME support
-    of wsOpenIM: discard
-    of wsCloseIM: discard
-    of wsFocusOut: # Un Focus
-      let focus {.cursor.} = win.focus
-      if not isNil(focus):
-        focus.flags.excl(wFocus)
-        focus.vtable.handle(focus, outFocus)
-        # Remove Focus
-        win.focus = nil
-    of wsHoverOut: # Un Hover
-      let hover {.cursor.} = win.hover
-      if not isNil(hover):
-        hover.flags.excl(wHoverGrab)
-        hover.vtable.handle(hover, outHover)
-        # Remove Hover
-        win.hover = nil
-    of wsTerminate: 
-      return true
 
 # ---------------------------
 # Window Keyboard Event Procs
@@ -309,38 +306,29 @@ proc widgetEvent(win: GUIWindow, state: ptr GUIState) =
   if enabled:
     found.vtable.event(found, state)
 
-proc handleEvents*(win: GUIWindow): bool =
-  # Poll Pending Events
+proc procEvent(win: GUIWindow, signal: pointer) =
   let state = nogui_native_state(win.native)
-  nogui_state_poll(state)
-  # Process Pending Events
-  while nogui_state_next(state) != 0:
-    case state.kind
-    of evUnknown: continue
-    of evFlush: discard
-    of evPending: pending(win.queue)
-    # Window Events
-    of evWindowExpose: discard
-    of evWindowClose:
-      # TODO: propose callback when close
-      return true
-    of evWindowResize:
-      let
-        info = nogui_native_info(win.native)
-        metrics = addr win.root.metrics
-      # Change Root Dimensions
-      metrics.w = int16 info.width
-      metrics.h = int16 info.height
-      # Update Root Layout
-      viewport(win.ctx, info.width, info.height)
-      delay(win.root.target, wsLayout)
-    of evWindowEnter, evWindowLeave:
-      continue
-    else: win.widgetEvent(state)
-    # Process Signals
-    for signal in poll(win.queue):
-      if win.signalEvent(signal):
-        return true
+  # Process Event State
+  case state.kind
+  of evUnknown: discard
+  of evWindowExpose: discard
+  of evWindowClose:
+    win.running = false
+  of evWindowResize:
+    let
+      info = nogui_native_info(win.native)
+      metrics = addr win.root.metrics
+    # Change Root Dimensions
+    metrics.w = int16 info.width
+    metrics.h = int16 info.height
+    # Update Root Layout
+    viewport(win.ctx, info.width, info.height)
+    delay(win.root.target, wsLayout)
+  # Window Hover Events
+  of evWindowEnter, evWindowLeave:
+    return
+  # Widget Events
+  else: win.widgetEvent(state)
 
 # -------------------
 # GUI Rendering Procs
@@ -366,3 +354,14 @@ proc render*(win: GUIWindow) =
   finish() # -- End GUI Rendering
   # Present Frame to Native
   nogui_native_frame(win.native)
+
+proc poll*(win: GUIWindow): bool =
+  result = win.running
+  let native = win.native
+  # Pump Native Events
+  if not result:
+    return result
+  # Poll Native Events
+  nogui_native_pump(native)
+  while result and nogui_native_poll(native) != 0:
+    result = result and win.running

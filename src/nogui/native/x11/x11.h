@@ -47,6 +47,7 @@ struct nogui_native_t {
 
   // nogui export
   nogui_info_t info;
+  nogui_queue_t queue;
   nogui_state_t state;
 };
 

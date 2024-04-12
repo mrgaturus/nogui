@@ -1,5 +1,6 @@
 #include "x11.h"
 #include <stdlib.h>
+#include <string.h>
 
 // ---------------------
 // X11 Keyboard Keycodes
@@ -146,18 +147,13 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
           state->kind = evWindowClose;
 
       break;
-    // -- Cursor Event --
-    case GenericEvent:
-      // Check XInput2 Event
-      if (event->xcookie.extension == native->xi2_opcode) {
-        if (XGetEventData(native->display, &event->xcookie)) {
-          // Translate XInput2 Event
-          x11_xinput2_event(state, event);
-          XFreeEventData(native->display, &event->xcookie);
-        }
-      }
 
+    // -- XInput2 Event --
+    case GenericEvent:
+      if (event->xcookie.data)
+          x11_xinput2_event(state, event);
       break;
+
     // -- Keyboard Events --
     case KeyPress: 
       x11_keypress_event(state, event);
@@ -168,33 +164,55 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
   }
 }
 
-// -----------------------
-// X11 State Event Polling
-// -----------------------
+// ----------------------
+// X11 Native Event Queue
+// ----------------------
 
-void nogui_state_poll(nogui_state_t* state) {
-  // TODO: create a dedicated queue for events and callbacks
-  //       for now it uses x11 event pooling because it can
+void nogui_native_pump(nogui_native_t* native) {
+  Display* display = native->display;
+  nogui_queue_t* queue = &native->queue;
+
+  XEvent event;
+  const long size = sizeof(event);
+  // Pump X11 Events
+  while (XPending(display)) {
+    XNextEvent(display, &event);
+
+    // Prepare XInput2 Generic Event
+    if (event.type == GenericEvent) {
+      event.xcookie.data = NULL;
+      // Retreive XInput2 Cookie Data
+      if (event.xcookie.extension == native->xi2_opcode)
+        XGetEventData(native->display, &event.xcookie);
+    }
+
+    // Prepare Created Callback
+    nogui_cb_t* c = nogui_cb_create(size);
+    c->fn = queue->cb_event.fn;
+    c->self = queue->cb_event.self;
+    // Copy XEvent to Callback
+    void* data = nogui_cb_data(c);
+    memcpy(data, &event, size);
+
+    // Push Callback to Queue
+    nogui_queue_push(queue, c);
+  }
 }
 
-int nogui_state_next(nogui_state_t* state) {
-  int pending = !! *state->queue;
-  // Check Signal Queue
-  if (pending) {
-    state->kind = evFlush;
-    return pending;
+int nogui_native_poll(nogui_native_t* native) {
+  nogui_queue_t* queue = &native->queue;
+  nogui_cb_t* cb = queue->first;
+  
+  // Translate XEvent to nogui State
+  if (cb && cb->fn == queue->cb_event.fn) {
+    XEvent* event = (XEvent*) nogui_cb_data(cb);
+    x11_event_translate(&native->state, event);
+
+    // Destroy XInput2 Generic Event
+    if (event->type == GenericEvent && event->xcookie.data)
+      XFreeEventData(native->display, &event->xcookie);
   }
 
-  Display* display = state->native->display;
-  pending = XPending(display);
-  // Process Current Event
-  if (pending) {
-    XEvent event;
-    XNextEvent(display, &event);
-    x11_event_translate(state, &event);
-  // Check Signal Pending
-  } else if ((pending = !! *state->cherry))
-    state->kind = evPending;
-
-  return pending;
+  // Dispatch Current Callback
+  return nogui_queue_poll(queue);
 }

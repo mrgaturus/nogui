@@ -172,18 +172,24 @@ nogui_native_t* nogui_native_init(int w, int h) {
   XSetWMProtocols(native->display, XID, &window_close, 1);
   native->window_close = window_close;
 
-  // Initial Native Info
+  // Initialize Native Info
   native->info.width = w;
   native->info.height = h;
-  // Initial Native State
+  // Initialize Native State
   native->state.native = native;
   native->state.utf8str = malloc(16);
   native->state.utf8cap = 16;
+  // Initialize Native Queue
+  native->queue = (nogui_queue_t) {};
 
   return native;
 }
 
-int nogui_native_execute(nogui_native_t* native) {
+// --------------------
+// X11 Native Execution
+// --------------------
+
+int nogui_native_open(nogui_native_t* native) {
   int result = XMapWindow(native->display, native->XID);
   if (result == BadWindow)
     log_error("failed opening window on X11");
@@ -195,14 +201,6 @@ int nogui_native_execute(nogui_native_t* native) {
 
 void nogui_native_frame(nogui_native_t* native) {
   eglSwapBuffers(native->egl_display, native->egl_surface);
-}
-
-nogui_info_t* nogui_native_info(nogui_native_t* native) {
-  return &native->info;
-}
-
-nogui_state_t* nogui_native_state(nogui_native_t* native) {
-  return &native->state;
 }
 
 // ------------------
@@ -231,5 +229,22 @@ void nogui_native_destroy(nogui_native_t* native) {
     free(native->state.utf8str);
 
   // Dealloc Native Platform
+  nogui_queue_destroy(&native->queue);
   free(native);
+}
+
+// ---------------------------
+// X11 Native Objects Pointers
+// ---------------------------
+
+nogui_info_t* nogui_native_info(nogui_native_t* native) {
+  return &native->info;
+}
+
+nogui_queue_t* nogui_native_queue(nogui_native_t* native) {
+  return &native->queue;
+}
+
+nogui_state_t* nogui_native_state(nogui_native_t* native) {
+  return &native->state;
 }

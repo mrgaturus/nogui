@@ -15,6 +15,8 @@ proc includePath(): string {.compileTime.} =
 # Include Native Folder
 {.passC: "-I" & includePath().}
 {.compile: "logger.c".}
+{.compile: "queue.c".}
+
 {.push header: "native.h".}
 # Export Keymap Objects
 import keymap
@@ -28,8 +30,6 @@ type
     devMouse
   GUIEvent* {.pure, importc: "nogui_event_t".} = enum
     evUnknown
-    evFlush
-    evPending
     # Cursor Events
     evCursorMove
     evCursorClick
@@ -48,9 +48,6 @@ type
   # GUI Native State Object
   GUINative* {.importc: "nogui_native_t".} = object
   GUIState* {.importc: "nogui_state_t".} = object
-    native: ptr GUINative
-    queue*, cherry*: ptr pointer
-    # Kind State
     kind*: GUIEvent
     tool*: GUITool
     # Cursor State
@@ -63,7 +60,7 @@ type
     scan*: uint32
     # Input Method Dummy
     # TODO: first class IME support
-    utf8status*: int32
+    utf8state*: int32
     utf8cap, utf8size*: int32
     utf8str*: cstring
 
@@ -77,24 +74,46 @@ type
     # OpenGL Function Loader
     gl_major*, gl_minor*: int32
     gl_loader*: proc (name: cstring): pointer {.noconv.}
+  # GUI Native Callback
+  GUINativeProc* {.importc: "nogui_proc_t".} =
+    proc(self, data: pointer) {.noconv.}
+  GUINativeCallback* {.importc: "nogui_cb_t".} = object
+    self*: pointer
+    fn*: GUINativeProc
+  # GUI Native Queue
+  GUINativeQueue* {.importc: "nogui_queue_t".} = object
+    cb_event*: GUINativeCallback
+    cb_signal*: GUINativeCallback
 
 {.push importc.}
 
-# GUI Native Object
+# GUI Native Queue Callback
+proc nogui_cb_create*(bytes: int32): ptr GUINativeCallback
+proc nogui_cb_data*(cb: ptr GUINativeCallback): pointer
+proc nogui_cb_call*(cb: ptr GUINativeCallback)
+
+# GUI Native Queue Push
+proc nogui_queue_push*(queue: ptr GUINativeQueue, cb: ptr GUINativeCallback)
+proc nogui_queue_delay*(queue: ptr GUINativeQueue, cb: ptr GUINativeCallback)
+
+# -------------------------
+# GUI Native Platform Procs
+# -------------------------
+
+# GUI Native Platform
 proc nogui_native_init*(w, h: int32): ptr GUINative
-proc nogui_native_execute*(native: ptr GUINative): int32
+proc nogui_native_open*(native: ptr GUINative): int32
 proc nogui_native_frame*(native: ptr GUINative)
-proc nogui_native_info*(native: ptr GUINative): ptr GUINativeInfo
 proc nogui_native_destroy*(native: ptr GUINative)
 
-# GUI Native Event
+# GUI Native Objects
+proc nogui_native_info*(native: ptr GUINative): ptr GUINativeInfo
+proc nogui_native_queue*(native: ptr GUINative): ptr GUINativeQueue
 proc nogui_native_state*(native: ptr GUINative): ptr GUIState
-proc nogui_state_poll*(state: ptr GUIState)
-proc nogui_state_next*(state: ptr GUIState): int32
 
-# GUI Native Properties
-proc nogui_window_title*(native: ptr GUINative, title: cstring)
-proc nogui_window_cursor*(native: ptr GUINative, cursor: GUINativeCursor)
+# GUI Native Event Pooling
+proc nogui_native_pump*(native: ptr GUINative)
+proc nogui_native_poll*(native: ptr GUINative): int32
 
 {.pop.} # importc
 {.pop.} # header

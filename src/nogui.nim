@@ -2,8 +2,6 @@ from nogui/pack import folders
 from nogui/data import newFont
 from nogui/core/widget import GUIWidget
 from nogui/core/timer import loop
-from nogui/core/signal import 
-  GUIQueue, newGUIQueue, destroy
 
 import nogui/libs/ft2
 import nogui/native/ffi
@@ -36,8 +34,7 @@ type
   Application = object
     window: GUIWindow
     native: ptr GUINative
-    state: ptr GUIState
-    queue: GUIQueue
+    state*: ptr GUIState
     # Text Layout
     ft2*: FT2Library
     atlas*: CTXAtlas
@@ -57,7 +54,6 @@ type
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
   # Destroy Queue and Native
-  destroy(app.queue)
   nogui_native_destroy(app.native)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
@@ -135,11 +131,9 @@ proc createApp*(w, h: int32) =
   if not gladLoadGL(info.gl_loader):
     log(lvError, "failed load OpenGL")
   # Create Queue, Atlas, Window
-  let
-    queue = newGUIQueue()
-    atlas = newCTXAtlas(result.font.face)
-  result.window = newGUIWindow(native, queue, atlas)
-  result.queue = queue
+  let atlas = newCTXAtlas(result.font.face)
+  result.window = newGUIWindow(native, atlas)
+  result.state = nogui_native_state(native)
   result.atlas = atlas
   # Create Shallow String
   result.fmt = addr result.fmt0
@@ -160,7 +154,7 @@ template executeApp*(root: GUIWidget, body: untyped) =
     # TODO: allow configure ms
     loop(16):
       # Handle Events and Execute Body
-      if handleEvents(win): break
+      if not win.poll(): break
       body; render(win)
 
 # ------------

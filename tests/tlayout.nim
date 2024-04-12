@@ -10,6 +10,51 @@ import nogui/ux/prelude
 import nogui/ux/widgets/button
 import nogui/ux/layouts/[box, misc]
 
+widget UXCallstack:
+  callback cbPostpone0:
+    echo "!! postpone0"
+    send(self.cbFirst0)
+
+  callback cbPostpone1:
+    echo "!! postpone1"
+
+  callback cbFirst00:
+    echo "-- -- first00 call"
+
+  callback cbFirst0:
+    echo "-- first0 call"
+    send(self.cbFirst00)
+
+  callback cbFirst1:
+    echo "-- first1 call"
+
+  callback cbFirst2:
+    echo "-- first2 call"
+
+  callback cbFirst:
+    echo "first call"
+    send(self.cbFirst0)
+    send(self.cbFirst1)
+    send(self.cbFirst2)
+
+  callback cbSecond:
+    echo "second call"
+
+  callback cbInit:
+    delay(self.cbPostpone0)
+    delay(self.cbPostpone0)
+    delay(self.cbPostpone1)
+    send(self.cbFirst)
+    send(self.cbSecond)
+
+  new callstack():
+    result.flags = {wMouse, wKeyboard}
+  
+  method event(state: ptr GUIState) =
+    if self.test(wGrab):
+      echo "() event call"
+      send(self.cbInit)
+
 controller CONLayout:
   attributes:
     widget: GUIWidget
@@ -25,7 +70,7 @@ controller CONLayout:
       # Sub Layout
       vertical().child:
         min: button("Minimun Top", cbHello)
-        button("Growable Center", cbHello)
+        callstack()
         min: button("Minimun Bottom", cbHello)
         # Sub Sub Layout
         horizontal().child:
