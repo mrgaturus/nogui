@@ -27,11 +27,17 @@ const
 
 type
   GUIHandle* = enum
-    inFocus, inHover, inFrame
-    outFocus, outHover, outFrame
+    inHover, outHover
+    inFocus, outFocus
+    inFrame, outFrame
   GUIKind* = enum
-    wgRoot, wgChild, wgFrame # Basic
-    wgPopup, wgMenu, wgTooltip
+    wkWidget
+    wkLayout
+    wkContainer
+    # Toplevel
+    wkFrame
+    wkPopup
+    wkTooltip
   # Widget VTable Methods
   GUIMethods* {.pure.} = object
     handle*: proc(self: GUIWidget, kind: GUIHandle) {.noconv.}
@@ -118,8 +124,6 @@ proc add*(self, widget: GUIWidget) =
     self.last.next = widget
   # Set Widget To Last
   self.last = widget
-  # Set Kind as Children
-  widget.kind = wgChild
 
 # ----------------------------------------------
 # WIDGET SLIBINGS PROCS
@@ -242,14 +246,14 @@ proc close*(widget: GUIWidget) {.inline.} =
   widget.send(wsClose)
 
 proc move*(widget: GUIWidget, x, y: int32) =
-  if widget.kind > wgChild:
+  if widget.kind >= wkFrame:
     widget.metrics.x = int16 x
     widget.metrics.y = int16 y
     # Send Layout Signal
     widget.relax(wsLayout)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
-  if widget.kind > wgChild:
+  if widget.kind >= wkFrame:
     let metrics = addr widget.metrics
     metrics.w = max(int16 w, metrics.minW)
     metrics.h = max(int16 h, metrics.minH)
