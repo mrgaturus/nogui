@@ -1,4 +1,4 @@
-import widget, signal, render
+import widget, signal, render, timer
 from atlas import CTXAtlas
 # Native Platform
 import ../native/ffi
@@ -9,6 +9,7 @@ type
     last {.cursor.}: GUIWidget
   GUIWindow* = ref object
     native: ptr GUINative
+    timers: ptr GUITimers
     ctx: CTXRender
     # Window Root
     root: GUIWidget
@@ -53,6 +54,7 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   new result
   # Define Window Native
   result.native = native
+  result.timers = useTimers()
   # Define Window Queue
   result.useQueue(native)
   result.ctx = newCTXRender(atlas)
@@ -361,7 +363,9 @@ proc poll*(win: GUIWindow): bool =
   # Pump Native Events
   if not result:
     return result
-  # Poll Native Events
+  # Pump Native Events
   nogui_native_pump(native)
+  nogui_timers_pump(win.timers)
+  # Poll Native Pumped Events
   while result and nogui_native_poll(native) != 0:
     result = result and win.running

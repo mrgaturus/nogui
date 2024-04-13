@@ -14,6 +14,7 @@ void log_info(const char* format, ... );
 struct nogui_native_t;
 struct nogui_cursor_t;
 
+typedef long long nogui_time_t;
 typedef struct nogui_native_t nogui_native_t;
 typedef struct nogui_cursor_t nogui_cursor_t;
 // OpenGL Function Address Loader, used by glad
@@ -105,6 +106,14 @@ typedef struct {
   int utf8cap, utf8size;
   char* utf8str;
 } nogui_state_t;
+
+// -------------------------
+// GUI Native Monotime Procs
+// -------------------------
+
+nogui_time_t nogui_time_now();
+nogui_time_t nogui_time_ms(int ms);
+void nogui_time_sleep(nogui_time_t time);
 
 // ----------------------
 // GUI Native Queue Procs

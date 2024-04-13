@@ -16,6 +16,7 @@ proc includePath(): string {.compileTime.} =
 {.passC: "-I" & includePath().}
 {.compile: "logger.c".}
 {.compile: "queue.c".}
+{.compile: "time.c".}
 
 {.push header: "native.h".}
 # Export Keymap Objects
@@ -66,6 +67,7 @@ type
 
 type
   # GUI Native Properties
+  GUINativeTime* {.importc: "nogui_time_t".} = distinct int64
   GUINativeCursor* {.importc: "nogui_cursor_t".} = object
   GUINativeInfo* {.importc: "nogui_info_t".} = object
     title*: cstring
@@ -86,6 +88,14 @@ type
     cb_signal*: GUINativeCallback
 
 {.push importc.}
+
+proc nogui_time_now*(): GUINativeTime
+proc nogui_time_ms*(ms: cint): GUINativeTime
+proc nogui_time_sleep*(time: GUINativeTime)
+
+# ----------------------
+# GUI Native Queue Procs
+# ----------------------
 
 # GUI Native Queue Callback
 proc nogui_cb_create*(bytes: int32): ptr GUINativeCallback

@@ -40,12 +40,22 @@ widget UXCallstack:
   callback cbSecond:
     echo "second call"
 
+  callback cbTimeout:
+    echo "called very later"
+    send(self.cbFirst)
+    send(self.cbSecond)
+    timeout(self.cbTimeout, 2000)
+
   callback cbInit:
+    # Executes After Events
     delay(self.cbPostpone0)
     delay(self.cbPostpone0)
     delay(self.cbPostpone1)
+    # Executes After Current Event
     send(self.cbFirst)
     send(self.cbSecond)
+    # Executes After established Milliseconds
+    timeout(self.cbTimeout, 2000)
 
   new callstack():
     result.flags = {wMouse, wKeyboard}

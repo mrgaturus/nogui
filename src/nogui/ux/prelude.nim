@@ -3,7 +3,7 @@ from ../native/ffi import GUIEvent, GUITool, GUIState
 # Import Widget and Rendering
 import ../core/[widget, render, atlas, signal, value]
 # Import Event and Callback Stuff
-from ../core/timer import pushTimer, stopTimer
+from ../core/timer import timeout, timestop
 # Import Global App State
 from ../../nogui import getApp, width, index
 # Import Icon ID Helper
@@ -70,7 +70,7 @@ export atlas except
   checkTexture
 # Export Event and Callback Stuff
 export signal except newGUIQueue
-export pushTimer, stopTimer
+export timeout, timestop
 # Export Relevant Global State
 export getApp, width, index
 # Export Constant Icon ID
