@@ -1,6 +1,6 @@
 from signal import
   GUISignal, GUITarget,
-  WidgetSignal, send, delay
+  WidgetSignal, send, relax
 from render import 
   CTXRender, GUIRect, push, pop
 # Native Platform State
@@ -242,7 +242,7 @@ proc move*(widget: GUIWidget, x, y: int32) =
     widget.metrics.x = int16 x
     widget.metrics.y = int16 y
     # Send Layout Signal
-    delay(widget.target, wsLayout)
+    relax(widget.target, wsLayout)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
@@ -250,7 +250,7 @@ proc resize*(widget: GUIWidget, w, h: int32) =
     metrics.w = max(int16 w, metrics.minW)
     metrics.h = max(int16 h, metrics.minH)
     # Send Layout Signal
-    delay(widget.target, wsLayout)
+    relax(widget.target, wsLayout)
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE

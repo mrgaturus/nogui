@@ -104,7 +104,7 @@ proc nogui_cb_call*(cb: ptr GUINativeCallback)
 
 # GUI Native Queue Push
 proc nogui_queue_push*(queue: ptr GUINativeQueue, cb: ptr GUINativeCallback)
-proc nogui_queue_delay*(queue: ptr GUINativeQueue, cb: ptr GUINativeCallback)
+proc nogui_queue_relax*(queue: ptr GUINativeQueue, cb: ptr GUINativeCallback)
 
 # -------------------------
 # GUI Native Platform Procs

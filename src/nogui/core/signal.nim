@@ -90,11 +90,11 @@ proc send*(target: GUITarget, ws: WidgetSignal) =
   # Send Created Callback
   nogui_queue_push(queue, s.cb)
 
-proc delay*(target: GUITarget, ws: WidgetSignal) =
+proc relax*(target: GUITarget, ws: WidgetSignal) =
   assert(not cast[pointer](target).isNil)
   let s = signal(target, ws)
   # Send Created Callback
-  nogui_queue_delay(queue, s.cb)
+  nogui_queue_relax(queue, s.cb)
 
 # ------------------------------
 # Signal Callback Signal Sending
@@ -113,11 +113,11 @@ proc send*(cb: GUICallback) =
   # Send Created Callback
   nogui_queue_push(queue, s.cb)
 
-proc delay*(cb: GUICallback) =
+proc relax*(cb: GUICallback) =
   if isNil(cb.fn): return
   let s = signal(cb)
   # Send Created Callback
-  nogui_queue_delay(queue, s.cb)
+  nogui_queue_relax(queue, s.cb)
 
 # -----------------------------
 # Signal Callback Extra Sending
@@ -139,17 +139,17 @@ proc send(cb: GUICallback, data: pointer, size: Natural) =
   # Send Created Callback
   nogui_queue_push(queue, s.cb)
 
-proc delay(cb: GUICallback, data: pointer, size: Natural) =
+proc relax(cb: GUICallback, data: pointer, size: Natural) =
   if isNil(cb.fn) or isNil(data): return
   let s = signal(cb, data, size)
   # Send Created Callback
-  nogui_queue_delay(queue, s.cb)
+  nogui_queue_relax(queue, s.cb)
 
 template send*[T](cb: GUICallbackEX[T], data: sink T) =
   GUICallback(cb).send(addr data, sizeof T)
 
-template delay*[T](cb: GUICallbackEX[T], data: sink T) =
-  GUICallback(cb).delay(addr data, sizeof T)
+template relax*[T](cb: GUICallbackEX[T], data: sink T) =
+  GUICallback(cb).relax(addr data, sizeof T)
 
 # -----------------------
 # Signal Callback Forcing

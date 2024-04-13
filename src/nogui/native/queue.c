@@ -63,7 +63,7 @@ void nogui_queue_push(nogui_queue_t* queue, nogui_cb_t* cb) {
   queue->stack = cb;
 }
 
-void nogui_queue_delay(nogui_queue_t* queue, nogui_cb_t* cb) {
+void nogui_queue_relax(nogui_queue_t* queue, nogui_cb_t* cb) {
   // Initialize Queue if Empty
   if (!queue->once) {
     queue->once = cb;
@@ -75,18 +75,18 @@ void nogui_queue_delay(nogui_queue_t* queue, nogui_cb_t* cb) {
   nogui_cb_t* c = queue->once;
 
   while (c) {
-    // Compare if is already Delayed
+    // Compare if is already Relaxed
     if (nogui_cb_equal(c, cb) == 0) {
       free(cb);
       return;
     }
 
-    // Next Delayed
+    // Next Relaxed
     last = c;
     c = c->next;
   }
 
-  // Replace Last Delayed
+  // Replace Last Relaxed
   last->next = cb;
 }
 
@@ -120,7 +120,7 @@ CALLBACK_POLL:
   if (queue->once) {
     cb = queue->once;
     queue->once = NULL;
-    // Consume Delayed Queue
+    // Consume Relaxed Queue
     goto CALLBACK_POLL;
   }
 

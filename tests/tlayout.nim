@@ -48,9 +48,9 @@ widget UXCallstack:
 
   callback cbInit:
     # Executes After Events
-    delay(self.cbPostpone0)
-    delay(self.cbPostpone0)
-    delay(self.cbPostpone1)
+    relax(self.cbPostpone0)
+    relax(self.cbPostpone0)
+    relax(self.cbPostpone1)
     # Executes After Current Event
     send(self.cbFirst)
     send(self.cbSecond)

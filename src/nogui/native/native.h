@@ -88,7 +88,6 @@ typedef enum {
 
 typedef struct {
   nogui_native_t* native;
-  void **queue, **cherry;
   // State Kind and Tool
   nogui_event_t kind;
   nogui_tool_t tool;
@@ -126,7 +125,7 @@ void nogui_cb_call(nogui_cb_t* cb);
 
 // GUI Native Queue Push
 void nogui_queue_push(nogui_queue_t* queue, nogui_cb_t* cb);
-void nogui_queue_delay(nogui_queue_t* queue, nogui_cb_t* cb);
+void nogui_queue_relax(nogui_queue_t* queue, nogui_cb_t* cb);
 
 // GUI Native Queue Pop
 int nogui_queue_poll(nogui_queue_t* queue);

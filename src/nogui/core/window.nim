@@ -73,7 +73,7 @@ proc execute*(win: GUIWindow, root: GUIWidget): bool =
   win.running = result
   # Set Renderer Viewport Dimensions
   viewport(win.ctx, info.width, info.height)
-  delay(root.target, wsLayout)
+  relax(root.target, wsLayout)
 
 # --------------------------
 # Window Layer Attach/Detach
@@ -325,7 +325,7 @@ proc procEvent(win: GUIWindow, signal: pointer) =
     metrics.h = int16 info.height
     # Update Root Layout
     viewport(win.ctx, info.width, info.height)
-    delay(win.root.target, wsLayout)
+    relax(win.root.target, wsLayout)
   # Window Hover Events
   of evWindowEnter, evWindowLeave:
     return
