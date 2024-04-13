@@ -325,7 +325,7 @@ proc procEvent(win: GUIWindow, signal: pointer) =
     metrics.h = int16 info.height
     # Update Root Layout
     viewport(win.ctx, info.width, info.height)
-    relax(win.root.target, wsLayout)
+    relax(win.root, wsLayout)
   # Window Hover Events
   of evWindowEnter, evWindowLeave:
     return

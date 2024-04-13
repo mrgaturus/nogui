@@ -45,6 +45,7 @@ type
     # Dimensions Hint
     minW*, minH*: int16
     maxW*, maxH*: int16
+  # Widget Object
   GUIWidget* {.inheritable.} = ref object
     vtable*: ptr GUIMethods
     # Widget Node Tree
@@ -97,8 +98,11 @@ proc some*(self: GUIWidget, mask: GUIFlags): bool {.inline.} =
   mask * self.flags != {}
 
 # -- Widget Weak Cursor
-proc target*(self: GUIWidget): GUITarget {.inline.} =
-  cast[GUITarget](self) # Avoid Ref Count Loosing
+converter target*(self: GUIWidget): GUITarget {.inline.} =
+  cast[GUITarget](self) # Avoid ORC Cycle
+
+converter unwrap*(self: GUITarget): GUIWidget {.inline.} =
+  cast[GUIWidget](self) # Avoid ORC Cycle
 
 # ---------------------
 # WIDGET CHILDREN PROCS
@@ -232,17 +236,17 @@ proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
 # -----------------------------
 
 proc open*(widget: GUIWidget) {.inline.} =
-  send(widget.target, wsOpen)
+  widget.send(wsOpen)
 
 proc close*(widget: GUIWidget) {.inline.} =
-  send(widget.target, wsClose)
+  widget.send(wsClose)
 
 proc move*(widget: GUIWidget, x, y: int32) =
   if widget.kind > wgChild:
     widget.metrics.x = int16 x
     widget.metrics.y = int16 y
     # Send Layout Signal
-    relax(widget.target, wsLayout)
+    widget.relax(wsLayout)
 
 proc resize*(widget: GUIWidget, w, h: int32) =
   if widget.kind > wgChild:
@@ -250,7 +254,7 @@ proc resize*(widget: GUIWidget, w, h: int32) =
     metrics.w = max(int16 w, metrics.minW)
     metrics.h = max(int16 h, metrics.minH)
     # Send Layout Signal
-    relax(widget.target, wsLayout)
+    widget.relax(wsLayout)
 
 # ----------------------------
 # WIDGET FINDING - EVENT QUEUE
