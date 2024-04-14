@@ -38,8 +38,8 @@ type
     # Key Events
     evKeyDown
     evKeyUp
-    evNextFocus
-    evPrevFocus
+    evFocusNext
+    evFocusPrev
     # Window Events
     evWindowExpose
     evWindowResize

@@ -16,6 +16,7 @@ from std/importutils import privateAccess
 # ------------------------
 
 proc colorControl*(self: GUIWidget, idle, hover, click: uint32): uint32 {.inline.} =
+  const wHoverGrab = {wHover, wGrab}
   let flags = self.flags * wHoverGrab
   # Choose Which Color Using State
   if flags == {}: idle

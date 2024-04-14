@@ -48,11 +48,12 @@ static void x11_keypress_event(nogui_state_t* state, XEvent* event) {
   // Add null-terminated to UTF8 Buffer
   state->utf8str[state->utf8size] = '\0';
 
+  state->kind = evKeyDown;
   // Override Focus Cycle
   if (key == 0xff09)
-    state->kind = evNextFocus;
+    state->kind = evFocusNext;
   else if (key == 0xfe20)
-    state->kind = evPrevFocus;
+    state->kind = evFocusPrev;
   // HACK: Avoid Lookup Raw Numpad Keys
   else if (key < 0xff80 || key > 0xffb9)
     key = XkbKeycodeToKeysym(
@@ -61,7 +62,6 @@ static void x11_keypress_event(nogui_state_t* state, XEvent* event) {
       0, 0
     );
 
-  state->kind = evKeyDown;
   state->scan = key;
   // Translate Key to nogui Keycode
   state->key = x11_keycode_lookup(key);

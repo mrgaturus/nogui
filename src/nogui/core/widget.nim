@@ -19,12 +19,6 @@ type
     wGrab
   GUIFlags* = set[GUIFlag]
 
-const
-  wStandard* = {wMouse, wKeyboard}
-  # Event Status Checking
-  wFocusable* = {wVisible, wKeyboard}
-  wHoverGrab* = {wHover, wGrab}
-
 type
   GUIHandle* = enum
     inHover, outHover
@@ -35,6 +29,7 @@ type
     wkLayout
     wkContainer
     # Toplevel
+    wkRoot
     wkFrame
     wkPopup
     wkTooltip
@@ -303,35 +298,60 @@ proc find*(widget: GUIWidget, x, y: int32): GUIWidget =
 # -------------------------------
 
 proc visible*(widget: GUIWidget): bool =
-  var cursor = widget
-  # Test Self Visibility
-  result = wVisible in cursor.flags
-  # Walk to Outermost Parent
+  var w {.cursor.} = widget
+  result = wVisible in w.flags
+  # Check Outermost Parent
   while result:
-    cursor = cursor.parent
-    if isNil(cursor): break
-    else: # Test Parent Visibility
-      result = wVisible in cursor.flags
+    w = w.parent
+    if isNil(w): break
+    # Check if Parent is Visible
+    result = wVisible in w.flags
+
+proc focusable*(widget: GUIWidget): bool =
+  # Check if is a Widget, is Enabled and is Visible
+  result = widget.kind == wkWidget and
+  wKeyboard in widget.flags and
+  widget.visible()
 
 proc step*(widget: GUIWidget, back: bool): GUIWidget =
   result = widget
-  # Step Neightbords
+  # Check if is not a Toplevel Widget
+  var outer {.cursor.} = widget.parent
+  if isNil(outer): return result
+  # Find the Outermost Container
+  while outer.kind < wkContainer:
+    if isNil(outer.parent):
+      break
+    # Next Outermost
+    outer = outer.parent
+  # Find Next/Prev Focus
   while true:
-    result = # Step Widget
-      if back: result.prev
-      else: result.next
-    # Reroll Widget
+    # Step Next Widget
+    let top {.cursor.} = result.parent
+    if back: result = result.prev
+    else: result = result.next
+    # Exit from Scope
     if isNil(result):
-      result = # Restart Widget
-        if back: widget.parent.last
-        else: widget.parent.first
-    # Check if is Focusable or is the same again
-    if result.flags * wFocusable == wFocusable or 
-      result == widget: break
+      result = top
+      if result != outer:
+        continue
+    # Enter to Layout Scope
+    while result.kind == wkLayout or result == outer:
+      var inside {.cursor.} = result
+      # Locate at an Endpoint
+      if back: inside = inside.last
+      else: inside = inside.first
+      if isNil(inside):
+        break
+      # Next Inside
+      result = inside
+    # Check Focusable Widget
+    if result.kind > wkWidget: continue
+    if {wVisible, wKeyboard} in result.flags or result == widget:
+      break
 
 # --------------------------------
 # WIDGET LAYOUT TREE - EVENT QUEUE
-# TODO: use names freed by removing vtable templates alias
 # --------------------------------
 
 proc absolute(widget: GUIWidget) =

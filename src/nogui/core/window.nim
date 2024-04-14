@@ -61,8 +61,9 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
 
 proc execute*(win: GUIWindow, root: GUIWidget): bool =
   win.root = root
-  # TODO: remove this after callback based shortcuts
-  root.flags = {wMouse, wKeyboard, wVisible}
+  # Define Root Properties
+  root.kind = wkRoot
+  root.flags.incl(wVisible)
   # Set to Global Dimensions
   let info = nogui_native_info(win.native)
   root.metrics.w = int16 info.width
@@ -146,9 +147,12 @@ proc unfocus(win: GUIWindow) =
   win.focus = nil
 
 proc focus(win: GUIWindow, widget: GUIWidget) =
-  if wFocusable notin widget.flags: return
-  if widget != win.focus:
-    win.unfocus()
+  # Check if is able to be Focused
+  if widget == win.focus or
+  not widget.focusable():
+    return
+  # Remove Previous Focus
+  win.unfocus()
   # Handle Focus In
   widget.flags.incl(wFocus)
   widget.vtable.handle(widget, inFocus)
@@ -185,7 +189,7 @@ proc layout(win: GUIWindow, widget: GUIWidget) =
     widget.arrange()
     # Check if Focus is Lost
     let focus {.cursor.} = win.focus
-    if not isNil(focus) and wFocusable notin focus.flags:
+    if not isNil(focus) and not widget.focusable():
       win.unfocus()
 
 # --------------------------
@@ -195,8 +199,8 @@ proc layout(win: GUIWindow, widget: GUIWidget) =
 proc findFocus(win: GUIWindow, state: ptr GUIState): GUIWidget =
   let
     focus {.cursor.} = win.focus
-    next = state.kind == evNextFocus
-    back = state.kind == evPrevFocus
+    next = state.kind == evFocusNext
+    back = state.kind == evFocusPrev
   # Check if not has focus or is not cycle
   if not (next or back) or isNil(focus):
     return focus
@@ -288,7 +292,7 @@ proc widgetEvent(win: GUIWindow, state: ptr GUIState) =
     if enabled:
       win.prepareClick(found, state)
   # Keyboard Event Dispatch
-  of evKeyDown, evKeyUp, evNextFocus, evPrevFocus:
+  of evKeyDown, evKeyUp, evFocusNext, evFocusPrev:
     let prev = win.focus
     found = win.findFocus(state)
     # TODO: dispatch callback based hotkeys instead root
