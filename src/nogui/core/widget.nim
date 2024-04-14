@@ -308,10 +308,17 @@ proc visible*(widget: GUIWidget): bool =
     result = wVisible in w.flags
 
 proc focusable*(widget: GUIWidget): bool =
-  # Check if is a Widget, is Enabled and is Visible
-  result = widget.kind == wkWidget and
-  wKeyboard in widget.flags and
-  widget.visible()
+  if widget.kind > wkWidget:
+    return false
+  # Check if Widget is Focusable
+  var w {.cursor.} = widget
+  result = {wVisible, wKeyboard} in w.flags
+  # Check Outermost Parent
+  while result:
+    w = w.parent
+    if isNil(w): break
+    # Check if Parent is Visible and is a Layout
+    result = wVisible in w.flags and w.kind > wkWidget
 
 proc step*(widget: GUIWidget, back: bool): GUIWidget =
   result = widget
