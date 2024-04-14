@@ -139,6 +139,8 @@ widget UXGridLayout:
   new grid(w, h: int32):
     result.w = w
     result.h = h
+    # Layout Widget Kind
+    result.kind = wkLayout
     # Allocate Cells
     result.wBand = band(w)
     result.hBand = band(h)

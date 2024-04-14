@@ -14,7 +14,7 @@ widget UXLevelCell of UXLayoutCell:
 
 widget UXLayoutHLevel:
   new level():
-    discard
+    result.kind = wkLayout
 
   method update =
     # Separator Horizontal
@@ -63,7 +63,7 @@ widget UXLayoutHLevel:
 
 widget UXLayoutVLevel:
   new vlevel():
-    discard
+    result.kind = wkLayout
 
   method update =
     # Separator Vertical

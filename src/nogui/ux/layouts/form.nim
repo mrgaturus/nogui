@@ -10,14 +10,17 @@ widget UXLayoutField:
     size0: int16
 
   new field(name: string, w: GUIWidget):
+    result.kind = wkLayout
     result.add label(name, hoLeft, veMiddle)
     result.add w
 
   new field(name, w: GUIWidget):
+    result.kind = wkLayout
     result.add name
     result.add w
 
   new field(w: GUIWidget):
+    result.kind = wkLayout
     result.add dummy()
     result.add w
 
@@ -64,7 +67,7 @@ widget UXLayoutForm:
     size0: int16
 
   new form():
-    discard
+    result.kind = wkLayout
 
   method update =
     var 

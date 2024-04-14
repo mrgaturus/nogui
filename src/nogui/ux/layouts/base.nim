@@ -14,6 +14,7 @@ widget UXLayoutCell:
     self.add w
     # Mimic Widget Flags
     self.flags = w.flags
+    self.kind = wkLayout
 
   method update =
     # Ensure is one widget

@@ -41,6 +41,8 @@ widget UXAdjustLayout:
     [scaleW, scaleH]: float32
 
   proc init(w: GUIWidget) =
+    self.kind = wkLayout
+    # Original Scale
     self.scaleW = 1.0
     self.scaleH = 1.0
     # Store Widget
@@ -110,12 +112,16 @@ widget UXMarginLayout:
     # Use Default Margin
     result.marginW = low int16
     result.marginH = low int16
+    # Widget Layout Kind
+    result.kind = wkLayout
 
   new margin(size: int16, w: GUIWidget):
     result.add w
     # Customized Margin
     result.marginW = size
     result.marginH = size
+    # Widget Layout Kind
+    result.kind = wkLayout
 
   method update =
     let 

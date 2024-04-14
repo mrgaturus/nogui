@@ -11,7 +11,7 @@ widget UXLayoutVBox:
     [fit, count]: int16
 
   new vertical():
-    discard
+    result.kind = wkLayout
 
   method update =
     var 
@@ -81,7 +81,7 @@ widget UXLayoutHBox:
     [fit, count]: int16
 
   new horizontal():
-    discard
+    result.kind = wkLayout
 
   method update =
     var 
