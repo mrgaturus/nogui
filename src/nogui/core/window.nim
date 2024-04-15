@@ -1,4 +1,4 @@
-import widget, signal, render, timer
+import widget, tree, signal, render, timer
 from atlas import CTXAtlas
 # Native Platform
 import ../native/ffi
