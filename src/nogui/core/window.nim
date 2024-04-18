@@ -152,7 +152,7 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   # Define Window Native
   result.native = native
   result.timers = useTimers()
-  result.man = useManager(native)
+  result.man = createManager()
   # Define Window Queue
   result.messenger(native)
   result.ctx = newCTXRender(atlas)

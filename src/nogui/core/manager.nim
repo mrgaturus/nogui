@@ -1,5 +1,5 @@
 import ../native/ffi
-import widget, tree
+import widget, tree, callback
 
 type
   GUILayer* = object
@@ -11,10 +11,9 @@ type
   # GUI Window Manager
   GUIManager* = ref object
     state: ptr GUIState
-    # REWORK SIGNAL QUEUE
-    # !!!!!!!!!! USE SIGNAL QUEUE !!!!!!!!!!!
-    queue: ptr GUINativeQueue
-    cbForward: GUINativeCallback
+    # Window Event Forward
+    cbForward: GUICallbackEX[GUIWidget]
+    cbLand: GUICallback
     # Window Frames
     root*: GUIWidget
     frame*: GUILayer
@@ -156,13 +155,16 @@ proc layout*(man: GUIManager, widget: GUIWidget) =
 # Cursor Hover Manager
 # --------------------
 
+proc unhover(man: GUIManager, idx: int) =
+  let hover = man.stack[idx].hover
+  hover.flags.excl(wHover)
+  hover.vtable.handle(hover, outHover)
+
 proc unhover*(man: GUIManager) =
   var i = high(man.stack)
   # Handle Focus Out
   while i >= 0:
-    let hover = man.stack[i].hover
-    hover.flags.excl(wHover)
-    hover.vtable.handle(hover, outHover)
+    man.unhover(i)
     # Next Hover
     dec(i)
   # Clear Hover Stack
@@ -174,32 +176,28 @@ proc land(man: GUIManager) =
   var i = high(man.stack)
   # Handle Focus Out
   while i >= depth:
-    let hover = man.stack[i].hover
-    hover.flags.excl(wHover)
-    hover.vtable.handle(hover, outHover)
+    man.unhover(i)
     # Next Hover
     dec(i)
   # Land Hover Stack
-  setLen(man.stack, depth + 1)
+  setLen(man.stack, depth)
 
 proc hover*(man: GUIManager, widget: GUIWidget) =
   let i = man.depth
+  man.depth = i + 1
   # Push to Hover Stack
   if i + 1 > len(man.stack):
     setLen(man.stack, i + 1)
   # Collapse Hover Stack
   elif widget != man.stack[i].hover:
     man.land()
+    man.unhover(i)
     man.stack[i] = default(GUIForward)
-  else:
-    man.depth = i + 1
-    return
+  else: return
   # Handle Hover In
   widget.flags.incl(wHover)
   widget.vtable.handle(widget, inHover)
   man.stack[i].hover = widget
-  # Next Hover
-  man.depth = i + 1
 
 # ----------------------
 # Cursor Forward Manager
@@ -245,22 +243,6 @@ proc cursorGrab(widget: GUIWidget, state: ptr GUIState) =
   # Replace Widget Flags
   widget.flags = flags
 
-proc cursorSend(man: GUIManager, widget: GUIWidget) =
-  # ---------------------------------------------
-  # !!!!!!!!!! REWORK SIGNAL QUEUE !!!!!!!!!!!!!!
-  # !!!!!!!!!! USE GUICallbackEX INSTEAD !!!!!!!!
-  # ---------------------------------------------
-  const size = int32 sizeof(GUIWidget)
-  let
-    cb0 = man.cbForward
-    cb = nogui_cb_create(size)
-    data {.cursor.} = cast[ptr pointer](nogui_cb_data(cb))
-  cb.fn = cb0.fn
-  cb.self = cb0.self
-  data[] = cast[pointer](widget)
-  # Send to Native Callback
-  nogui_queue_push(man.queue, cb)
-
 proc cursorForward(man: GUIManager, widget: GUIWidget) =
   let
     state = man.state
@@ -272,11 +254,12 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
   # Dispatch Cursor Event
   if wMouse in flags:
     widget.vtable.event(widget, state)
-  # Forward Event from Stack if was Grabbed
+  # Forward Whole Stack if was Grabbed
   if wGrab in (flags + widget.flags):
     if depth < high(man.stack):
       let next = man.stack[depth + 1].hover
-      man.cursorSend(next) # !!!!!!!!!!!!!
+      send(man.cbForward, next)
+  # Forward to Next Inside Widget
   elif widget.kind >= wkRoot or widget.kind == wkForward:
     let jump = addr man.stack[depth].jump
     var next = jump[]
@@ -287,11 +270,10 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
     jump[] = next
     # Forward Event
     if next != widget:
-      man.cursorSend(next)
-    # Collapse Stack
-    else:
-      man.depth = depth
-      man.land()
+      send(man.cbForward, next)
+    else: send(man.cbLand)
+  # Finalize Event Forwarding
+  else: send(man.cbLand)
 
 # ----------------------
 # Event Dispatch Manager
@@ -323,21 +305,21 @@ proc keyEvent*(man: GUIManager, state: ptr GUIState): bool =
     man.step(back)
     result = true
 
-# ---------------------------------------
-# !!!!!!!!!! REWORK SIGNAL QUEUE !!!!!!!!
-# !!!!!!!!!! USE SIGNAL QUEUE !!!!!!!!!!!
-# !!!!!!!!!! USE GUICallbackEX !!!!!!!!!!
-# ---------------------------------------
+# -----------------------
+# Event Configure Manager
+# -----------------------
 
-proc cbForward*(man: GUIManager, widget: ptr GUIWidget) =
+proc cbForward(man: GUIManager, widget: ptr GUIWidget) =
   man.cursorForward(widget[])
 
-proc useManager*(native: ptr GUINative): GUIManager =
+proc cbLand(man: GUIManager) =
+  man.land()
+
+proc createManager*(): GUIManager =
   new result
   # Register Forward Callback
-  var cb: GUINativeCallback
-  cb.self = cast[pointer](result)
-  cb.fn = cast[GUINativeProc](cbForward)
-  # Store GUI Queue
-  result.cbForward = cb
-  result.queue = nogui_native_queue(native)
+  let self = cast[pointer](result)
+  result.cbForward = unsafeCallbackEX[GUIWidget](self, cbForward)
+  result.cbLand = unsafeCallback(self, cbLand)
+  # Reserve Event Forward Stack
+  result.stack = newSeqOfCap[GUIForward](8)
