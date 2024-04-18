@@ -12,18 +12,19 @@ proc outside*(widget: GUIWidget): GUIWidget =
 
 proc inside*(widget: GUIWidget, x, y: int32): GUIWidget =
   result = widget.last
+  if isNil(result):
+    return widget
   # Find Children
   while true:
-    if pointOnArea(result, x, y):
-      if isNil(result.last):
+    # Enter Layout or Container Scope
+    if result.pointOnArea(x, y):
+      if isNil(result.last) or result.kind < wkLayout:
         return result
-      else: # Find Inside
-        result = result.last
-    # Check Prev Widget
+      else: result = result.last
+    # Check Previous Widget
     if isNil(result.prev):
       return result.parent
-    else: # Prev Widget
-      result = result.prev
+    else: result = result.prev
 
 proc find*(pivot: GUIWidget, x, y: int32): GUIWidget =
   # Initial Widget
@@ -35,8 +36,7 @@ proc find*(pivot: GUIWidget, x, y: int32): GUIWidget =
       result = w.parent
     w = w.parent
   # Find Inside of Outside
-  if not isNil(result.last):
-    result = inside(result, x, y)
+  result = inside(result, x, y)
 
 # -------------------------
 # Widget Tree Finder: Focus

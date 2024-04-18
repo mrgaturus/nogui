@@ -45,7 +45,7 @@ controller CONLayout:
 
   proc createWidget: GUIWidget =
     # Create Layout
-    margin: horizontal().child:
+    margin(16): horizontal().child:
       min: focustest()
       # Sub Layout
       vertical().child:
