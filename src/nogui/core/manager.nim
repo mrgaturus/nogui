@@ -109,9 +109,9 @@ proc step*(man: GUIManager, back: bool) =
     # Replace Focus
     man.focus = widget
 
-# -------------------
-# Layer Frame Manager
-# -------------------
+# --------------------
+# Layer Layout Manager
+# --------------------
 
 proc layer(man: GUIManager, widget: GUIWidget): ptr GUILayer =
   case widget.kind
@@ -134,6 +134,7 @@ proc open*(man: GUIManager, widget: GUIWidget) =
 
 proc close*(man: GUIManager, widget: GUIWidget) =
   let la = man.layer(widget)
+  if isNil(la): return
   la[].detach(widget)
   # Remove Focus if is Inside
   let focus {.cursor.} = man.focus

@@ -55,7 +55,7 @@ widget UXCallstack:
     send(self.cbFirst)
     send(self.cbSecond)
     # Executes After established Milliseconds
-    timeout(self.cbTimeout, 2000)
+    #timeout(self.cbTimeout, 2000)
 
   new callstack():
     result.flags = {wMouse, wKeyboard}

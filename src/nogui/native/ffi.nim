@@ -85,7 +85,6 @@ type
   # GUI Native Queue
   GUINativeQueue* {.importc: "nogui_queue_t".} = object
     cb_event*: GUINativeCallback
-    cb_signal*: GUINativeCallback
 
 {.push importc.}
 

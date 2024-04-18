@@ -1,44 +1,151 @@
-import widget, tree, signal, render, timer, manager
+import widget, callback, render, timer, manager
+from tree import render
 from atlas import CTXAtlas
 # Native Platform
 import ../native/ffi
 
 type
-  GUIWindow* = ref object
+  WindowMessage* = enum
+    wsFocusOut
+    wsHoverOut
+    # Window Buttons
+    wsMaximize
+    wsMininize
+    wsClose
+    # Window Exit
+    wsTerminate
+  WidgetMessage* = enum
+    wsFocus
+    wsLayout
+    wsForward
+    wsStop
+    # Toplevel
+    wsOpen
+    wsClose
+  WidgetSignal = object
+    msg: WidgetMessage
+    widget {.cursor.}: GUIWidget
+
+type
+  Window = object
     native: ptr GUINative
     timers: ptr GUITimers
-    # Window Manager
+    # Window Renderer
     ctx: CTXRender
     man: GUIManager
+    # Window Callbacks Messenger
+    cbWidget: GUICallbackEX[WidgetSignal]
+    cbWindow: GUICallbackEX[WindowMessage]
     # Window Running
     running: bool
+  # GUI Window Client
+  GUIWindow* = ref Window
+  GUIClient* = ptr Window
 
-# -------------------------
-# Window Native Queue Procs
-# -------------------------
+# -----------------------
+# Window Client Messenger
+# -----------------------
 
-proc procSignal(win: GUIWindow, signal: GUISignal)
-proc procEvent(win: GUIWindow, signal: pointer)
+proc send*(win: GUIClient, widget: GUIWidget, msg: WidgetMessage) =
+  let signal = WidgetSignal(msg: msg, widget: widget)
+  send(win.cbWidget, signal)
 
-proc useQueue(win: GUIWindow, native: ptr GUINative) =
+proc send*(win: GUIClient, msg: WindowMessage) =
+  send(win.cbWindow, msg)
+
+proc relax*(win: GUIClient, widget: GUIWidget, msg: WidgetMessage) =
+  let signal = WidgetSignal(msg: msg, widget: widget)
+  relax(win.cbWidget, signal)
+
+proc relax*(win: GUIClient, msg: WindowMessage) =
+  relax(win.cbWindow, msg)
+
+# --------------------------
+# Window Client Manipulation
+# --------------------------
+
+proc resize(win: GUIWindow, w, h: int32) =
+  let
+    man {.cursor.} = win.man
+    metrics = addr man.root.metrics
+  # Change Root Dimensions
+  metrics.w = int16 w
+  metrics.h = int16 h
+  # Update Root Layout
+  viewport(win.ctx, w, h)
+  let client = cast[GUIClient](win)
+  relax(client, man.root, wsLayout)
+
+# ----------------------
+# Window Client Dispatch
+# ----------------------
+
+proc procWidget(win: GUIWindow, signal: ptr WidgetSignal) =
+  let
+    widget {.cursor.} = signal.widget
+    man {.cursor.} = win.man
+  # Dispatch Widget Signal
+  case signal.msg
+  of wsLayout: layout(man, widget)
+  of wsFocus: focus(man, widget)
+  of wsOpen: open(man, widget)
+  of wsClose: close(man, widget)
+  # TODO: Window Forwarding
+  else: discard
+
+proc procWindow(win: GUIWindow, msg: ptr WindowMessage) =
+  case msg[]
+  of wsFocusOut: win.man.unfocus()
+  of wsHoverOut: win.man.unhover()
+  of wsTerminate:
+    win.running = false
+  # TODO: Window Buttons
+  else: discard
+
+proc procEvent(win: GUIWindow, msg: pointer) =
+  let 
+    state = nogui_native_state(win.native)
+    man {.cursor.} = win.man
+  # Dispatch Event
+  case state.kind
+  of evUnknown: discard
+  # Window Manager Events
+  of evCursorMove, evCursorClick, evCursorRelease:
+    man.cursorEvent(state)
+  of evKeyDown, evKeyUp, evFocusNext, evFocusPrev:
+    # TODO: callback hotkeys
+    if not man.keyEvent(state):
+      discard
+  # Window Property Events
+  of evWindowExpose: discard
+  of evWindowClose:
+    # TODO: close callback
+    win.running = false
+  of evWindowResize:
+    let info = nogui_native_info(win.native)
+    win.resize(info.width, info.height)
+  # Window Hover Events
+  of evWindowEnter, evWindowLeave:
+    return
+
+# ----------------------
+# Window Client Creation
+# ----------------------
+
+proc messenger(win: GUIWindow, native: ptr GUINative) =
   let
     self = cast[pointer](win)
     queue = nogui_native_queue(native)
-  var cbEvent, cbSignal: GUINativeCallback
-  # Define Native Callbacks
+  # Define Event Native Callback
+  var cbEvent: GUINativeCallback
   cbEvent.fn = cast[GUINativeProc](procEvent)
-  cbSignal.fn = cast[GUINativeProc](procSignal)
   cbEvent.self = self
-  cbSignal.self = self
-  # Prepare Native Callbacks
+  # Define Signal Native Callbacks
+  win.cbWidget = unsafeCallbackEX[WidgetSignal](self, procWidget)
+  win.cbWindow = unsafeCallbackEX[WindowMessage](self, procWindow)
+  # Prepare Native Queue
   queue.cb_event = cbEvent
-  queue.cb_signal = cbSignal
-  # Prepare Signal Queue
-  signal.useQueue(queue)
-
-# ---------------------
-# Window Creation Procs
-# ---------------------
+  callback.messenger(native)
 
 proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   new result
@@ -47,78 +154,25 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   result.timers = useTimers()
   result.man = useManager(native)
   # Define Window Queue
-  result.useQueue(native)
+  result.messenger(native)
   result.ctx = newCTXRender(atlas)
+
+# -----------------------
+# Window Client Execution
+# -----------------------
 
 proc execute*(win: GUIWindow, root: GUIWidget): bool =
   win.man.root = root
   root.kind = wkRoot
   root.flags.incl(wVisible)
-  # Set to Global Dimensions
-  let info = nogui_native_info(win.native)
-  root.metrics.w = int16 info.width
-  root.metrics.h = int16 info.height
   # Open Program Native Window
   result = nogui_native_open(win.native) != 0
   win.running = result
-  # Set Renderer Viewport Dimensions
-  viewport(win.ctx, info.width, info.height)
-  relax(root.target, wsLayout)
-
-# ------------------
-# Window Queue Procs
-# ------------------
-
-proc procEvent(win: GUIWindow, signal: pointer) =
-  let 
-    state = nogui_native_state(win.native)
-    man {.cursor.} = win.man
-  # Process Event State
-  case state.kind
-  of evUnknown: discard
-  # Window Manager Events
-  of evCursorMove, evCursorClick, evCursorRelease:
-    man.cursorEvent(state)
-  of evKeyDown, evKeyUp, evFocusNext, evFocusPrev:
-    if not man.keyEvent(state):
-      # TODO: callback hotkeys
-      echo state.key.name()
-  # Window Property Events
-  of evWindowExpose: discard
-  of evWindowClose:
-    win.running = false
-  of evWindowResize:
-    let
-      info = nogui_native_info(win.native)
-      metrics = addr man.root.metrics
-    # Change Root Dimensions
-    metrics.w = int16 info.width
-    metrics.h = int16 info.height
-    # Update Root Layout
-    viewport(win.ctx, info.width, info.height)
-    relax(man.root, wsLayout)
-  # Window Hover Events
-  of evWindowEnter, evWindowLeave:
-    return
-
-proc procSignal(win: GUIWindow, signal: GUISignal) =
-  case signal.kind
-  of sCallback, sCallbackEX:
-    signal.call()
-  of sWidget:
-    let
-      widget = cast[GUIWidget](signal.target)
-      man {.cursor.} = win.man
-    case signal.ws
-    of wsLayout: layout(man, widget)
-    of wsFocus: focus(man, widget)
-    # Window Layer Widget
-    of wsOpen: open(man, widget)
-    of wsClose: close(man, widget)
-
-# -------------------
-# GUI Rendering Procs
-# -------------------
+  if not result:
+    return result
+  # Update Root Layout
+  let info = nogui_native_info(win.native)
+  win.resize(info.width, info.height)
 
 proc renderLayer(ctx: ptr CTXRender, layer: GUILayer) =
   if isNil(layer.first): return

@@ -1,6 +1,6 @@
 import native/ffi
 import core/[widget, render]
-from core/signal import 
+from core/callback import 
   GUICallback, GUICallbackEX, 
   unsafeCallback, unsafeCallbackEX
 import macros, macrocache

@@ -1,9 +1,4 @@
-from signal import
-  GUISignal, GUITarget,
-  WidgetSignal, send, relax
-from render import 
-  CTXRender, GUIRect, push, pop
-# Native Platform State
+from render import CTXRender, GUIRect
 from ../native/ffi import GUIState
 
 type
@@ -48,6 +43,7 @@ type
     minW*, minH*: int16
     maxW*, maxH*: int16
   # Widget Object
+  GUITarget* = pointer
   GUIWidget* {.inheritable.} = ref object
     vtable*: ptr GUIMethods
     # Widget Node Tree
@@ -230,31 +226,6 @@ proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
   wVisible in widget.flags and
     x >= rect.x and x <= rect.x + rect.w and
     y >= rect.y and y <= rect.y + rect.h
-
-# -----------------------------
-# WIDGET FRAMED Move and Resize
-# -----------------------------
-
-proc open*(widget: GUIWidget) {.inline.} =
-  widget.send(wsOpen)
-
-proc close*(widget: GUIWidget) {.inline.} =
-  widget.send(wsClose)
-
-proc move*(widget: GUIWidget, x, y: int32) =
-  if widget.kind >= wkFrame:
-    widget.metrics.x = int16 x
-    widget.metrics.y = int16 y
-    # Send Layout Signal
-    widget.relax(wsLayout)
-
-proc resize*(widget: GUIWidget, w, h: int32) =
-  if widget.kind >= wkFrame:
-    let metrics = addr widget.metrics
-    metrics.w = max(int16 w, metrics.minW)
-    metrics.h = max(int16 h, metrics.minH)
-    # Send Layout Signal
-    widget.relax(wsLayout)
 
 # -------------------
 # Widget Status Check

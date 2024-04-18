@@ -51,9 +51,8 @@ typedef struct {
   nogui_cb_t* first;
   nogui_cb_t* stack;
   nogui_cb_t* once;
-  // Window Event Proc
+  // Event Callback
   nogui_cb_t cb_event;
-  nogui_cb_t cb_signal;
 } nogui_queue_t;
 
 // ------------------------

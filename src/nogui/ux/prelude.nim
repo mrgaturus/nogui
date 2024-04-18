@@ -1,21 +1,34 @@
-from ../builder import widget
+# Import GUI Toolkit Core
+from ../builder import widget, controller
 from ../native/ffi import GUIEvent, GUITool, GUIState
-# Import Widget and Rendering
-import ../core/[widget, render, atlas, signal, value]
-# Import Event and Callback Stuff
+import ../core/[widget, render, atlas, callback, value]
+from ../core/window import WidgetMessage, send, relax
 from ../core/timer import timeout, timestop
 # Import Global App State
-from ../../nogui import getApp, width, index
+from ../../nogui import
+  getApp,
+  getWindow,
+  width, index
 # Import Icon ID Helper
 from ../data import CTXIconID, CTXIconEmpty, `==`
 # Import Private Access
 from std/importutils import privateAccess
 
+# -------------------
+# GUI Widget Callback
+# -------------------
+
+proc send*(widget: GUIWidget, msg: WidgetMessage) =
+  getWindow().send(widget, msg)
+
+proc relax*(widget: GUIWidget, msg: WidgetMessage) =
+  getWindow().relax(widget, msg)
+
 # ------------------------
 # GUI Control Color Helper
 # ------------------------
 
-proc colorControl*(self: GUIWidget, idle, hover, click: uint32): uint32 {.inline.} =
+template colorControl(self: GUIWidget, idle, hover, click: uint32): uint32 =
   const wHoverGrab = {wHover, wGrab}
   let flags = self.flags * wHoverGrab
   # Choose Which Color Using State
@@ -23,22 +36,16 @@ proc colorControl*(self: GUIWidget, idle, hover, click: uint32): uint32 {.inline
   elif flags == wHoverGrab: click
   else: hover
 
-# --------------------
-# Toggle Button Colors
-# --------------------
-
+# -- Toggle Button Colors
 proc opaqueColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
-  self.colorControl(0, c.focus, c.clicked)
+  self.colorControl(0'u32, c.focus, c.clicked)
 
 proc activeColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
   self.colorControl(c.clicked, c.focus, c.item)
 
-# ------------------
-# Item Button Colors
-# ------------------
-
+# -- Item Button Colors
 proc optionColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
   self.colorControl(c.darker, c.focus, c.clicked)
@@ -70,13 +77,13 @@ export atlas except
   createTexture,
   checkTexture
 # Export Event and Callback Stuff
-export signal except newGUIQueue
+export callback except messenger
 export timeout, timestop
-# Export Relevant Global State
-export getApp, width, index
+# Export Global App State
+export getApp, getWindow, width, index
+export WidgetMessage, window.send, window.relax
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values
 export value
-# Export Private Access
 export privateAccess

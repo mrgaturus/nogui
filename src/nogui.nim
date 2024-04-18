@@ -35,14 +35,14 @@ type
     window: GUIWindow
     native: ptr GUINative
     state*: ptr GUIState
-    # Text Layout
+    # Freetype Font
     ft2*: FT2Library
     atlas*: CTXAtlas
-    # Atlas Font Metrics
+    # Font Metrics
     font*: GUIFont
     space*: GUISpace
     colors*: GUIColors
-    # TODO: reuse it for event ut8buffer
+    # Format String
     fmt0: CacheString
     fmt*: ShallowString
   GUIApplication = ptr Application
@@ -53,7 +53,7 @@ type
 
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
-  # Destroy Queue and Native
+  # Destroy Native Platform
   nogui_native_destroy(app.native)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
@@ -124,29 +124,22 @@ proc createApp*(w, h: int32) =
   result.space = createSpace()
   result.font = createFont(ft2)
   # Create Native Platform
-  let native = nogui_native_init(w, h)
-  result.native = native
+  let
+    native = nogui_native_init(w, h)
+    info = nogui_native_info(native)
   # Load OpenGL Functions
-  let info = nogui_native_info(native)
   if not gladLoadGL(info.gl_loader):
     log(lvError, "failed load OpenGL")
   # Create Queue, Atlas, Window
   let atlas = newCTXAtlas(result.font.face)
   result.window = newGUIWindow(native, atlas)
   result.state = nogui_native_state(native)
+  result.native = native
   result.atlas = atlas
   # Create Shallow String
   result.fmt = addr result.fmt0
   # Copy Default Data
   static: folders: "data" >> ""
-
-proc getApp*(): GUIApplication =
-  # Check App Initialize
-  when defined(debug):
-    if isNil(app.queue):
-      log(lvError, "app is not initialized")
-  # Return Current App
-  result = addr app
 
 template executeApp*(root: GUIWidget, body: untyped) =
   let win {.cursor.} = app.window
@@ -157,9 +150,24 @@ template executeApp*(root: GUIWidget, body: untyped) =
       if not win.poll(): break
       body; render(win)
 
-# ------------
-# Font Metrics
-# ------------
+# -------------------
+# Application Current
+# -------------------
+
+proc getApp*(): GUIApplication =
+  # Check App Initialize
+  when defined(debug):
+    if isNil(app.queue):
+      log(lvError, "app is not initialized")
+  # Return Current App
+  result = addr app
+
+proc getWindow*(): GUIClient {.inline.} =
+  result = cast[GUIClient](getApp().window)
+
+# ------------------------
+# Application Font Metrics
+# ------------------------
 
 proc width*(str: string): int32 =
   let atlas = app.atlas

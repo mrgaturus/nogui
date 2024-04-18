@@ -1,5 +1,5 @@
 import ../native/ffi
-import signal
+import callback
 
 # -------------------------
 # Main Loop + Frame Limiter

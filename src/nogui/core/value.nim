@@ -1,4 +1,4 @@
-from signal import GUICallback, send
+from callback import GUICallback, send
 
 # ------------------------
 # Shared Values Definition
