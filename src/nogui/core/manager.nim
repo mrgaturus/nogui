@@ -22,7 +22,7 @@ type
     # Window Event State
     focus {.cursor.}: GUIWidget
     stack: seq[GUIForward]
-    depth: int
+    depth, stops: int
 
 # --------------------
 # Layer Attach Manager
@@ -262,12 +262,13 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
   # Forward to Next Inside Widget
   elif widget.kind >= wkRoot or widget.kind == wkForward:
     let jump = addr man.stack[depth].jump
-    var next = jump[]
+    # Prepare Next Pivot
+    var next {.cursor.} = jump[]
     if isNil(next):
       next = widget
-    # Store Next Widget on Jump Cache
+    # Find Next Widget and Store Cache
     next = next.find(state.mx, state.my)
-    jump[] = next
+    jump[] = next.parent
     # Forward Event
     if next != widget:
       send(man.cbForward, next)
@@ -284,6 +285,7 @@ proc cursorEvent*(man: GUIManager, state: ptr GUIState) =
   # Prepare Cursor Event
   man.state = state
   man.depth = 0
+  man.stops = 0
   # Elevate Outer Frame when Clicked
   if state.kind == evCursorClick and outer.kind == wkFrame:
     elevate(man.frame, outer)
@@ -305,21 +307,56 @@ proc keyEvent*(man: GUIManager, state: ptr GUIState): bool =
     man.step(back)
     result = true
 
+# ------------------------
+# Event Forwarding Manager
+# ------------------------
+
+proc forward*(man: GUIManager, widget: GUIWidget) =
+  let state = man.state
+  case state.kind
+  # Forward Cursor Event
+  of evCursorClick, evCursorMove, evCursorRelease:
+    var w {.cursor.} = widget
+    if w.kind in {wkLayout, wkContainer}:
+      w = w.find(state.mx, state.my)
+    # Dispatch Forward if not Grabbed
+    let outer {.cursor.} = man.stack[0].hover
+    if wGrab notin outer.flags and state.kind != evCursorRelease:
+      man.cursorForward(w)
+  # Forward Key Event
+  of evKeyDown, evKeyUp:
+    if wKeyboard in widget.flags:
+      widget.vtable.event(widget, state)
+  # Skip Invalid Event
+  else: discard
+
+proc stop*(man: GUIManager, widget: GUIWidget) =
+  let
+    depth = man.depth - 1
+    check = depth >= 0 and
+      man.stack[depth].hover == widget
+  # Check if Widget is Current Hover
+  man.stops += int(check)
+  if man.stops == 1:
+    man.land()
+
 # -----------------------
 # Event Configure Manager
 # -----------------------
 
-proc cbForward(man: GUIManager, widget: ptr GUIWidget) =
-  man.cursorForward(widget[])
+proc onforward(man: GUIManager, widget: ptr GUIWidget) =
+  if man.stops == 0:
+    man.cursorForward widget[]
 
-proc cbLand(man: GUIManager) =
-  man.land()
+proc onland(man: GUIManager) =
+  if man.stops == 0:
+    man.land()
 
 proc createManager*(): GUIManager =
   new result
   # Register Forward Callback
   let self = cast[pointer](result)
-  result.cbForward = unsafeCallbackEX[GUIWidget](self, cbForward)
-  result.cbLand = unsafeCallback(self, cbLand)
-  # Reserve Event Forward Stack
+  result.cbForward = unsafeCallbackEX[GUIWidget](self, onforward)
+  result.cbLand = unsafeCallback(self, onland)
+  # Create Forward Stack
   result.stack = newSeqOfCap[GUIForward](8)

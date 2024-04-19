@@ -22,7 +22,7 @@ proc inside*(widget: GUIWidget, x, y: int32): GUIWidget =
         return result
       else: result = result.last
     # Check Previous Widget
-    if isNil(result.prev):
+    elif isNil(result.prev):
       return result.parent
     else: result = result.prev
 

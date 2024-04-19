@@ -88,10 +88,11 @@ proc procWidget(win: GUIWindow, signal: ptr WidgetSignal) =
   case signal.msg
   of wsLayout: layout(man, widget)
   of wsFocus: focus(man, widget)
+  of wsForward: forward(man, widget)
+  of wsStop: stop(man, widget)
+  # Window Manager Open
   of wsOpen: open(man, widget)
   of wsClose: close(man, widget)
-  # TODO: Window Forwarding
-  else: discard
 
 proc procWindow(win: GUIWindow, msg: ptr WindowMessage) =
   case msg[]
@@ -117,7 +118,9 @@ proc procEvent(win: GUIWindow, msg: pointer) =
     if not man.keyEvent(state):
       discard
   # Window Property Events
-  of evWindowExpose: discard
+  of evWindowExpose:
+    # TODO: interaction counts
+    discard
   of evWindowClose:
     # TODO: close callback
     win.running = false
