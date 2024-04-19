@@ -17,7 +17,9 @@ type
 type
   GUIHandle* = enum
     inHover, outHover
+    inGrab, outGrab
     inFocus, outFocus
+    # Window Toplevel
     inFrame, outFrame
   GUIKind* = enum
     wkWidget
@@ -31,7 +33,7 @@ type
     wkTooltip
   # Widget VTable Methods
   GUIMethods* {.pure.} = object
-    handle*: proc(self: GUIWidget, kind: GUIHandle) {.noconv.}
+    handle*: proc(self: GUIWidget, reason: GUIHandle) {.noconv.}
     event*: proc(self: GUIWidget, state: ptr GUIState) {.noconv.}
     update*: proc(self: GUIWidget) {.noconv.}
     layout*: proc(self: GUIWidget) {.noconv.}
@@ -84,6 +86,9 @@ proc contains*(flags, mask: GUIFlags): bool {.inline.} =
 
 proc some*(flags, mask: GUIFlags): bool {.inline.} =
   mask * flags != {}
+
+proc delta*(flags, mask: GUIFlags): GUIFlags {.inline.} =
+  {.emit: "`result` = `flags` ^ `mask`;".}
 
 # -- Widget Flags Testing
 proc test*(self: GUIWidget, flag: GUIFlag): bool {.inline.} =

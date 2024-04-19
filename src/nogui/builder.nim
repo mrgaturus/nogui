@@ -19,7 +19,7 @@ type
     mkLayout
     mkDraw
 
-proc handle0(obj: GUIWidget, kind: GUIHandle) {.noconv.} = discard
+proc handle0(obj: GUIWidget, reason: GUIHandle) {.noconv.} = discard
 proc event0(obj: GUIWidget, state: ptr GUIState) {.noconv.} = discard
 proc update0(obj: GUIWidget) {.noconv.} = discard
 proc layout0(obj: GUIWidget) {.noconv.} = discard

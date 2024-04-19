@@ -30,10 +30,13 @@ widget UXForwardTest:
     m1.h = m0.h
 
   method event(state: ptr GUIState) =
-    echo "Forward: ", state.mx, " ", state.my
-    if self.test(wGrab):
-      self.send(wsStop)
+    #echo "Forward: ", state.mx, " ", state.my
+    #if self.test(wGrab):
+    #  self.send(wsStop)
     send(self.first, wsForward)
+
+  method handle(reason: GUIHandle) =
+    echo cast[pointer](self).repr, " ", reason
 
 widget UXFocusTest:
   new focustest():
@@ -42,7 +45,7 @@ widget UXFocusTest:
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
       self.send(wsFocus)
-    echo "-- Widget: ", state.mx, " ", state.my
+    #echo "-- Widget: ", state.mx, " ", state.my
 
   method update =
     let m = addr self.metrics
@@ -57,11 +60,12 @@ widget UXFocusTest:
     # Draw Focus Check
     ctx.fill rect(self.rect)
 
-  method handle(kind: GUIHandle) =
-    case kind
-    of inFocus: echo "focused: ", cast[pointer](self).repr
-    of outFocus: echo "unfocused: ", cast[pointer](self).repr
-    else: discard
+  method handle(reason: GUIHandle) =
+    echo "-- ", cast[pointer](self).repr, " ", reason
+    #case reason
+    #of inFocus: echo "focused: ", cast[pointer](self).repr
+    #of outFocus: echo "unfocused: ", cast[pointer](self).repr
+    #else: discard
 
 controller CONLayout:
   attributes:

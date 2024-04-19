@@ -156,9 +156,17 @@ proc layout*(man: GUIManager, widget: GUIWidget) =
 # --------------------
 
 proc unhover(man: GUIManager, idx: int) =
-  let hover = man.stack[idx].hover
-  hover.flags.excl(wHover)
-  hover.vtable.handle(hover, outHover)
+  let
+    hover = man.stack[idx].hover
+    flags = hover.flags
+  # Remove Grab
+  if wGrab in flags:
+    hover.flags.excl(wGrab)
+    hover.vtable.handle(hover, outGrab)
+  # Remove Hover
+  if wHover in flags:
+    hover.flags.excl(wHover)
+    hover.vtable.handle(hover, outHover)
 
 proc unhover*(man: GUIManager) =
   var i = high(man.stack)
@@ -224,22 +232,27 @@ proc cursorOuter(man: GUIManager, x, y: int32): GUIWidget =
 
 proc cursorGrab(widget: GUIWidget, state: ptr GUIState) =
   var flags = widget.flags
-  let popup = widget.kind == wkPopup
+  # Change Widget Hover
+  if widget.pointOnArea(state.mx, state.my):
+    flags.incl(wHover)
+  else: flags.excl(wHover)
   # Change Widget Grab
   if state.kind == evCursorClick:
     flags.incl(wGrab)
   elif state.kind == evCursorRelease:
     flags.excl(wGrab)
-  # Check Widget Hover on Grab or Popup
-  if wGrab in (flags + widget.flags) or popup:
-    let check = widget.pointOnArea(state.mx, state.my)
-    if check: flags.incl(wHover)
-    else: flags.excl(wHover)
-    # Handle Hover Changed on Popup Toplevel
-    if popup and check != (wHover in widget.flags):
-      let handle = widget.vtable.handle
-      if check: handle(widget, inHover)
-      else: handle(widget, outHover)
+  # Check Flags Changes
+  let
+    handle = widget.vtable.handle
+    check = flags.delta(widget.flags)
+  # React to Hover Changes
+  if wHover in check:
+    if wHover in flags: handle(widget, inHover)
+    else: handle(widget, outHover)
+  # React to Grab Changes
+  if wGrab in check:
+    if wGrab in flags: handle(widget, inGrab)
+    else: handle(widget, outGrab)
   # Replace Widget Flags
   widget.flags = flags
 
