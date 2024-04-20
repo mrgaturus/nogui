@@ -19,9 +19,12 @@ type
     frame*: GUILayer
     popup*: GUILayer
     tooltip*: GUILayer
-    # Window Event State
+    # Window Focus State
     focus {.cursor.}: GUIWidget
+    hold {.cursor.}: GUIWidget
+    # Window Hover State
     stack: seq[GUIForward]
+    backup: seq[GUIForward]
     depth, stops: int
 
 # --------------------
@@ -109,49 +112,6 @@ proc step*(man: GUIManager, back: bool) =
     man.focus = widget
 
 # --------------------
-# Layer Layout Manager
-# --------------------
-
-proc layer(man: GUIManager, widget: GUIWidget): ptr GUILayer =
-  case widget.kind
-  of wkFrame: addr man.frame
-  of wkPopup: addr man.popup
-  of wkTooltip: addr man.tooltip
-  # Not Belongs to Layer
-  else: nil
-
-proc open*(man: GUIManager, widget: GUIWidget) =
-  if wVisible in widget.flags: return
-  # Attach Widget to Layer
-  let la = man.layer(widget)
-  if isNil(la): return
-  la[].attach(widget)
-  # Handle Widget Attach
-  widget.flags.incl(wVisible)
-  widget.vtable.handle(widget, inFrame)
-  widget.arrange()
-
-proc close*(man: GUIManager, widget: GUIWidget) =
-  let la = man.layer(widget)
-  if isNil(la): return
-  la[].detach(widget)
-  # Remove Focus if is Inside
-  let focus {.cursor.} = man.focus
-  if not isNil(focus) and focus.outside() == widget:
-    man.unfocus()
-  # Handle Widget Detach
-  widget.flags.excl(wVisible)
-  widget.vtable.handle(widget, outFrame)
-
-proc layout*(man: GUIManager, widget: GUIWidget) =
-  if wVisible in widget.flags:
-    widget.arrange()
-    # Check if Focus is Lost
-    let focus {.cursor.} = man.focus
-    if not isNil(focus) and not widget.focusable():
-      man.unfocus()
-
-# --------------------
 # Cursor Hover Manager
 # --------------------
 
@@ -168,9 +128,41 @@ proc unhover(man: GUIManager, idx: int) =
     hover.flags.excl(wHover)
     hover.vtable.handle(hover, outHover)
 
+proc floor(man: GUIManager, idx: int) =
+  let
+    d = man.depth
+    l = man.stack.len
+    r = max(l - idx, 0)
+    i0 = min(l, idx)
+  # Handle Hover Out
+  var i = i0 - 1
+  while i >= 0:
+    man.unhover(i)
+    # Next Hover
+    dec(i)
+  # Floor Hover Elements
+  copyMem(
+    addr man.stack[0],
+    addr man.stack[i0],
+    GUIForward.sizeof * r)
+  # Floor Hover Stack
+  setLen(man.stack, r)
+  man.depth = max(d - i0, 0)
+
+proc land(man: GUIManager) =
+  let depth = man.depth
+  var i = high(man.stack)
+  # Handle Hover Out
+  while i >= depth:
+    man.unhover(i)
+    # Next Hover
+    dec(i)
+  # Land Hover Stack
+  setLen(man.stack, depth)
+
 proc unhover*(man: GUIManager) =
   var i = high(man.stack)
-  # Handle Focus Out
+  # Handle Hover Out
   while i >= 0:
     man.unhover(i)
     # Next Hover
@@ -178,17 +170,6 @@ proc unhover*(man: GUIManager) =
   # Clear Hover Stack
   setLen(man.stack, 0)
   man.depth = 0
-
-proc land(man: GUIManager) =
-  let depth = man.depth
-  var i = high(man.stack)
-  # Handle Focus Out
-  while i >= depth:
-    man.unhover(i)
-    # Next Hover
-    dec(i)
-  # Land Hover Stack
-  setLen(man.stack, depth)
 
 proc hover*(man: GUIManager, widget: GUIWidget) =
   let i = man.depth
@@ -217,8 +198,11 @@ proc cursorOuter(man: GUIManager, x, y: int32): GUIWidget =
     # Return Grabbed Outermost
     if wGrab in outer.flags:
       return outer
+  # Find Current Hold
+  if not isNil(man.hold):
+    result = man.hold
   # Find Last Popup
-  if not isNil(man.popup.last):
+  elif not isNil(man.popup.last):
     result = man.popup.last
   # Find Hovered Frame
   elif not isNil(man.frame.last):
@@ -307,18 +291,19 @@ proc cursorEvent*(man: GUIManager, state: ptr GUIState) =
 
 proc keyEvent*(man: GUIManager, state: ptr GUIState): bool =
   let
-    pivot {.cursor.} = man.focus
     next = state.kind == evFocusNext
     back = state.kind == evFocusPrev
-  # No Focused Widget
-  if isNil(pivot):
-    return false
-  elif not (next or back):
-    result = wKeyboard in pivot.flags
-    if result: pivot.vtable.event(pivot, state)
-  else: # Focus Cycle Tab
+  var focus {.cursor.} = man.focus
+  # Fallback to Hold Widget
+  if isNil(focus):
+    focus = man.hold
+  # Step Focus Cycle
+  elif next or back:
     man.step(back)
-    result = true
+    return true
+  # Dispatch Keyboard Event
+  result = not isNil(focus) and wKeyboard in focus.flags
+  if result: focus.vtable.event(focus, state)
 
 # ------------------------
 # Event Forwarding Manager
@@ -353,9 +338,111 @@ proc stop*(man: GUIManager, widget: GUIWidget) =
   if man.stops == 1:
     man.land()
 
+# -------------------
+# Widget Hold Manager
+# -------------------
+
+proc hold*(man: GUIManager, widget: GUIWidget) =
+  if not isNil(man.hold): return
+  # Remove Focus
+  man.unfocus()
+  # Floor Stack to Hold
+  let l = len(man.stack)
+  for i in 0 ..< l:
+    if man.stack[i].hover == widget:
+      man.backup = man.stack
+      setLen(man.backup, i)
+      # Floor Stack
+      man.floor(i)
+      break
+  # Handle Hold Change
+  widget.flags.incl(wHold)
+  widget.vtable.handle(widget, inHold)
+  # Define Window Hold
+  man.hold = widget
+
+proc unhold*(man: GUIManager) =
+  if isNil(man.hold): return
+  let
+    hold = man.hold
+    shift = len(man.backup)
+  # Remove Focus
+  man.unfocus()
+  # Restore Hover Stack
+  if shift > 0:
+    let l = len(man.stack)
+    setLen(man.stack, l + shift)
+    # Copy Backup Shift to Stack
+    const bytes = sizeof(GUIForward)
+    moveMem(addr man.stack[shift], addr man.stack[0], bytes * l)
+    copyMem(addr man.stack[0], addr man.backup[0], bytes * shift)
+    # Remove Backup Stack
+    wasMoved(man.backup)
+  # Remove Hover Otherwise
+  else: man.unhover()
+  # Handle Hold Change
+  hold.flags.excl(wHold)
+  hold.vtable.handle(hold, outHold)
+  # Remove Window Hold
+  man.hold = nil
+
 # -----------------------
-# Event Configure Manager
+# Widget Toplevel Manager
 # -----------------------
+
+proc layer(man: GUIManager, widget: GUIWidget): ptr GUILayer =
+  case widget.kind
+  of wkFrame: addr man.frame
+  of wkPopup: addr man.popup
+  of wkTooltip: addr man.tooltip
+  # Not Belongs to Layer
+  else: nil
+
+proc open*(man: GUIManager, widget: GUIWidget) =
+  if wVisible in widget.flags: return
+  # Attach Widget to Layer
+  let la = man.layer(widget)
+  if isNil(la): return
+  la[].attach(widget)
+  # Handle Widget Attach
+  widget.flags.incl(wVisible)
+  widget.vtable.handle(widget, inFrame)
+  widget.arrange()
+
+proc close*(man: GUIManager, widget: GUIWidget) =
+  let la = man.layer(widget)
+  if isNil(la): return
+  la[].detach(widget)
+  # Remove Focus if was Inside
+  let focus {.cursor.} = man.focus
+  if not isNil(focus) and not focus.focusable():
+    man.unfocus()
+  # Handle Widget Detach
+  widget.flags.excl(wVisible)
+  widget.vtable.handle(widget, outFrame)
+  # Floor Stack to Next Toplevel if not Holded
+  if not isNil(man.hold): return
+  let l = len(man.stack)
+  for i in 0 ..< l:
+    if man.stack[i].hover.kind >= wkRoot:
+      man.floor(i)
+      break
+
+# ---------------------
+# Widget Layout Manager
+# ---------------------
+
+proc layout*(man: GUIManager, widget: GUIWidget) =
+  if wVisible in widget.flags:
+    widget.arrange()
+    # Check if Focus is Lost
+    let focus {.cursor.} = man.focus
+    if not isNil(focus) and not focus.focusable():
+      man.unfocus()
+
+# ------------------------
+# Widget Manager Configure
+# ------------------------
 
 proc onforward(man: GUIManager, widget: ptr GUIWidget) =
   if man.stops == 0:
@@ -371,5 +458,5 @@ proc createManager*(): GUIManager =
   let self = cast[pointer](result)
   result.cbForward = unsafeCallbackEX[GUIWidget](self, onforward)
   result.cbLand = unsafeCallback(self, onland)
-  # Create Forward Stack
+  # Reserve Forward Stack Capacity
   result.stack = newSeqOfCap[GUIForward](8)

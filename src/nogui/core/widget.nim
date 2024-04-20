@@ -9,9 +9,8 @@ type
     wMouse
     wKeyboard
     # Event Status
-    wFocus
-    wHover
-    wGrab
+    wHover, wGrab
+    wFocus, wHold
   GUIFlags* = set[GUIFlag]
 
 type
@@ -20,6 +19,7 @@ type
     inGrab, outGrab
     inFocus, outFocus
     # Window Toplevel
+    inHold, outHold
     inFrame, outFrame
   GUIKind* = enum
     wkWidget
@@ -45,7 +45,7 @@ type
     minW*, minH*: int16
     maxW*, maxH*: int16
   # Widget Object
-  GUITarget* = pointer
+  GUITarget* = distinct pointer
   GUIWidget* {.inheritable.} = ref object
     vtable*: ptr GUIMethods
     # Widget Node Tree

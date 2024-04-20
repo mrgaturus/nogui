@@ -1,8 +1,10 @@
 # Import GUI Toolkit Core
 from ../builder import widget, controller
-from ../native/ffi import GUIEvent, GUITool, GUIState
+from ../native/ffi import
+  GUIEvent, GUITool,
+  GUIKeycode, GUIKeymod, GUIState, mods, name
 import ../core/[widget, render, atlas, callback, value]
-from ../core/window import WidgetMessage, send, relax
+from ../core/window import WindowMessage, WidgetMessage, send, relax
 from ../core/timer import timeout, timestop
 # Import Global App State
 from ../../nogui import
@@ -61,7 +63,11 @@ proc itemColor*(self: GUIWidget): uint32 =
 export
   GUIEvent,
   GUITool,
-  GUIState
+  GUIKeycode,
+  GUIKeymod,
+  GUIState,
+  ffi.mods,
+  ffi.name
 
 export builder.widget
 export widget
@@ -81,7 +87,8 @@ export callback except messenger
 export timeout, timestop
 # Export Global App State
 export getApp, getWindow, width, index
-export WidgetMessage, window.send, window.relax
+export WindowMessage, WidgetMessage
+export window.send, window.relax
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values

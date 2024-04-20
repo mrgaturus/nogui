@@ -6,8 +6,9 @@ import ../native/ffi
 
 type
   WindowMessage* = enum
-    wsFocusOut
-    wsHoverOut
+    wsUnFocus
+    wsUnHover
+    wsUnHold
     # Window Buttons
     wsMaximize
     wsMininize
@@ -22,6 +23,7 @@ type
     # Toplevel
     wsOpen
     wsClose
+    wsHold
   WidgetSignal = object
     msg: WidgetMessage
     widget {.cursor.}: GUIWidget
@@ -93,11 +95,15 @@ proc procWidget(win: GUIWindow, signal: ptr WidgetSignal) =
   # Window Manager Open
   of wsOpen: open(man, widget)
   of wsClose: close(man, widget)
+  of wsHold: hold(man, widget)
 
 proc procWindow(win: GUIWindow, msg: ptr WindowMessage) =
+  let man {.cursor.} = win.man
+  # Dispatch Window Signal
   case msg[]
-  of wsFocusOut: win.man.unfocus()
-  of wsHoverOut: win.man.unhover()
+  of wsUnFocus: man.unfocus()
+  of wsUnHover: man.unhover()
+  of wsUnHold: man.unhold()
   of wsTerminate:
     win.running = false
   # TODO: Window Buttons

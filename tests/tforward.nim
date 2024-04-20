@@ -44,8 +44,15 @@ widget UXFocusTest:
   
   method event(state: ptr GUIState) =
     if state.kind == evCursorRelease and self.test(wHover):
-      self.send(wsFocus)
+      if Mod_Shift in state.mods:
+        self.send(wsHold)
+      if Mod_Control in state.mods:
+        getWindow().send(wsUnHold)
+      if self.test(wHover):
+        self.send(wsFocus)
     #echo "-- Widget: ", state.mx, " ", state.my
+    if state.kind == evKeyDown:
+      echo name(state.key)
 
   method update =
     let m = addr self.metrics
