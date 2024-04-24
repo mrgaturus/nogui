@@ -1,3 +1,4 @@
+import nogui/core/shortcut
 from nogui/libs/gl import 
   glClear, 
   glClearColor, 
@@ -81,6 +82,9 @@ controller CONLayout:
   callback cbHello:
     echo "hello world"
 
+  callback cbShortcut:
+    echo "hello shortcut"
+
   proc createWidget: GUIWidget =
     # Create Layout
     margin(16): horizontal().child:
@@ -93,12 +97,20 @@ controller CONLayout:
         # Sub Sub Layout
         forwardtest:
           horizontal().child:
-            focustest()
+            forwardtest:
+              vertical().child:
+                focustest()
+                focustest()
+                focustest()
             min: focustest()
             focustest()
       min: focustest()
 
   new conlayout():
+    # Register Shortcuts
+    let shorts = getWindow().shorts
+    shorts[].register shortcut(result.cbHello, NK_A + {Mod_Control, Mod_Shift})
+    shorts[].register shortcut(result.cbShortcut, NK_A + {Mod_Control})
     # Create New Widget
     result.widget = result.createWidget()
 

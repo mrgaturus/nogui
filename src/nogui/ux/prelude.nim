@@ -4,8 +4,11 @@ from ../native/ffi import
   GUIEvent, GUITool,
   GUIKeycode, GUIKeymod, GUIState, mods, name
 import ../core/[widget, render, atlas, callback, value]
-from ../core/window import WindowMessage, WidgetMessage, send, relax
 from ../core/timer import timeout, timestop
+# Import Window Manipulation
+from ../core/window import
+  WindowMessage, WidgetMessage,
+  send, relax, shorts, observers
 # Import Global App State
 from ../../nogui import
   getApp,
@@ -89,6 +92,7 @@ export timeout, timestop
 export getApp, getWindow, width, index
 export WindowMessage, WidgetMessage
 export window.send, window.relax
+export window.shorts, window.observers
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values

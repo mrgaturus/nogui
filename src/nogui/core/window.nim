@@ -1,4 +1,4 @@
-import widget, callback, render, timer, manager
+import widget, callback, render, timer, manager, shortcut
 from tree import render
 from atlas import CTXAtlas
 # Native Platform
@@ -35,6 +35,8 @@ type
     # Window Renderer
     ctx: CTXRender
     man: GUIManager
+    shorts: GUIShortcuts
+    observers: GUIObservers
     # Window Callbacks Messenger
     cbWidget: GUICallbackEX[WidgetSignal]
     cbWindow: GUICallbackEX[WindowMessage]
@@ -65,6 +67,12 @@ proc relax*(win: GUIClient, msg: WindowMessage) =
 # --------------------------
 # Window Client Manipulation
 # --------------------------
+
+proc shorts*(win: GUIClient): ptr GUIShortcuts =
+  addr win.shorts
+
+proc observers*(win: GUIClient): ptr GUIObservers =
+  addr win.observers
 
 proc resize(win: GUIWindow, w, h: int32) =
   let
@@ -120,9 +128,10 @@ proc procEvent(win: GUIWindow, msg: pointer) =
   of evCursorMove, evCursorClick, evCursorRelease:
     man.cursorEvent(state)
   of evKeyDown, evKeyUp, evFocusNext, evFocusPrev:
-    # TODO: callback hotkeys
-    if not man.keyEvent(state):
-      discard
+    if state.key == NK_Unknown: return
+    # Dispatch Key Event Widget or Shortcut
+    if not man.keyEvent(state) and state.kind == evKeyDown:
+      dispatch(win.shorts, state)
   # Window Property Events
   of evWindowExpose:
     # TODO: interaction counts
