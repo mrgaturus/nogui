@@ -156,11 +156,11 @@ widget UXColorWheel0Triangle:
       sv = cast[UXColor0Triangle](self.last)
       # Calculate Center
       rect = rect (sv.rect)
-      cx = (rect.x + rect.xw) * 0.5
-      cy = (rect.y + rect.yh) * 0.5
+      cx = (rect.x0 + rect.x1) * 0.5
+      cy = (rect.y0 + rect.y1) * 0.5
       # Calculate Radius
-      w = rect.xw - rect.x
-      h = rect.yh - rect.y
+      w = rect.x1 - rect.x0
+      h = rect.y1 - rect.y0
       radius = min(w, h) * 0.5
       # Center Point
       xx = x - cx

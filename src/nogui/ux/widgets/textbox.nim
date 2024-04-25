@@ -120,9 +120,9 @@ widget UXTextBox:
     if state.kind in {evKeyDown, evCursorClick, evCursorMove}:
       self.calculateOffsets()
 
-  method handle(kind: GUIHandle) =
+  method handle(reason: GUIHandle) =
     # Prepare Input Focus
-    case kind 
+    case reason
     of inFocus:
       # Change Current Widget
       self.input.focus cast[pointer](self)

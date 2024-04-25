@@ -41,8 +41,8 @@ widget UXCheckBox:
     if self.check.peek[]:
       let pad = float32(lm.icon shr 2)
       # Locate Marked Check
-      r.x += pad; r.y += pad
-      r.xw -= pad; r.yh -= pad
+      r.x0 += pad; r.y0 += pad
+      r.x1 -= pad; r.y1 -= pad
       # Adjust Rect Position
       ctx.fill(r)
     # Draw Text Next to Checkbox

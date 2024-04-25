@@ -36,8 +36,8 @@ widget UXMenuSeparator:
     ctx.color getApp().colors.item and 0x7FFFFFFF
     var rect = rect(self.rect)
     # Locate Separator Line
-    rect.y = (rect.y + rect.yh) * 0.5 - 1
-    rect.yh = rect.y + 2
+    rect.y0 = (rect.y0 + rect.y1) * 0.5 - 1
+    rect.y1 = rect.y0 + 2
     # Create Simple Line
     ctx.fill rect
 
@@ -112,7 +112,7 @@ widget UXMenuItem:
     self.portal[] = self
 
   proc init0*(label: string, icon = CTXIconEmpty) =
-    self.flags = wStandard
+    self.flags = {wMouse}
     # Labeling Attributes
     self.icon = icon
     self.label = label
@@ -151,6 +151,6 @@ widget UXMenuItem:
     # Change Label Metrics
     self.lm = lm
 
-  method handle(kind: GUIHandle) =
-    if kind in {inHover, inFocus}:
+  method handle(reason: GUIHandle) =
+    if reason in {inHover, inFocus}:
       self.select()

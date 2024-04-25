@@ -43,8 +43,8 @@ template event0(self: typed, state: ptr GUIState) =
   # Choose Slow Grab
   if state.kind == evCursorClick:
     let slow = # Check Slow Grab
-      (state.mods and ShiftMod) > 0 or 
-      state.key == RightButton
+      (Mod_Shift in state.mods) or 
+      state.key == Button_Right
     # Store Initial Values
     if slow:
       self.v = value[].toFloat()
@@ -125,7 +125,7 @@ widget UXSlider:
       ctx.color(colors.darker)
       ctx.fill(r)
       # Get Slider Width and Fill Slider Bar
-      r.xw = r.x + float32(rect.w) * value.toRaw
+      r.x0 = r.x1 + float32(rect.w) * value.toRaw
       ctx.color self.itemColor()
       ctx.fill(r)
     # Calculate Text Format
@@ -201,21 +201,21 @@ widget UXDualSlider:
       ctx.fill(r)
       # Add Slider Pad
       var pad = float32(font.height) * 0.25
-      r.x += pad; r.y += pad
-      r.xw -= pad; r.yh -= pad
+      r.x0 += pad; r.y0 += pad
+      r.x1 -= pad; r.y1 -= pad
       # Locate to Center
-      r.x = (r.x + r.xw) * 0.5
-      let half = r.xw - r.x
-      r.xw = r.x + half * t
+      r.x0 = (r.x0 + r.x1) * 0.5
+      let half = r.x1 - r.x0
+      r.x1 = r.x0 + half * t
       # Fill Slider
       ctx.color self.itemColor()
       ctx.fill(r)
       # Locate Mark
-      r.x = r.xw
+      r.x0 = r.x1
       pad *= 0.5
       # Apply Mark Pad
-      r.xw -= pad; r.x += pad
-      r.y -= pad; r.yh += pad
+      r.x1 -= pad; r.x0 += pad
+      r.y0 -= pad; r.y1 += pad
       # Fill Mark Pad
       ctx.color(colors.text)
       ctx.fill(r)

@@ -99,8 +99,8 @@ widget UXMenuItemCheck of UXMenuItem:
     if self.check.peek[]:
       let pad = float32(lm.icon shr 2)
       # Locate Marked Check
-      r.x += pad; r.y += pad
-      r.xw -= pad; r.yh -= pad
+      r.x0 += pad; r.y0 += pad
+      r.x1 -= pad; r.y1 -= pad
       # Draw Marked Check
       ctx.color getApp().colors.text
       ctx.fill(r)
