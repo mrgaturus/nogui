@@ -1,4 +1,4 @@
-import widget, render
+import widget, render, metrics
 
 # -------------------------
 # Widget Tree Finder: Hover
@@ -84,34 +84,37 @@ proc step*(pivot: GUIWidget, back: bool): GUIWidget =
 # Widget Tree Walker: Layout
 # --------------------------
 
-proc absolute(widget: GUIWidget) =
+proc cull(widget: GUIWidget, clip: GUIClipping) =
+  let
+    scope = clip.peek()
+    # Check if is not Hidden and Inside or Toplevel
+    check0 = wHidden notin widget.flags
+    check1 = inside(widget.rect, scope)
+    check2 = isNil(widget.parent)
+  # Check Culling Visibility
+  var flags = widget.flags
+  flags.excl(wVisible)
+  if check0 and (check1 or check2):
+    flags.incl(wVisible)
+  # Replace Widget Flags
+  widget.flags = flags
+
+proc absolute(widget: GUIWidget, clip: GUIClipping) =
   let
     rect = addr widget.rect
     metrics = addr widget.metrics
-  var flags = widget.flags
-  # Calcule Absolute Position
+  # Prepare Absolute Metrics
   rect.x = metrics.x
   rect.y = metrics.y
-  # Calculate Absolute Size
   rect.w = metrics.w
   rect.h = metrics.h
-  # Absolute is Relative when no parent
-  if isNil(widget.parent): return
-  # Move Absolute Position to Pivot
-  let pivot = addr widget.parent.rect
-  rect.x += pivot.x
-  rect.y += pivot.y
-  # Test Visibility Boundaries
-  let test = (wHidden notin flags) and
-    rect.x <= pivot.x + pivot.w and
-    rect.y <= pivot.y + pivot.h and
-    rect.x + rect.w >= pivot.x and
-    rect.y + rect.h >= pivot.y
-  # Mark Visible if Passed Visibility Test
-  flags.excl(wVisible)
-  if test: flags.incl(wVisible)
-  # Replace Flags
-  widget.flags = flags
+  # Calculate Absolute Position
+  if not isNil(widget.parent):
+    let pivot = addr widget.parent.rect
+    rect.x += pivot.x
+    rect.y += pivot.y
+  # Calculate Absolute Culling
+  widget.cull(clip)
 
 proc prepare(widget: GUIWidget) =
   var w {.cursor.} = widget
@@ -132,20 +135,28 @@ proc prepare(widget: GUIWidget) =
     else: w = w.next
     
 proc organize(widget: GUIWidget) =
-  var w {.cursor.} = widget
+  var
+    w {.cursor.} = widget
+    clip: GUIClipping
   # Traverse Children
   while true:
-    w.absolute()
-    # Is Visible?
+    w.absolute(clip)
+    # Arrange Widget if Visible
     if wVisible in w.flags:
       w.vtable.layout(w)
-      # Traverse Inside?
+      # Traverse Children?
       if not isNil(w.first):
+        if w.kind >= wkContainer:
+          clip.push(w.rect)
+        # Enter Scope
         w = w.first
         continue
     # Traverse Parents?
     while isNil(w.next) and w != widget:
       w = w.parent
+      # Remove Container Clipping
+      if w.kind >= wkContainer:
+        clip.pop()
     # Traverse Slibings?
     if w == widget: break
     else: w = w.next

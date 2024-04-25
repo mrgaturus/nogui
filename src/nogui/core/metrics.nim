@@ -42,9 +42,10 @@ proc pop*(clip: var GUIClipping) =
   let idx = max(high clip.levels, 0)
   setLen(clip.levels, idx)
 
-proc peek*(clip: var GUIClipping): GUIRect =
-  let idx = high clip.levels
-  if idx >= 0: # Last Level
+proc peek*(clip: GUIClipping): GUIRect =
+  let idx = high(clip.levels)
+  # Peek Current Clipping
+  if idx >= 0:
     result = clip.levels[idx]
 
 proc clear*(clip: var GUIClipping) {.inline.} =
