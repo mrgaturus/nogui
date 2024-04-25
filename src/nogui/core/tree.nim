@@ -178,15 +178,19 @@ proc render*(widget: GUIWidget, ctx: ptr CTXRender) =
     # Push Clipping
     if wVisible in w.flags:
       w.vtable.draw(w, ctx)
-      # Traverse Inside?
+      # Traverse Children?
       if not isNil(w.first):
-        ctx.push(w.rect)
+        if w.kind == wkContainer:
+          ctx.push(w.rect)
+        # Enter Scope
         w = w.first
         continue
     # Traverse Parents?
     while isNil(w.next) and w != widget:
-      ctx.pop()
       w = w.parent
+      # Remove Container Clipping
+      if w.kind == wkContainer:
+        ctx.pop()
     # Traverse Slibings?
     if w == widget: break
     else: w = w.next

@@ -44,7 +44,7 @@ proc pop*(clip: var GUIClipping) =
 
 proc peek*(clip: var GUIClipping): GUIRect =
   let idx = high clip.levels
-  if idx > 0: # Last Level
+  if idx >= 0: # Last Level
     result = clip.levels[idx]
 
 proc clear*(clip: var GUIClipping) {.inline.} =
