@@ -72,17 +72,6 @@ static void x11_keypress_release(nogui_state_t* state, XEvent* event) {
   nogui_native_t* native = state->native;
   KeySym key;
 
-  // Handle Key Repeat Properly
-  if (XEventsQueued(native->display, QueuedAfterReading)) {
-    XEvent peek;
-    XPeekEvent(native->display, &peek);
-    if (peek.type == KeyPress && 
-        peek.xkey.time == event->xkey.time &&
-        peek.xkey.keycode == event->xkey.keycode)
-      // Skip Event if Repeated
-      return;
-  }
-
   unsigned int mods = event->xkey.state;
   KeyCode code = event->xkey.keycode;
   // Lookup True Released Key
@@ -141,11 +130,12 @@ static void x11_event_translate(nogui_state_t* state, XEvent* event) {
       info->height = h;
 
       break;
+
+    // -- Window Close Event --
     case ClientMessage:
       // Request Window Close
       if (event->xclient.data.l[0] == native->window_close)
           state->kind = evWindowClose;
-
       break;
 
     // -- XInput2 Event --
@@ -184,6 +174,18 @@ void nogui_native_pump(nogui_native_t* native) {
       // Retreive XInput2 Cookie Data
       if (event.xcookie.extension == native->xi2_opcode)
         XGetEventData(native->display, &event.xcookie);
+    // Handle Key Repeat Properly
+    } else if (event.type == KeyRelease) {
+      if (XEventsQueued(native->display, QueuedAfterReading)) {
+        XEvent peek;
+        XPeekEvent(native->display, &peek);
+        // Avoid Instant KeyRelease Events
+        if (peek.type == KeyPress && 
+            peek.xkey.time == event.xkey.time &&
+            peek.xkey.keycode == event.xkey.keycode)
+          // Skip Event if Repeated
+          return;
+      }
     }
 
     // Prepare Created Callback
