@@ -1,5 +1,8 @@
-from render import CTXRender, GUIRect
+from render import CTXRender
+from metrics import GUIMetrics, GUIRect
 from ../native/ffi import GUIState
+# Export Widget Metrics
+export GUIMetrics, GUIRect
 
 type
   GUIFlag* = enum
@@ -38,12 +41,6 @@ type
     update*: proc(self: GUIWidget) {.noconv.}
     layout*: proc(self: GUIWidget) {.noconv.}
     draw*: proc(self: GUIWidget, ctx: ptr CTXRender) {.noconv.}
-  # Widget Metrics
-  GUIMetrics* = object
-    x*, y*, w*, h*: int16
-    # Dimensions Hint
-    minW*, minH*: int16
-    maxW*, maxH*: int16
   # Widget Object
   GUITarget* = distinct pointer
   GUIWidget* {.inheritable.} = ref object

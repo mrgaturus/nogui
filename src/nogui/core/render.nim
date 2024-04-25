@@ -9,19 +9,18 @@ from ../data import
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
+import metrics
 # OpenGL 3.2+
 import ../libs/gl
 
 const 
   STRIDE_SIZE = # 16bytes
-    sizeof(float32)*2 + # XY
-    sizeof(int16)*2 + # UV
+    sizeof(float32) * 2 + # XY
+    sizeof(int16) * 2 + # UV
     sizeof(uint32) # RGBA
 type
   # RENDER PRIMITIVES
-  GUIColor* = uint32
-  GUIRect* = object
-    x*, y*, w*, h*: int32
+  CTXColor* = uint32
   CTXPoint* = object
     x*, y*: float32
   CTXRect* = object
@@ -53,7 +52,7 @@ type
     vao, ebo, vbo: GLuint
     # Color and Clips
     color, colorAA: uint32
-    levels: seq[GUIRect]
+    clip: GUIClipping
     # Vertex index
     size, cursor: uint16
     # Write Pointers
@@ -69,7 +68,7 @@ type
 # GUI PRIMITIVE CREATION PROCS
 # ----------------------------
 
-proc rgba*(r, g, b, a: uint8): GUIColor {.compileTime.} =
+proc rgba*(r, g, b, a: uint8): CTXColor {.compileTime.} =
   result = r or (g shl 8) or (b shl 16) or (a shl 24)
 
 proc rect*(x, y, w, h: int32): CTXRect {.inline.} =
@@ -95,8 +94,8 @@ proc normal*(a, b: CTXPoint): CTXPoint =
   result.x = a.y - b.y
   result.y = b.x - a.x
   let norm = invSqrt(
-    result.x*result.x + 
-    result.y*result.y)
+    result.x * result.x + 
+    result.y * result.y)
   # Normalize Point
   result.x *= norm
   result.y *= norm
@@ -191,8 +190,8 @@ proc clear(ctx: var CTXRender) =
   setLen(ctx.elements, 0)
   setLen(ctx.verts, 0)
   # Clear Clipping Levels
-  setLen(ctx.levels, 0)
-  ctx.color = 0 # Nothing Color
+  ctx.clip.clear()
+  ctx.color = 0
 
 proc render*(ctx: var CTXRender) =
   if checkTexture(ctx.atlas): # Check if was Resized
@@ -237,6 +236,24 @@ proc finish*() =
   # Unbind Program
   glUseProgram(0)
 
+# ---------------------------
+# GUI CLIP/COLOR LEVELS PROCS
+# ---------------------------
+
+proc push*(ctx: ptr CTXRender, rect: var GUIRect) =
+  # Reset Current CMD
+  ctx.pCMD = nil
+  ctx.clip.push(rect)
+
+proc pop*(ctx: ptr CTXRender) {.inline.} =
+  # Reset Current CMD
+  ctx.pCMD = nil
+  ctx.clip.pop()
+
+proc color*(ctx: ptr CTXRender, color: uint32) {.inline.} =
+  ctx.color = color # Normal Solid Color
+  ctx.colorAA = color and 0xFFFFFF # Antialiased
+
 # ------------------------
 # GUI PAINTER HELPER PROCS
 # ------------------------
@@ -244,22 +261,19 @@ proc finish*() =
 proc addCommand(ctx: ptr CTXRender) =
   # Reset Cursor
   ctx.size = 0
+  # Create New Command
+  var cmd: CTXCommand
+  cmd.offset = int32 len(ctx.elements)
+  cmd.base = int32 len(ctx.verts)
+  cmd.clip = ctx.clip.peek()
   # Add New Command
-  ctx.cmds.add(
-    CTXCommand(
-      offset: int32(
-        len(ctx.elements)
-      ), base: int32(
-        len(ctx.verts)
-      ), clip: if len(ctx.levels) > 0: ctx.levels[^1]
-      else: GUIRect(w: ctx.vWidth, h: ctx.vHeight)
-    ) # End New CTX Command
-  ) # End Add Command
+  ctx.cmds.add(cmd)
   ctx.pCMD = addr ctx.cmds[^1]
 
 proc addVerts*(ctx: ptr CTXRender, vSize, eSize: int32) =
   # Create new Command if is reseted
-  if isNil(ctx.pCMD): addCommand(ctx)
+  if isNil(ctx.pCMD):
+    addCommand(ctx)
   # Set New Vertex and Elements Lenght
   ctx.verts.setLen(ctx.verts.len + vSize)
   ctx.elements.setLen(ctx.elements.len + eSize)
@@ -304,7 +318,7 @@ proc vertexUV*(ctx: ptr CTXRender; i: int32; x, y: float32; u, v: int16) {.inlin
   vert.color = ctx.color # Color RGBA
 
 # X,Y,COLOR | PUBLIC
-proc vertexCOL*(ctx: ptr CTXRender; i: int32; x, y: float32; color: GUIColor) {.inline.} =
+proc vertexCOL*(ctx: ptr CTXRender; i: int32; x, y: float32; color: CTXColor) {.inline.} =
   let vert = addr ctx.pVert[i]
   vert.x = x # Position X
   vert.y = y # Position Y
@@ -334,41 +348,6 @@ proc quad*(ctx: ptr CTXRender; i: int32; a, b, c, d: int32) =
   element[3] = cursor + cast[uint16](c)
   element[4] = cursor + cast[uint16](d)
   element[5] = cursor + cast[uint16](a)
-
-# -----------------------
-# GUI CLIP/COLOR LEVELS PROCS
-# -----------------------
-
-proc intersect(ctx: ptr CTXRender, rect: var GUIRect): GUIRect =
-  let prev = addr ctx.levels[^1]
-  result.x = max(prev.x, rect.x)
-  result.y = max(prev.y, rect.y)
-  result.w = min(prev.x + prev.w, rect.x + rect.w) - result.x
-  result.h = min(prev.y + prev.h, rect.y + rect.h) - result.y
-  # Clamp Dimensions to 0
-  if (result.w or result.h) < 0:
-    result.w = 0
-    result.h = 0
-
-proc push*(ctx: ptr CTXRender, rect: var GUIRect) =
-  # Reset Current CMD
-  ctx.pCMD = nil
-  # Calcule Intersect Clip
-  var clip = if len(ctx.levels) > 0:
-    ctx.intersect(rect) # Intersect Level
-  else: rect # First Level
-  # Add new Level to Stack
-  ctx.levels.add(clip)
-
-proc pop*(ctx: ptr CTXRender) {.inline.} =
-  # Reset Current CMD
-  ctx.pCMD = nil
-  # Remove Last CMD from Stack
-  ctx.levels.setLen(max(ctx.levels.len - 1, 0))
-
-proc color*(ctx: ptr CTXRender, color: uint32) {.inline.} =
-  ctx.color = color # Normal Solid Color
-  ctx.colorAA = color and 0xFFFFFF # Antialiased
 
 # ---------------------------
 # GUI BASIC SHAPES DRAW PROCS

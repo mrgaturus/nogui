@@ -3,7 +3,7 @@ from ../builder import widget, controller
 from ../native/ffi import
   GUIEvent, GUITool,
   GUIKeycode, GUIKeymod, GUIState, mods, name
-import ../core/[widget, render, atlas, callback, value]
+import ../core/[widget, metrics, render, atlas, callback, value]
 from ../core/timer import timeout, timestop
 # Import Window Manipulation
 from ../core/window import
@@ -73,12 +73,16 @@ export
   ffi.name
 
 export builder.widget
+export builder.controller
 export widget
+export metrics except
+  GUIClipping,
+  push, pop, clear, peek
 export render except 
   newCTXRender,
-  begin, 
-  viewport, 
-  clear, 
+  begin,
+  viewport,
+  clear,
   render,
   finish
 export atlas except
