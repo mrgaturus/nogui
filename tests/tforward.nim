@@ -85,6 +85,10 @@ controller CONLayout:
   callback cbShortcut:
     echo "hello shortcut"
 
+  callback cbObserveCursor:
+    let state = getApp().state
+    echo "observer", state.mx, " ", state.my
+
   proc createWidget: GUIWidget =
     # Create Layout
     margin(16): horizontal().child:
@@ -108,9 +112,15 @@ controller CONLayout:
 
   new conlayout():
     # Register Shortcuts
-    let shorts = getWindow().shorts
-    shorts[].register shortcut(result.cbHello, NK_A + {Mod_Control, Mod_Shift})
+    let
+      shorts = getWindow().shorts
+      observers = getWindow().observers
+    shorts[].register:
+      let s0 = shortcut(result.cbHello, NK_A + {Mod_Control, Mod_Shift})
+      s0.mode = shortHold; s0
     shorts[].register shortcut(result.cbShortcut, NK_A + {Mod_Control})
+    # Register Observer
+    observers[].register observer(result.cbObserveCursor, {evCursorMove})
     # Create New Widget
     result.widget = result.createWidget()
 

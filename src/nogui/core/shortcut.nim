@@ -2,11 +2,17 @@ import ../native/ffi
 import callback
 
 type
+  GUIShortcutMode* = enum
+    shortSimple
+    shortOnce
+    shortHold
   GUIShortcutKey* = object
     code*: GUIKeycode
     mods*: GUIKeymods
   GUIShortcut* = ref object
     table: ptr GUIShortcuts
+    mode*: GUIShortcutMode
+    pressed: bool
     # Shortcut Action
     key: GUIShortcutKey
     cb*: GUICallback
@@ -187,8 +193,21 @@ proc unregister*(obs: GUIObserver) =
   table.list.del(idx)
 
 # -----------------------
-# Callback Table Dispatch
+# Shortcut Table Dispatch
 # -----------------------
+
+proc dispatch(short: GUIShortcut, state: ptr GUIState) =
+  let
+    pressed = state.kind in {evKeyDown, evFocusNext}
+    delta = pressed xor short.pressed
+  # Check Dispatch Mode
+  let check = case short.mode
+  of shortSimple: pressed
+  of shortOnce: pressed and delta
+  of shortHold: delta
+  # Dispatch Callback
+  if check: force(short.cb)
+  short.pressed = pressed
 
 proc dispatch*(table: var GUIShortcuts, state: ptr GUIState) =
   let
@@ -200,11 +219,15 @@ proc dispatch*(table: var GUIShortcuts, state: ptr GUIState) =
     let s {.cursor.} = table.list[idx]
     if s.hash != h: break
     # Dispatch Callback
-    send(s.cb)
+    s.dispatch(state)
     inc(idx)
+
+# -----------------------
+# Observer Table Dispatch
+# -----------------------
 
 proc dispatch*(table: var GUIObservers, state: ptr GUIState) =
   for obs in table.list:
     # Dispatch Observer if is Activated
     if state.kind in obs.watch:
-      send(obs.cb)
+      force(obs.cb)

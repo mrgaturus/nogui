@@ -121,6 +121,8 @@ proc procEvent(win: GUIWindow, msg: pointer) =
   let 
     state = nogui_native_state(win.native)
     man {.cursor.} = win.man
+  # Dispatch Event Observers
+  dispatch(win.observers, state)
   # Dispatch Event
   case state.kind
   of evUnknown: discard
@@ -129,8 +131,7 @@ proc procEvent(win: GUIWindow, msg: pointer) =
     man.cursorEvent(state)
   of evKeyDown, evKeyUp, evFocusNext, evFocusPrev:
     if state.key == NK_Unknown: return
-    # Dispatch Key Event Widget or Shortcut
-    if not man.keyEvent(state) and state.kind == evKeyDown:
+    if not man.keyEvent(state):
       dispatch(win.shorts, state)
   # Window Property Events
   of evWindowExpose:
