@@ -184,7 +184,7 @@ void nogui_native_pump(nogui_native_t* native) {
             peek.xkey.time == event.xkey.time &&
             peek.xkey.keycode == event.xkey.keycode)
           // Skip Event if Repeated
-          return;
+          continue;
       }
     }
 
