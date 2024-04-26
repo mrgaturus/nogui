@@ -41,6 +41,7 @@ type
     cbWidget: GUICallbackEX[WidgetSignal]
     cbWindow: GUICallbackEX[WindowMessage]
     # Window Running
+    lazy: int32
     running: bool
   # GUI Window Client
   GUIWindow* = ref Window
@@ -64,15 +65,28 @@ proc relax*(win: GUIClient, widget: GUIWidget, msg: WidgetMessage) =
 proc relax*(win: GUIClient, msg: WindowMessage) =
   relax(win.cbWindow, msg)
 
-# --------------------------
-# Window Client Manipulation
-# --------------------------
+# -----------------------
+# Window Client Shortcuts
+# -----------------------
 
 proc shorts*(win: GUIClient): ptr GUIShortcuts =
   addr win.shorts
 
 proc observers*(win: GUIClient): ptr GUIObservers =
   addr win.observers
+
+# -----------------------
+# Window Client Rendering
+# -----------------------
+
+proc exposed*(win: GUIClient): bool {.inline.} =
+  win.lazy != 0
+
+proc fuse*(win: GUIClient) {.inline.} =
+  inc(win.lazy)
+
+proc defuse*(win: GUIClient) {.inline.} =
+  dec(win.lazy)
 
 proc resize(win: GUIWindow, w, h: int32) =
   let
@@ -104,6 +118,8 @@ proc procWidget(win: GUIWindow, signal: ptr WidgetSignal) =
   of wsOpen: open(man, widget)
   of wsClose: close(man, widget)
   of wsHold: hold(man, widget)
+  # Lazy Rendering
+  inc(win.lazy)
 
 proc procWindow(win: GUIWindow, msg: ptr WindowMessage) =
   let man {.cursor.} = win.man
@@ -116,6 +132,8 @@ proc procWindow(win: GUIWindow, msg: ptr WindowMessage) =
     win.running = false
   # TODO: Window Buttons
   else: discard
+  # Lazy Rendering
+  inc(win.lazy)
 
 proc procEvent(win: GUIWindow, msg: pointer) =
   let 
@@ -135,8 +153,7 @@ proc procEvent(win: GUIWindow, msg: pointer) =
       dispatch(win.shorts, state)
   # Window Property Events
   of evWindowExpose:
-    # TODO: interaction counts
-    discard
+    win.lazy = 65535
   of evWindowClose:
     # TODO: close callback
     win.running = false
@@ -146,6 +163,8 @@ proc procEvent(win: GUIWindow, msg: pointer) =
   # Window Hover Events
   of evWindowEnter, evWindowLeave:
     return
+  # Lazy Rendering
+  inc(win.lazy)
 
 # ----------------------
 # Window Client Creation
@@ -201,10 +220,14 @@ proc renderLayer(ctx: ptr CTXRender, layer: GUILayer) =
     ctx[].render()
 
 proc render*(win: GUIWindow) =
-  begin(win.ctx) # -- Begin GUI Rendering
   let
     ctx = addr win.ctx
     man {.cursor.} = win.man
+  # Reset Lazy Rendering
+  if win.lazy == 0: return
+  win.lazy = 0
+  # Begin Rendering
+  begin(win.ctx)
   # Render Root
   render(man.root, ctx)
   ctx[].render()
@@ -212,7 +235,8 @@ proc render*(win: GUIWindow) =
   ctx.renderLayer(man.frame)
   ctx.renderLayer(man.popup)
   ctx.renderLayer(man.tooltip)
-  finish() # -- End GUI Rendering
+  # End Rendering
+  finish()
   # Present Frame to Native
   nogui_native_frame(win.native)
 

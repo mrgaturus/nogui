@@ -125,7 +125,7 @@ widget UXSlider:
       ctx.color(colors.darker)
       ctx.fill(r)
       # Get Slider Width and Fill Slider Bar
-      r.x0 = r.x1 + float32(rect.w) * value.toRaw
+      r.x1 = r.x0 + float32(rect.w) * value.toRaw
       ctx.color self.itemColor()
       ctx.fill(r)
     # Calculate Text Format

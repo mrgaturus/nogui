@@ -8,7 +8,8 @@ from ../core/timer import timeout, timestop
 # Import Window Manipulation
 from ../core/window import
   WindowMessage, WidgetMessage,
-  send, relax, shorts, observers
+  send, relax, shorts, observers,
+  exposed, fuse, defuse
 # Import Global App State
 from ../../nogui import
   getApp,
@@ -97,6 +98,7 @@ export getApp, getWindow, width, index
 export WindowMessage, WidgetMessage
 export window.send, window.relax
 export window.shorts, window.observers
+export window.exposed, window.fuse, window.defuse
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values

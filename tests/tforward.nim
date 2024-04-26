@@ -128,7 +128,6 @@ proc main() =
   createApp(1024, 600)
   let test = conlayout()
   # Clear Color
-  # Open Window
   executeApp(test.widget):
     glClearColor(0.1019607843137255, 0.11196078431372549, 0.11196078431372549, 1.0)
     glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
