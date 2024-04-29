@@ -1,15 +1,13 @@
-# Import GUI Toolkit Core
+# Import GUI Builder
 from ../builder import widget, controller
+# Import GUI Native Platform
 from ../native/ffi import
   GUIEvent, GUITool,
   GUIKeycode, GUIKeymod, GUIState, mods, name
-import ../core/[widget, metrics, render, atlas, callback, value]
+from ../native/cursor import GUICursorSys
+# Import GUI Core
+import ../core/[widget, metrics, render, atlas, callback, value, window]
 from ../core/timer import timeout, timestop
-# Import Window Manipulation
-from ../core/window import
-  WindowMessage, WidgetMessage,
-  send, relax, shorts, observers,
-  exposed, fuse, defuse
 # Import Global App State
 from ../../nogui import
   getApp,
@@ -71,7 +69,9 @@ export
   GUIKeymod,
   GUIState,
   ffi.mods,
-  ffi.name
+  ffi.name,
+  # Export Cursor
+  GUICursorSys
 
 export builder.widget
 export builder.controller
@@ -95,10 +95,10 @@ export callback except messenger
 export timeout, timestop
 # Export Global App State
 export getApp, getWindow, width, index
-export WindowMessage, WidgetMessage
-export window.send, window.relax
-export window.shorts, window.observers
-export window.exposed, window.fuse, window.defuse
+export window except
+  GUIWindow,
+  newGUIWindow,
+  execute, render, poll
 # Export Constant Icon ID
 export CTXIconID, CTXIconEmpty, data.`==`
 # Export Shared Values

@@ -1,8 +1,8 @@
 import widget, callback, render, timer, manager, shortcut
 from tree import render
 from atlas import CTXAtlas
-# Native Platform
-import ../native/ffi
+# GUI Native Platform
+import ../native/[ffi, cursor]
 
 type
   WindowMessage* = enum
@@ -32,6 +32,7 @@ type
   Window = object
     native: ptr GUINative
     timers: ptr GUITimers
+    cursors: GUICursors
     # Window Renderer
     ctx: CTXRender
     man: GUIManager
@@ -74,6 +75,19 @@ proc shorts*(win: GUIClient): ptr GUIShortcuts =
 
 proc observers*(win: GUIClient): ptr GUIObservers =
   addr win.observers
+
+# ---------------------
+# Window Client Cursors
+# ---------------------
+
+proc cursor*(win: GUIClient, id: GUICursorSys) =
+  win.cursors.change(id)
+
+proc cursor*(win: GUIClient, id: GUICursorID) =
+  win.cursors.change(id)
+
+proc cursorReset*(win: GUIClient) =
+  win.cursors.reset()
 
 # -----------------------
 # Window Client Rendering
@@ -190,6 +204,8 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   # Define Window Native
   result.native = native
   result.timers = useTimers()
+  result.cursors = createCursors(native)
+  # Define Window Manager
   result.man = createManager()
   # Define Window Queue
   result.messenger(native)

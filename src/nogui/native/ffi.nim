@@ -66,13 +66,17 @@ type
     utf8str*: cstring
 
 type
+  # GUI Native Bitmap 4bytes
+  GUINativeBitmap* {.importc: "nogui_bitmap_t".} = object
+    w*, h*: int32
+    ox*, oy*: int32
+    # Buffer Pixels RGBA
+    pixels*: ptr uint8
   # GUI Native Properties
   GUINativeTime* {.importc: "nogui_time_t".} = distinct int64
-  GUINativeCursor* {.importc: "nogui_cursor_t".} = object
   GUINativeInfo* {.importc: "nogui_info_t".} = object
-    title*: cstring
+    id*, title*: cstring
     width*, height*: int32
-    cursor*: ptr GUINativeCursor
     # OpenGL Function Loader
     gl_major*, gl_minor*: int32
     gl_loader*: proc (name: cstring): pointer {.noconv.}
@@ -138,10 +142,10 @@ proc mods*(state: ptr GUIState): GUIKeymods {.inline.} =
 # BSD is not supported
 # Wayland has awful governance
 when defined(linux):
-  {.passL: "-lX11 -lXi -lEGL".}
+  {.passL: "-lX11 -lXi -lXcursor -lEGL".}
   # Compile X11 Native Platform
-  {.compile: "x11/cursor.c".}
   {.compile: "x11/device.c".}
   {.compile: "x11/event.c".}
   {.compile: "x11/keymap.c".}
+  {.compile: "x11/props.c".}
   {.compile: "x11/window.c".}

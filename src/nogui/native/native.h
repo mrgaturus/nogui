@@ -21,9 +21,41 @@ typedef struct nogui_cursor_t nogui_cursor_t;
 typedef void* (*nogui_getProcAddress_t)(const char* name);
 
 typedef struct {
-  char* title;
+  int w, h;
+  int ox, oy;
+  // Buffer Pixels RGBA
+  unsigned char* pixels;
+} nogui_bitmap_t;
+
+typedef enum {
+  cursorArrow,
+  cursorCross,
+  cursorMove,
+  cursorWaitHard,
+  cursorWaitSoft,
+  cursorForbidden,
+  cursorText,
+  cursorTextUp,
+  // Hand Cursors
+  cursorHandPoint,
+  cursorHandHover,
+  cursorHandGrab,
+  // Zoom Cursors
+  cursorZoomIn,
+  cursorZoomOut,
+  // Resize Cursors
+  cursorSizeVertical,
+  cursorSizeHorizontal,
+  cursorSizeDiagLeft,
+  cursorSizeDiagRight,
+  // Resize Dock Cursors
+  cursorSplitVertical,
+  cursorSplitHorizontal
+} nogui_cursorsys_t;
+
+typedef struct {
+  char *id, *title;
   int width, height;
-  nogui_cursor_t* cursor;
   // OpenGL Function Loader
   int gl_major, gl_minor;
   nogui_getProcAddress_t gl_loader;
@@ -125,10 +157,25 @@ void nogui_cb_call(nogui_cb_t* cb);
 // GUI Native Queue Push
 void nogui_queue_push(nogui_queue_t* queue, nogui_cb_t* cb);
 void nogui_queue_relax(nogui_queue_t* queue, nogui_cb_t* cb);
-
 // GUI Native Queue Pop
 int nogui_queue_poll(nogui_queue_t* queue);
 void nogui_queue_destroy(nogui_queue_t* queue);
+
+// ----------------------------
+// GUI Native Propierties Procs
+// ----------------------------
+
+// GUI Native Cursor
+nogui_cursor_t* nogui_cursor_custom(nogui_native_t* native, nogui_bitmap_t bm);
+nogui_cursor_t* nogui_cursor_sys(nogui_native_t* native, nogui_cursorsys_t id);
+void nogui_cursor_destroy(nogui_native_t* native, nogui_cursor_t* cursor);
+
+// GUI Native Cursor Property
+void nogui_native_cursor(nogui_native_t* native, nogui_cursor_t* cursor);
+void nogui_native_cursor_reset(nogui_native_t* native);
+// GUI Native Identifier Property
+void nogui_native_id(nogui_native_t* native, char* id);
+void nogui_native_title(nogui_native_t* native, char* title);
 
 // -------------------------
 // GUI Native Platform Procs

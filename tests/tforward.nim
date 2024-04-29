@@ -1,8 +1,8 @@
 import nogui/core/shortcut
 from nogui/libs/gl import 
-  glClear, 
-  glClearColor, 
-  GL_COLOR_BUFFER_BIT, 
+  glClear,
+  glClearColor,
+  GL_COLOR_BUFFER_BIT,
   GL_DEPTH_BUFFER_BIT
 from nogui import createApp, executeApp
 from nogui/builder import controller, child
@@ -40,6 +40,9 @@ widget UXForwardTest:
     echo cast[pointer](self).repr, " ", reason
 
 widget UXFocusTest:
+  attributes:
+    shape: GUICursorSys
+
   new focustest():
     result.flags = {wMouse, wKeyboard}
   
@@ -54,6 +57,10 @@ widget UXFocusTest:
     #echo "-- Widget: ", state.mx, " ", state.my
     if state.kind == evKeyDown:
       echo name(state.key)
+      self.shape = cast[GUICursorSys]((ord(self.shape) + 1) mod (1 + ord high GUICursorSys))
+      if self.test(wHover):
+        getWindow().cursor(self.shape)
+      echo self.shape
 
   method update =
     let m = addr self.metrics
@@ -70,10 +77,11 @@ widget UXFocusTest:
 
   method handle(reason: GUIHandle) =
     echo "-- ", cast[pointer](self).repr, " ", reason
-    #case reason
-    #of inFocus: echo "focused: ", cast[pointer](self).repr
-    #of outFocus: echo "unfocused: ", cast[pointer](self).repr
-    #else: discard
+    let win = getWindow()
+    case reason
+    of inHover: win.cursor(self.shape)
+    of outHover: win.cursorReset()
+    else: discard
 
 controller CONLayout:
   attributes:
