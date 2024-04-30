@@ -54,11 +54,12 @@ typedef enum {
 } nogui_cursorsys_t;
 
 typedef struct {
-  char *id, *title;
+  char *title;
+  char *id, *name;
   int width, height;
   // OpenGL Function Loader
-  int gl_major, gl_minor;
-  nogui_getProcAddress_t gl_loader;
+  int glMajor, glMinor;
+  nogui_getProcAddress_t glProc;
 } nogui_info_t;
 
 // ------------------------
@@ -174,7 +175,7 @@ void nogui_cursor_destroy(nogui_native_t* native, nogui_cursor_t* cursor);
 void nogui_native_cursor(nogui_native_t* native, nogui_cursor_t* cursor);
 void nogui_native_cursor_reset(nogui_native_t* native);
 // GUI Native Identifier Property
-void nogui_native_id(nogui_native_t* native, char* id);
+void nogui_native_id(nogui_native_t* native, char* id, char* name);
 void nogui_native_title(nogui_native_t* native, char* title);
 
 // -------------------------

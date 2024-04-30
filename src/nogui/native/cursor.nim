@@ -81,7 +81,6 @@ proc loadCustom(c: GUICursors) =
         pixels: cast[ptr uint8](cursor.buffer)
       )
     # Create Custom Native Cursor from RGBA
-    echo bitmap
     let cursor = nogui_cursor_custom(c.native, bitmap)
     c.custom.add(cursor)
 

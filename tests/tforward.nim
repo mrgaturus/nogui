@@ -4,7 +4,7 @@ from nogui/libs/gl import
   glClearColor,
   GL_COLOR_BUFFER_BIT,
   GL_DEPTH_BUFFER_BIT
-from nogui import createApp, executeApp
+from nogui import createApp, executeApp, class
 from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
@@ -12,7 +12,7 @@ import nogui/ux/layouts/[box, misc]
 import nogui/pack
 
 cursors 64:
-  pepper := "pepper.png" (32, 32)
+  pepper := "pepper.png" (200, 200)
 
 widget UXForwardTest:
   new forwardtest(w: GUIWidget):
@@ -138,6 +138,10 @@ controller CONLayout:
 
 proc main() =
   createApp(1024, 600)
+  # Define Title Properties
+  getApp().class("nogui", "nogui")
+  getWindow().title("Forward Testing")
+
   let test = conlayout()
   # Clear Color
   executeApp(test.widget):

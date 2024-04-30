@@ -75,11 +75,12 @@ type
   # GUI Native Properties
   GUINativeTime* {.importc: "nogui_time_t".} = distinct int64
   GUINativeInfo* {.importc: "nogui_info_t".} = object
-    id*, title*: cstring
+    title*: cstring
+    id*, name*: cstring
     width*, height*: int32
     # OpenGL Function Loader
-    gl_major*, gl_minor*: int32
-    gl_loader*: proc (name: cstring): pointer {.noconv.}
+    glMajor*, glMinor*: int32
+    glProc*: proc (name: cstring): pointer {.noconv.}
   # GUI Native Callback
   GUINativeProc* {.importc: "nogui_proc_t".} =
     proc(self, data: pointer) {.noconv.}
@@ -123,6 +124,10 @@ proc nogui_native_destroy*(native: ptr GUINative)
 proc nogui_native_info*(native: ptr GUINative): ptr GUINativeInfo
 proc nogui_native_queue*(native: ptr GUINative): ptr GUINativeQueue
 proc nogui_native_state*(native: ptr GUINative): ptr GUIState
+
+# GUI Native Identifier Property
+proc nogui_native_id*(native: ptr GUINative, id, name: cstring)
+proc nogui_native_title*(native: ptr GUINative, title: cstring)
 
 # GUI Native Event Pooling
 proc nogui_native_pump*(native: ptr GUINative)

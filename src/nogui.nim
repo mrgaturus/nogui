@@ -128,7 +128,7 @@ proc createApp*(w, h: int32) =
     native = nogui_native_init(w, h)
     info = nogui_native_info(native)
   # Load OpenGL Functions
-  if not gladLoadGL(info.gl_loader):
+  if not gladLoadGL(info.glProc):
     log(lvError, "failed load OpenGL")
   # Create Queue, Atlas, Window
   let atlas = newCTXAtlas(result.font.face)
@@ -164,6 +164,14 @@ proc getApp*(): GUIApplication =
 
 proc getWindow*(): GUIClient {.inline.} =
   result = cast[GUIClient](getApp().window)
+
+# ----------------------------
+# Application Class Identifier
+# ----------------------------
+
+proc class*(app: GUIApplication, id, name: cstring) =
+  app.window.class(id, name)
+  echo nogui_native_info(app.native).name
 
 # ------------------------
 # Application Font Metrics

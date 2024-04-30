@@ -66,6 +66,16 @@ proc relax*(win: GUIClient, widget: GUIWidget, msg: WidgetMessage) =
 proc relax*(win: GUIClient, msg: WindowMessage) =
   relax(win.cbWindow, msg)
 
+# -------------------
+# Window Client Title
+# -------------------
+
+proc title*(win: GUIClient, name: cstring) =
+  nogui_native_title(win.native, name)
+
+proc class*(win: GUIWindow, id, name: cstring) =
+  nogui_native_id(win.native, id, name)
+
 # -----------------------
 # Window Client Shortcuts
 # -----------------------

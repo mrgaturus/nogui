@@ -86,7 +86,7 @@ static void x11_create_egl(nogui_native_t* native, Window XID) {
   native->egl_context = egl_context;
   native->egl_surface = egl_surface;
   // Store EGL GetProcAddress Function
-  native->info.gl_loader = (nogui_getProcAddress_t) eglGetProcAddress;
+  native->info.glProc = (nogui_getProcAddress_t) eglGetProcAddress;
 
   // -- Logging EGL & OpenGL Version --
   GLGETSTRING glGetString = (GLGETSTRING) eglGetProcAddress("glGetString");
@@ -175,6 +175,10 @@ nogui_native_t* nogui_native_init(int w, int h) {
   // Initialize Native Info
   native->info.width = w;
   native->info.height = h;
+  // Initialize Native Title
+  native->info.title = calloc(1, 1);
+  native->info.id = calloc(1, 1);
+  native->info.name = calloc(1, 1);
   // Initialize Native State
   native->state.native = native;
   native->state.utf8str = malloc(16);
@@ -227,6 +231,11 @@ void nogui_native_destroy(nogui_native_t* native) {
   // TODO: first class IME support
   if (native->state.utf8str)
     free(native->state.utf8str);
+
+  // Dealloc Native Title
+  free(native->info.title);
+  free(native->info.id);
+  free(native->info.name);
 
   // Dealloc Native Platform
   nogui_queue_destroy(&native->queue);
