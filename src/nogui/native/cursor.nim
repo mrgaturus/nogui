@@ -1,4 +1,5 @@
 import ffi
+import ../data
 
 # -----------------------
 # Native Platform Cursors
@@ -52,7 +53,7 @@ proc nogui_native_cursor_reset(native: ptr GUINative)
 # -------------------
 
 type
-  GUICursorID* = distinct int32
+  GUICursorID* = CTXCursorID
   GUICursors* = ref object
     native: ptr GUINative
     # Native Cursors Lists
@@ -61,15 +62,36 @@ type
     # Current Cursor
     active: GUICursor
 
+# ----------------------
+# Native Cursor Creation
+# ----------------------
+
+proc loadCustom(c: GUICursors) =
+  let cursors = newCursors("cursors.dat")
+  for cursor in cursors.icons():
+    let
+      info = cursor.info
+      bitmap = GUINativeBitmap(
+        w: info.w,
+        h: info.h,
+        # Hotspot Position
+        ox: info.ox,
+        oy: info.oy,
+        # Cursor RGBA Buffer
+        pixels: cast[ptr uint8](cursor.buffer)
+      )
+    # Create Custom Native Cursor from RGBA
+    echo bitmap
+    let cursor = nogui_cursor_custom(c.native, bitmap)
+    c.custom.add(cursor)
+
 proc createCursors*(native: ptr GUINative): GUICursors =
   new result
   # Native Platform
   result.native = native
+  result.loadCustom()
 
-proc push*(c: var GUICursors, bitmap: GUINativeBitmap) =
-  c.custom.add nogui_cursor_custom(c.native, bitmap)
-
-proc destroy*(c: var GUICursors) =
+proc destroy*(c: GUICursors) =
   let native = c.native
   # Destroy Custom Cursors
   for cursor in c.custom:
@@ -84,12 +106,12 @@ proc destroy*(c: var GUICursors) =
 # Native Cursor Manager
 # ---------------------
 
-proc change(c: var GUICursors, cursor: GUICursor) =
+proc change(c: GUICursors, cursor: GUICursor) =
   if cursor != c.active:
     nogui_native_cursor(c.native, cursor)
     c.active = cursor
 
-proc change*(c: var GUICursors, id: GUICursorSys) =
+proc change*(c: GUICursors, id: GUICursorSys) =
   let native = c.native
   var cursor = c.sys[id]
   # Define Cursor if not Defined
@@ -99,12 +121,12 @@ proc change*(c: var GUICursors, id: GUICursorSys) =
   # Change Current Cursor
   c.change(cursor)
 
-proc change*(c: var GUICursors, id: GUICursorID) =
+proc change*(c: GUICursors, id: GUICursorID) =
   let cursor = c.custom[int32 id]
   # Change Current Cursor
   c.change(cursor)
 
-proc reset*(c: var GUICursors) =
+proc reset*(c: GUICursors) =
   if isNil(c.active): return
   nogui_native_cursor_reset(c.native)
   # Remove Active Cursor

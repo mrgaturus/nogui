@@ -8,9 +8,7 @@
 
 nogui_cursor_t* nogui_cursor_custom(nogui_native_t* native, nogui_bitmap_t bm) {
   XcursorImage* img = XcursorImageCreate(bm.w, bm.h);
-  // Calculate Image Bytes
-  int size = bm.w * bm.h;
-  int bytes = sizeof(XcursorPixel) * size;
+  int bytes = sizeof(XcursorPixel) * bm.w * bm.h;
 
   // Define Cursor Header
   img->version = 1;
@@ -21,11 +19,12 @@ nogui_cursor_t* nogui_cursor_custom(nogui_native_t* native, nogui_bitmap_t bm) {
   // Define Pixels Temporal Buffer
   img->pixels = (XcursorPixel*) bm.pixels;
 
-  XcursorPixel* dst = img->pixels;
-  // Convert Bitmap to ARGB 32bit
-  for (int i = 0; i < size; i++) {
-    XcursorPixel pixel = dst[i];
-    dst[i] = (pixel << 8) | (pixel >> 24);
+  char* dst = (char*) img->pixels;
+  // Convert Bitmap to BGRA 32bit
+  for (int i = 0; i < bytes; i += 4) {
+    char aux = dst[i];
+    dst[i] = dst[i + 2];
+    dst[i + 2] = aux;
   }
 
   // Create Native X11 Cursor

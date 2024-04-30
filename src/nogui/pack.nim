@@ -7,11 +7,12 @@ from os import parentDir, `/`
 when not defined(skiplist):
   from strutils import join
 # Packed Counters File
-const 
+const
   mcPathsCount = CacheCounter"nogui:path"
   mcIconsCount = CacheCounter"nogui:icon"
-# Glyph Icon ID Type
-from data import CTXIconID
+  mcCursorsCount = CacheCounter"nogui:cursor"
+# Import Icon Identifiers Type
+from data import CTXIconID, CTXCursorID
 
 # ---------------------------
 # gorge Executor with Checker
@@ -71,19 +72,18 @@ macro folders*(paths: untyped) =
     # Step Current Folder
     inc mcPathsCount
 
-# ---------------------
-# Icon Definition Macro
-# ---------------------
+# --------------------
+# Constant Symbol Node
+# --------------------
 
-func icon(item: NimNode): NimNode =
+func symbol(item, ty: NimNode, class: string, value: int): NimNode =
   let 
-    value = newIntLitNode(mcIconsCount.value)
-    ty = bindSym"CTXIconID"
-    # Icon Name and Visibility
+    value = newIntLitNode(value)
+    # Cursor Name and Visibility
     op = item[0]
     name = item[1]
   # Add Name Prefix
-  var id = ident("icon" & name.strVal)
+  var id = ident(class & name.strVal)
   copyLineInfo(id, name)
   # Check if is Public
   if op.eqIdent("*="): 
@@ -93,25 +93,68 @@ func icon(item: NimNode): NimNode =
   result = nnkConstDef.newTree(
     id, ty, nnkCommand.newTree(ty, value)
   )
-  # Step Current Icon
-  inc mcIconsCount
+
+# ---------------------
+# Icon Definition Macro
+# ---------------------
 
 macro icons*(dir: string, size: int, list: untyped) =
   result = nnkConstSection.newTree()
+  let ty = bindSym"CTXIconID"
   # Create data folder if not exists
   let
-    iconsClear = mcIconsCount.value == 0
-    iconsList = listPrepare(list, "icons.list", iconsClear)
+    clear = mcIconsCount.value == 0
+    entries = listPrepare(list, "icons.list", clear)
     # Icon Subdir / Icon Pixel Size
-    iconsSubdir = dir.strVal
-    iconsSize = $size.intVal
+    subdir = dir.strVal
+    fit = $size.intVal
   # Define Each Icon
   for item in list:
     expectKind(item, nnkInfix)
-    let iconName = iconsSubdir / item[2].strVal
-    listEntry(item, iconsList, iconName, iconsSize)
-    # Add New Fresh Constant
-    result.add icon(item)
+    let name = subdir / item[2].strVal
+    listEntry(item, entries, name, fit)
+    # Add New Fresh Constant Symbol
+    let count = mcIconsCount.value
+    result.add symbol(item, ty, "icon", count)
+    inc(mcIconsCount)
 
 template icons*(size: int, list: untyped) =
   icons("", size, list)
+
+# -----------------------
+# Cursor Definition Macro
+# -----------------------
+
+macro cursors*(dir: string, size: int, list: untyped) =
+  result = nnkConstSection.newTree()
+  let ty = bindSym"CTXCursorID"
+  # Create data folder if not exists
+  let
+    clear = mcCursorsCount.value == 0
+    entries = listPrepare(list, "cursors.list", clear)
+    # Cursor Subdir / Pixel Size
+    subdir = dir.strVal
+    fit = $size.intVal
+  # Define Each Icon
+  for item in list:
+    expectKind(item, nnkInfix)
+    # Lookup Cursor Data
+    let info = item[2]
+    expectKind(info, nnkCommand)
+    # Lookup Hotspot Data
+    let hot = info[1]
+    expectLen(hot, 2)
+    # Cursor Information
+    let
+      key = subdir / info[0].strVal
+      hotspot = $hot[0].intVal & "," & $hot[1].intVal
+      value = fit & " - " & hotspot
+    # Add New Entry to File List
+    listEntry(item, entries, key, value)
+    # Add New Fresh Constant Symbol
+    let count = mcCursorsCount.value
+    result.add symbol(item, ty, "cursor", count)
+    inc(mcCursorsCount)
+
+template cursors*(size: int, list: untyped) =
+  cursors("", size, list)

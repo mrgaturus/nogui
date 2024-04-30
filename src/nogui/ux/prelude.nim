@@ -14,7 +14,10 @@ from ../../nogui import
   getWindow,
   width, index
 # Import Icon ID Helper
-from ../data import CTXIconID, CTXIconEmpty, `==`
+from ../data import
+  CTXIconID,
+  CTXCursorID,
+  CTXIconEmpty, `==`
 # Import Private Access
 from std/importutils import privateAccess
 
@@ -100,7 +103,11 @@ export window except
   newGUIWindow,
   execute, render, poll
 # Export Constant Icon ID
-export CTXIconID, CTXIconEmpty, data.`==`
+export
+  CTXIconID,
+  CTXIconEmpty,
+  CTXCursorID,
+  data.`==`
 # Export Shared Values
 export value
 export privateAccess

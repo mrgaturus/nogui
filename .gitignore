@@ -7,6 +7,7 @@ tests/*
 # Ignore Test Data
 tests/data
 # Ignore Generated List
+cursors.list
 icons.list
 paths.list
 

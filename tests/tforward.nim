@@ -9,6 +9,10 @@ from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/layouts/[box, misc]
+import nogui/pack
+
+cursors 64:
+  pepper := "pepper.png" (32, 32)
 
 widget UXForwardTest:
   new forwardtest(w: GUIWidget):
@@ -79,7 +83,7 @@ widget UXFocusTest:
     echo "-- ", cast[pointer](self).repr, " ", reason
     let win = getWindow()
     case reason
-    of inHover: win.cursor(self.shape)
+    of inHover: win.cursor(cursorPepper)
     of outHover: win.cursorReset()
     else: discard
 
