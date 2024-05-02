@@ -171,7 +171,6 @@ proc getWindow*(): GUIClient {.inline.} =
 
 proc class*(app: GUIApplication, id, name: cstring) =
   app.window.class(id, name)
-  echo nogui_native_info(app.native).name
 
 # ------------------------
 # Application Font Metrics

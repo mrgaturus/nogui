@@ -6,16 +6,24 @@ from nogui/libs/gl import
 from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
+import nogui/ux/pivot
 # Import All Widgets
 import nogui/ux/layouts/[box, misc]
 
 widget UXFocusTest:
+  attributes:
+    pivot: GUIStatePivot
+
   new focustest():
     result.flags = {wMouse, wKeyboard}
   
   method event(state: ptr GUIState) =
+    self.pivot.capture(state)
     if state.kind == evCursorRelease and self.test(wHover):
       self.send(wsFocus)
+    echo "dist: ", self.pivot.dist
+    echo "away: ", self.pivot.away
+
 
   method update =
     let m = addr self.metrics
@@ -30,8 +38,8 @@ widget UXFocusTest:
     # Draw Focus Check
     ctx.fill rect(self.rect)
 
-  method handle(kind: GUIHandle) =
-    case kind
+  method handle(reason: GUIHandle) =
+    case reason
     of inFocus: echo "focused: ", cast[pointer](self).repr
     of outFocus: echo "unfocused: ", cast[pointer](self).repr
     else: discard

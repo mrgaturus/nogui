@@ -5,11 +5,6 @@ import callback
 # Main Loop + Frame Limiter
 # -------------------------
 
-# Calculate Distance Beetween Times
-proc `+`(a, b: GUINativeTime): GUINativeTime {.borrow.}
-proc `-`(a, b: GUINativeTime): GUINativeTime {.borrow.}
-proc `<`(a, b: GUINativeTime): bool {.borrow.}
-
 template loop*(ms: int, body: untyped) =
   let limit = nogui_time_ms(ms)
   var a, b: GUINativeTime

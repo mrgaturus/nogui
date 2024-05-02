@@ -139,6 +139,10 @@ proc nogui_native_poll*(native: ptr GUINative): int32
 proc mods*(state: ptr GUIState): GUIKeymods {.inline.} =
   cast[GUIKeymods](state.mask)
 
+proc `+`*(a, b: GUINativeTime): GUINativeTime {.borrow.}
+proc `-`*(a, b: GUINativeTime): GUINativeTime {.borrow.}
+proc `<`*(a, b: GUINativeTime): bool {.borrow.}
+
 # ------------------------
 # Platform Native Compiler
 # ------------------------
