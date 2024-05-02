@@ -9,7 +9,7 @@ import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/widgets/[button, slider, check, radio, label]
 import nogui/ux/layouts/[form, level, misc]
-import nogui/values
+import nogui/ux/values/[linear, dual]
 import nogui/format
 from math import pow
 
@@ -38,7 +38,7 @@ proc spacing(w: GUIWidget): GUIWidget =
   #result.margin = 4
   result = margin(size = 16, a)
 
-proc half(value: & Lerp): UXAdjustLayout =
+proc half(value: & Linear): UXAdjustLayout =
   result = adjust slider(value)
   # Adjust Metrics
   result.scaleW = 0.75
@@ -46,15 +46,15 @@ proc half(value: & Lerp): UXAdjustLayout =
 controller CONLayout:
   attributes:
     widget: GUIWidget
-    [valueA, valueB]: @ Lerp
-    [valueA1, valueB1]: @ Lerp
-    [valueC, valueD]: @ Lerp
-    [valueE, valueF]: @ Lerp
-    [valueG, valueH]: @ Lerp
+    [valueA, valueB]: @ Linear
+    [valueA1, valueB1]: @ Linear
+    [valueC, valueD]: @ Linear
+    [valueE, valueF]: @ Linear
+    [valueG, valueH]: @ Linear
     [check0, check1]: @ bool
     [check2, check3]: @ bool
     [check4, check5]: @ bool
-    dual0: @ Lerp2
+    dual0: @ LinearDual
     a: @ int32
 
   callback cbHello:
@@ -77,7 +77,7 @@ controller CONLayout:
       field(): checkbox("Transparent", self.check0)
 
       field("Blending", self.check2): 
-        slider0int(self.valueC) do (s: ShallowString, v: Lerp):
+        slider0int(self.valueC) do (s: ShallowString, v: Linear):
           let i = v.toInt
           s.format("%d + %d = %d", i, i, i + i)
       field("Dilution", self.check3): 
@@ -90,7 +90,7 @@ controller CONLayout:
       
       label("", hoLeft, veMiddle)
       field("Min Pressure"): slider(self.valueG)
-      field("Curve Pressure"): dual0float(self.dual0) do (s: ShallowString, v: Lerp2):
+      field("Curve Pressure"): dual0float(self.dual0) do (s: ShallowString, v: LinearDual):
         let 
           f = v.toFloat
           fs = pow(2.0, f) * 100.0
@@ -101,16 +101,16 @@ controller CONLayout:
 
   new conlayout():
     # Create New Widget
-    result.valueA = lerp(0, 100).value
-    result.valueA1 = lerp(0, 100).value
-    result.valueB1 = lerp(0, 100).value
-    result.valueB = lerp(20, 50).value
-    result.valueC = lerp(-100, 100).value
-    result.valueD = lerp(0, 5).value
-    result.valueE = lerp(0, 100).value
-    result.valueF = lerp(0, 200).value
+    result.valueA = linear(0, 100).value
+    result.valueA1 = linear(0, 100).value
+    result.valueB1 = linear(0, 100).value
+    result.valueB = linear(20, 50).value
+    result.valueC = linear(-100, 100).value
+    result.valueD = linear(0, 5).value
+    result.valueE = linear(0, 100).value
+    result.valueF = linear(0, 200).value
     result.valueG = value(result.valueD.peek, result.cbHello)
-    result.dual0 = value lerp2(-5, 5)
+    result.dual0 = value dual(-5, 5)
     result.widget = result.createWidget()
     result.dual0.peek[].lorp(-4)
 

@@ -1,38 +1,38 @@
 import ../prelude
 import ../../format
 # Import Value Interpolation
-import ../../values
+import ../values/[linear, dual]
 
-# ---------------------
-# Lerp Formatting Procs
-# ---------------------
+# -----------------------
+# Linear Formatting Procs
+# -----------------------
 
-type 
-  LerpFmtProc* =
-    proc(s: ShallowString, v: Lerp) {.nimcall.}
-  Lerp2FmtProc* =
-    proc(s: ShallowString, v: Lerp2) {.nimcall.}
+type
+  LinearFormat* =
+    proc(s: ShallowString, v: Linear) {.nimcall.}
+  Linear2Format* =
+    proc(s: ShallowString, v: LinearDual) {.nimcall.}
 
-# -- Single Lerp Formatting --
-template fmt*(f: cstring): LerpFmtProc =
-  proc (s: ShallowString, v: Lerp) =
+# -- Single Linear Formatting --
+template fmt*(f: cstring): LinearFormat =
+  proc (s: ShallowString, v: Linear) =
     s.format(f, v.toInt)
 
-template fmf*(f: cstring): LerpFmtProc =
-  proc (s: ShallowString, v: Lerp) =
+template fmf*(f: cstring): LinearFormat =
+  proc (s: ShallowString, v: Linear) =
     s.format(f, v.toFloat)
 
-# -- Dual Lerp Formatting --
-template fmt2*(f: cstring): Lerp2FmtProc =
-  proc (s: ShallowString, v: Lerp2) =
+# -- Dual Linear Formatting --
+template fmt2*(f: cstring): Linear2Format =
+  proc (s: ShallowString, v: LinearDual) =
     s.format(f, v.toInt)
 
-template fmf2*(f: cstring): Lerp2FmtProc =
-  proc (s: ShallowString, v: Lerp2) =
+template fmf2*(f: cstring): Linear2Format =
+  proc (s: ShallowString, v: LinearDual) =
     s.format(f, v.toFloat)
 
 # ------------------------
-# Widget Lerp Event Commom
+# Widget Linear Event Commom
 # ------------------------
 
 template event0(self: typed, state: ptr GUIState) =
@@ -67,24 +67,24 @@ template event0(self: typed, state: ptr GUIState) =
     # Execute Changed Callback
     send(self.value.head.cb)
 
-# -------------------------
-# Widget Single Lerp Slider
-# -------------------------
+# --------------------
+# Widget Linear Slider
+# --------------------
 
 widget UXSlider:
   attributes:
-    value: & Lerp
+    value: & Linear
     # Slow Drag
     v: float32
     x: int16
     # Format Slider
-    fn: LerpFmtProc
+    fn: LinearFormat
     [z0, s0]: bool
     # Misc Custom
     {.public.}:
       step: float32
 
-  proc slider0(value: & Lerp, fn: LerpFmtProc, z0: bool) =
+  proc slider0(value: & Linear, fn: LinearFormat, z0: bool) =
     # Widget Standard Flag
     self.flags = {wMouse}
     self.value = value
@@ -95,14 +95,14 @@ widget UXSlider:
     self.step = 1.0
 
   # -- Integer Format --
-  new slider(value: & Lerp):
+  new slider(value: & Linear):
     result.slider0(value, fmt"%d", true)
 
   # -- Customizable Format --
-  new slider0float(value: & Lerp, fn: LerpFmtProc):
+  new slider0float(value: & Linear, fn: LinearFormat):
     result.slider0(value, fn, false)
 
-  new slider0int(value: & Lerp, fn: LerpFmtProc):
+  new slider0int(value: & Linear, fn: LinearFormat):
     result.slider0(value, fn, true)
 
   method update =
@@ -141,24 +141,24 @@ widget UXSlider:
     self.event0(state)
 
 # -------------------------
-# Widget Double Lerp Slider
+# Widget Linear Dual Slider
 # -------------------------
 
 widget UXDualSlider:
   attributes:
-    value: & Lerp2
+    value: & LinearDual
     # Slow Drag
     v: float32
     x: int16
     # Format Slider
-    fn: Lerp2FmtProc
+    fn: Linear2Format
     [z0, s0]: bool
     # Misc Custom
     {.public.}:
       step: float32
       center: float32
 
-  proc dual0(value: & Lerp2, fn: Lerp2FmtProc, z0: bool) =
+  proc dual0(value: & LinearDual, fn: Linear2Format, z0: bool) =
     # Widget Standard Flag
     self.flags = {wMouse}
     self.value = value
@@ -169,14 +169,14 @@ widget UXDualSlider:
     self.step = 0.03125
 
   # -- Integer Format --
-  new dual(value: & Lerp2):
+  new dual(value: & LinearDual):
     result.dual0(value, fmt2"%d", true)
 
   # -- Customizable Format --
-  new dual0float(value: & Lerp2, fn: Lerp2FmtProc):
+  new dual0float(value: & LinearDual, fn: Linear2Format):
     result.dual0(value, fn, false)
 
-  new dual0int(value: & Lerp2, fn: Lerp2FmtProc):
+  new dual0int(value: & LinearDual, fn: Linear2Format):
     result.dual0(value, fn, true)
 
   method update =
