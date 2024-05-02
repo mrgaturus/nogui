@@ -1,8 +1,5 @@
-# Math and Fast Math Modules
+# Import Trigonometric Operations
 from math import sin, cos, PI
-from ../values import
-  fastSqrt, invSqrt,
-  guiProjection
 # Data Loader
 from ../data import 
   newShader, CTXIconID, CTXIconEmpty, `==`
