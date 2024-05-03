@@ -65,7 +65,7 @@ template event0(self: typed, state: ptr GUIState) =
       value[].discrete(t)
     else: value[].lerp(t)
     # Execute Changed Callback
-    send(self.value.head.cb)
+    send(self.value.cb)
 
 # --------------------
 # Widget Linear Slider
