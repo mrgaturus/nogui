@@ -6,14 +6,14 @@ from callback import GUICallback, send
 
 type
   ValueHeader = object
-    cb*: GUICallback
+    cb: GUICallback
     loc: pointer
   ValueOpaque = ptr object
     head: ValueHeader
     loc: pointer
   # - Widget Shared Values
   Value*[T] = object
-    head*: ValueHeader
+    head: ValueHeader
     data: T
 
 converter toShared*[T](value: var Value[T]):
@@ -27,14 +27,14 @@ template `&`*(t: typedesc): typedesc = ptr Value[t]
 # Shared Values Encapsulation
 # ---------------------------
 
-proc value*[T](a: T): Value[T] =
+converter value*[T](a: T): Value[T] =
   result.data = a
 
 proc value*[T](a: T, cb: GUICallback): Value[T] =
   result.data = a
   result.head.cb = cb
 
-proc value*[T](a: ptr T): Value[T] =
+converter value*[T](a: ptr T): Value[T] =
   result.head.loc = a
 
 proc value*[T](a: ptr T, cb: GUICallback): Value[T] =
@@ -67,3 +67,13 @@ template peek*[T](value: ptr Value[T]): ptr T =
 
 template react*[T](value: ptr Value[T]): ptr T =
   cast[ptr T](react value.head)
+
+# ----------------------
+# Shared Values Callback
+# ----------------------
+
+proc cb*[T](value: Value[T]): GUICallback {.inline.} =
+  value.head.cb
+
+proc cb*[T](value: var Value[T], cb: GUICallback) {.inline.} =
+  value.head.cb = cb

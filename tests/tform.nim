@@ -101,16 +101,16 @@ controller CONLayout:
 
   new conlayout():
     # Create New Widget
-    result.valueA = linear(0, 100).value
-    result.valueA1 = linear(0, 100).value
-    result.valueB1 = linear(0, 100).value
-    result.valueB = linear(20, 50).value
-    result.valueC = linear(-100, 100).value
-    result.valueD = linear(0, 5).value
-    result.valueE = linear(0, 100).value
-    result.valueF = linear(0, 200).value
+    result.valueA = linear(0, 100)
+    result.valueA1 = linear(0, 100)
+    result.valueB1 = linear(0, 100)
+    result.valueB = linear(20, 50)
+    result.valueC = linear(-100, 100)
+    result.valueD = linear(0, 5)
+    result.valueE = linear(0, 100)
+    result.valueF = linear(0, 200)
     result.valueG = value(result.valueD.peek, result.cbHello)
-    result.dual0 = value dual(-5, 5)
+    result.dual0 = dual(-5, 5)
     result.widget = result.createWidget()
     result.dual0.peek[].lorp(-4)
 
