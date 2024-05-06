@@ -7,11 +7,39 @@ from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
+import nogui/ux/containers/scroll as scroll0
 import nogui/ux/widgets/[button, slider, check, radio, label, scroll]
 import nogui/ux/layouts/[form, level, misc]
 import nogui/ux/values/[linear, dual, scroller]
 import nogui/format
 from math import pow
+
+# ---------------------
+# Preferred Size Widget
+# ---------------------
+
+widget UXLayoutPreferred:
+  attributes:
+    [w, h]: int16
+
+  new preferred(widget: GUIWidget, w, h: int32):
+    result.kind = wkLayout
+    result.add(widget)
+    # Preferred Min Size
+    result.w = int16 w
+    result.h = int16 h
+  
+  method update =
+    self.metrics.minW = self.w
+    self.metrics.minH = self.h
+  
+  method layout =
+    let m1 = addr self.first.metrics
+    m1[].fit(self.metrics)
+
+# -------------
+# Field Helpers
+# -------------
 
 proc field(name: string, check: & bool, w: GUIWidget): GUIWidget =
   let ck = # Dummy Test
@@ -63,8 +91,8 @@ controller CONLayout:
 
   proc createWidget: GUIWidget =
     let cbHello = self.cbHello
-    # Create Layout
-    spacing: form().child:
+    # Create Widget Layout
+    let widget = spacing: form().child:
       field("Size"): slider(self.valueA)
       field("Min Size"): half(self.valueA1)
       field("Opacity"): slider(self.valueB)
@@ -102,6 +130,9 @@ controller CONLayout:
       # Scroller Example
       label("", hoLeft, veMiddle)
       field("Scroller"): scrollbar(self.scroll, false)
+    # Create Scroll Layout
+    result = scrollview:
+      preferred(widget, 600, 400)
 
 
   new conlayout():
