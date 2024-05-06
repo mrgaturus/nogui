@@ -7,9 +7,9 @@ from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
-import nogui/ux/widgets/[button, slider, check, radio, label]
+import nogui/ux/widgets/[button, slider, check, radio, label, scroll]
 import nogui/ux/layouts/[form, level, misc]
-import nogui/ux/values/[linear, dual]
+import nogui/ux/values/[linear, dual, scroller]
 import nogui/format
 from math import pow
 
@@ -54,6 +54,7 @@ controller CONLayout:
     [check0, check1]: @ bool
     [check2, check3]: @ bool
     [check4, check5]: @ bool
+    scroll: @ Scroller
     dual0: @ LinearDual
     a: @ int32
 
@@ -98,6 +99,10 @@ controller CONLayout:
           let i = int32(fs)
           s.format("%d%%", i)
         else: s.format("%.1f%%", fs)
+      # Scroller Example
+      label("", hoLeft, veMiddle)
+      field("Scroller"): scrollbar(self.scroll, false)
+
 
   new conlayout():
     # Create New Widget
@@ -109,6 +114,7 @@ controller CONLayout:
     result.valueD = linear(0, 5)
     result.valueE = linear(0, 100)
     result.valueF = linear(0, 200)
+    result.scroll = scroller(1000, 250)
     result.valueG = value(result.valueD.peek, result.cbHello)
     result.dual0 = dual(-5, 5)
     result.widget = result.createWidget()
