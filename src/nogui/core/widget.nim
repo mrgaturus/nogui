@@ -45,10 +45,11 @@ type
   GUITarget* = distinct pointer
   GUIWidget* {.inheritable.} = ref object
     vtable*: ptr GUIMethods
+    parent* {.cursor.}: GUIWidget
     # Widget Node Tree
-    parent*: GUIWidget
-    next*, prev*: GUIWidget
-    first*, last*: GUIWidget
+    next*, first*: GUIWidget
+    prev* {.cursor.}: GUIWidget
+    last* {.cursor.}: GUIWidget
     # Widget Flags
     kind*: GUIKind
     flags*: GUIFlags
@@ -62,14 +63,14 @@ type
 
 # First -> Last
 iterator forward*(first: GUIWidget): GUIWidget =
-  var frame = first
+  var frame {.cursor.} = first
   while not isNil(frame):
     yield frame
     frame = frame.next
 
 # Last -> First
 iterator reverse*(last: GUIWidget): GUIWidget =
-  var frame = last
+  var frame {.cursor.} = last
   while not isNil(frame):
     yield frame
     frame = frame.prev
