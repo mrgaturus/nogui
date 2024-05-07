@@ -56,7 +56,7 @@ widget UXRadio:
 
 import button
 # Define Toggle Button Widget
-widget UXButtonOption of UXButtonOpaque:
+widget UXButtonOption of UXButtonBase:
   attributes:
     value: int32
     check: & int32
@@ -74,14 +74,18 @@ widget UXButtonOption of UXButtonOpaque:
     result.check = check
 
   new button(label: string, check: & int32, value: int32):
-    result.init0(label)
+    result.init0(label, CTXIconEmpty)
     # Set Checkbox Attribute
     result.value = value
     result.check = check
 
   method draw(ctx: ptr CTXRender) =
-    self.draw0(ctx, self.check.peek[] == self.value)
+    const colors = [btnClear, btnActive]
+    let check = self.check.peek[] == self.value
+    # Draw Button Selected
+    self.mode = colors[int32 check]
+    self.draw0(ctx)
 
   method event(state: ptr GUIState) =
-    if state.kind == evCursorRelease and self.test(wHover):
+    if self.event0(state):
       self.check.react[] = self.value

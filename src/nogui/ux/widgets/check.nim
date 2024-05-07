@@ -59,16 +59,16 @@ widget UXCheckBox:
 
 import button
 # Define Toggle Button Widget
-widget UXButtonCheck of UXButtonOpaque:
+widget UXButtonCheck of UXButtonBase:
   attributes:
     check: & bool
 
-  new button(icon: CTXIconID, check: & bool):
-    result.init0("", icon)
+  new button(label: string, check: & bool):
+    result.init0(label, CTXIconEmpty)
     result.check = check
 
-  new button(label: string, check: & bool):
-    result.init0(label)
+  new button(icon: CTXIconID, check: & bool):
+    result.init0("", icon)
     result.check = check
 
   new button(label: string, icon: CTXIconID, check: & bool):
@@ -76,9 +76,13 @@ widget UXButtonCheck of UXButtonOpaque:
     result.check = check
 
   method draw(ctx: ptr CTXRender) =
-    self.draw0(ctx, self.check.peek[])
+    const colors = [btnClear, btnActive]
+    let check = int32 self.check.peek[]
+    # Draw Button Selected
+    self.mode = colors[check]
+    self.draw0(ctx)
 
   method event(state: ptr GUIState) =
-    if state.kind == evCursorRelease and self.test(wHover):
+    if self.event0(state):
       let check = self.check.react()
       check[] = not check[]

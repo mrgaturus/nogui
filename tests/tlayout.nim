@@ -9,6 +9,9 @@ import nogui/ux/prelude
 import nogui/ux/pivot
 # Import All Widgets
 import nogui/ux/layouts/[box, misc]
+import nogui/ux/widgets/[button, check, radio]
+import nogui/ux/separator
+from nogui/pack import icons
 
 widget UXFocusTest:
   attributes:
@@ -23,7 +26,6 @@ widget UXFocusTest:
       self.send(wsFocus)
     echo "dist: ", self.pivot.dist
     echo "away: ", self.pivot.away
-
 
   method update =
     let m = addr self.metrics
@@ -44,9 +46,14 @@ widget UXFocusTest:
     of outFocus: echo "unfocused: ", cast[pointer](self).repr
     else: discard
 
+icons "tatlas", 16:
+  brush := "reset.svg"
+
 controller CONLayout:
   attributes:
     widget: GUIWidget
+    [check0, check1]: @ bool
+    option: @ int32
 
   callback cbHello:
     echo "hello world"
@@ -63,7 +70,14 @@ controller CONLayout:
         # Sub Sub Layout
         horizontal().child:
           focustest()
-          min: focustest()
+          min: vertical().child:
+            button("Check 0", iconBrush, self.check0)
+            button("Check 1", iconBrush, self.check1)
+            min: separator()
+            button("Option A", iconBrush, self.option, 0)
+            button("Option B", iconBrush, self.option, 1)
+            min: separator()
+            button("Hello World", iconBrush, self.cbHello).clear()
           focustest()
       min: focustest()
 
