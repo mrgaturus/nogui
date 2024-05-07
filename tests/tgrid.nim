@@ -56,8 +56,8 @@ controller CONLayout:
         min: button(iconClose, addr self.b)
       
       cell(1, 2): horizontal().child:
-        button(iconLeft, "Previous", cbHello)
-        button(iconRight, "Next", cbHello)
+        button("Previous", iconLeft, cbHello)
+        button("Next", iconRight, cbHello)
 
   new conlayout():
     # Create New Widget
