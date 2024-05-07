@@ -1,4 +1,3 @@
-# TODO: event propagation will make work again with ptr
 from math import cos, sin, sqrt, PI
 import base
 

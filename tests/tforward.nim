@@ -9,6 +9,8 @@ from nogui/builder import controller, child
 import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/layouts/[box, misc]
+import nogui/ux/widgets/color
+import nogui/ux/values/chroma
 import nogui/pack
 
 cursors 64:
@@ -90,6 +92,7 @@ widget UXFocusTest:
 controller CONLayout:
   attributes:
     widget: GUIWidget
+    color: @ HSVColor
 
   callback cbHello:
     echo "hello world"
@@ -118,8 +121,8 @@ controller CONLayout:
                 focustest()
                 focustest()
                 focustest()
-            min: focustest()
-            focustest()
+            colorwheel(self.color)
+            colorwheel0triangle(self.color)
       min: focustest()
 
   new conlayout():

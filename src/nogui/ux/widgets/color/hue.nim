@@ -1,5 +1,5 @@
-# TODO: event propagation will make work again with ptr
-from math import 
+# TODO: cache hue circle triangles
+from math import
   sin, cos, arctan2, log2, PI
 import base
 

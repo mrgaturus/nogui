@@ -1,4 +1,4 @@
-# TODO: event propagation will make work again with ptr
+# TODO: allow propagate event when grabbing
 import ./color/[base, hue, sv]
 
 # ----------------
@@ -39,25 +39,14 @@ widget UXColorCube:
 # ------------------
 
 widget UXColorWheel:
-  attributes:
-    hold: GUIWidget
-
   new colorwheel(hsv: & HSVColor):
     let 
       wheel = hue0circle(hsv)
       square = sv0square(hsv)
-    # Remove Widget Flags
-    wheel.flags = {wHidden}
-    square.flags = {wHidden}
     # Add Widgets
     result.add wheel
     result.add square
     result.flags = {wMouse}
-
-  method draw(ctx: ptr CTXRender) =
-    # Draw Two Widgets
-    self.first.vtable.draw(self.first, ctx)
-    self.last.vtable.draw(self.last, ctx)
 
   method layout =
     let
@@ -82,43 +71,23 @@ widget UXColorWheel:
     square.h = int16(radius) shl 1
 
   method event(state: ptr GUIState) =
-    const wPropagate = {wVisible, wMouse}
-    # TODO: event propagation...
-    if state.kind == evCursorClick:
-      var hold: GUIWidget
-      for widget in [self.first, self.last]:
-        # TODO: event propagation pls...
-        widget.flags = wPropagate
-        if widget.pointOnArea(state.mx, state.my):
-          hold = widget
-        widget.flags = {wHidden}
-      # Replace Hold
-      self.hold = hold
-    elif state.kind == evCursorRelease:
-      self.hold = nil
-    # TODO: event propagation pls x2...
-    if not isNil(self.hold):
-      let hold = self.hold
-      # Execute Event
-      hold.flags = self.flags
-      hold.vtable.event(hold, state)
-      hold.flags = {wHidden}
+    if self.test(wGrab): return
+    # Find Collide Widget
+    var found = self.first
+    if pointOnArea(self.last, state.mx, state.my):
+      found = self.last
+    # Forward Event
+    found.send(wsForward)
 
 # --------------------
 # Color Wheel Triangle
 # --------------------
 
 widget UXColorWheel0Triangle:
-  attributes:
-    hold: GUIWidget
-
   new colorwheel0triangle(hsv: & HSVColor):
     let 
       wheel = hue0circle(hsv)
       triangle = sv0triangle(hsv)
-    # Remove Widget Flags
-    wheel.flags = {wHidden}
-    triangle.flags = {wHidden}
     # Add Widgets
     result.add wheel
     result.add triangle
@@ -146,11 +115,6 @@ widget UXColorWheel0Triangle:
     triangle.w = int16(radius) shl 1
     triangle.h = int16(radius) shl 1
 
-  method draw(ctx: ptr CTXRender) =
-    # TODO: those hacks will be gone thanks to event propagation
-    self.first.vtable.draw(self.first, ctx)
-    self.last.vtable.draw(self.last, ctx)
-
   proc collide(x, y: float32): bool =
     let 
       sv = cast[UXColor0Triangle](self.last)
@@ -174,20 +138,10 @@ widget UXColorWheel0Triangle:
     check0 and check1 and check2
 
   method event(state: ptr GUIState) =
-    # TODO: event propagation...
-    if state.kind == evCursorClick:
-      var hold = self.first
-      # Check Triangle
-      if self.collide(state.px, state.py):
-        hold = self.last
-      # Replace Hold
-      self.hold = hold
-    elif state.kind == evCursorRelease:
-      self.hold = nil
-    # TODO: event propagation pls x2...
-    if not isNil(self.hold):
-      let hold = self.hold
-      # Execute Event
-      hold.flags = self.flags
-      hold.vtable.event(hold, state)
-      hold.flags = {wHidden}
+    if self.test(wGrab): return
+    # Find Collide Widget
+    var found = self.first
+    if self.collide(state.px, state.py):
+      found = self.last
+    # Propagate Event
+    found.send(wsForward)
