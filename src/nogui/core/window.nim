@@ -8,6 +8,7 @@ type
   WindowMessage* = enum
     wsUnFocus
     wsUnHover
+    wsUnGrab
     wsUnHold
     # Window Buttons
     wsMaximize
@@ -151,6 +152,7 @@ proc procWindow(win: GUIWindow, msg: ptr WindowMessage) =
   case msg[]
   of wsUnFocus: man.unfocus()
   of wsUnHover: man.unhover()
+  of wsUnGrab: man.ungrab()
   of wsUnHold: man.unhold()
   of wsTerminate:
     win.running = false

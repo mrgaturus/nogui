@@ -69,6 +69,13 @@ proc fit*(m: var GUIMetrics, parent: GUIMetrics) =
   m.x = 0
   m.y = 0
 
+proc fit*(m: var GUIMetrics, w, h: int32) =
+  # Ajust Relative
+  m.minW = int16 w
+  m.minH = int16 h
+  m.w = m.minW
+  m.h = m.minH
+
 proc inset*(m: var GUIMetrics, border: int16) =
   m.x += border
   m.y += border

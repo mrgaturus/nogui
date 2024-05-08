@@ -251,11 +251,12 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
   # Dispatch Cursor Event
   if wMouse in flags:
     widget.vtable.event(widget, state)
-  # Forward Whole Stack if was Grabbed
+  # Forward Stack if was Grabbing
   if wGrab in (flags + widget.flags):
     if depth < high(man.stack):
       let next = man.stack[depth + 1].hover
       send(man.cbForward, next)
+      return
   # Forward to Next Inside Widget
   elif widget.kind >= wkRoot or widget.kind == wkForward:
     let jump = addr man.stack[depth].jump
@@ -269,9 +270,9 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
     if next != widget:
       jump[] = next.parent
       send(man.cbForward, next)
-    else: send(man.cbLand)
-  # Finalize Event Forwarding
-  else: send(man.cbLand)
+      return
+  # Finalize Forwarding
+  send(man.cbLand)
 
 # ----------------------
 # Event Dispatch Manager
@@ -317,10 +318,8 @@ proc forward*(man: GUIManager, widget: GUIWidget) =
     var w {.cursor.} = widget
     if w.kind in {wkLayout, wkContainer}:
       w = w.inside(state.mx, state.my)
-    # Dispatch Forward if not Grabbed
-    let outer {.cursor.} = man.stack[0].hover
-    if wGrab notin outer.flags and state.kind != evCursorRelease:
-      man.cursorForward(w)
+    # Dispatch Forward
+    man.cursorForward(w)
   # Forward Key Event
   of evKeyDown, evKeyUp:
     if wKeyboard in widget.flags:
@@ -385,6 +384,14 @@ proc unhold*(man: GUIManager) =
   hold.vtable.handle(hold, outHold)
   # Remove Window Hold
   man.hold = nil
+
+proc ungrab*(man: GUIManager) =
+  for fw in man.stack:
+    let w {.cursor.} = fw.hover
+    # Ungrab Widgets From Stack
+    if wGrab in w.flags:
+      w.flags.excl(wGrab)
+      w.vtable.handle(w, outGrab)
 
 # -----------------------
 # Widget Toplevel Manager

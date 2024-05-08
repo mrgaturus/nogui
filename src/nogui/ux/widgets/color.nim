@@ -1,4 +1,3 @@
-# TODO: allow propagate event when grabbing
 import ./color/[base, hue, sv]
 
 # ----------------
@@ -9,11 +8,13 @@ widget UXColorCube:
   new colorcube(hsv: & HSVColor):
     result.add hue0bar(hsv)
     result.add sv0square(hsv)
+    result.kind = wkLayout
     result.flags = {wMouse}
 
   new colorcube0triangle(hsv: & HSVColor):
     result.add hue0bar(hsv)
     result.add sv0triangle(hsv)
+    result.kind = wkLayout
     result.flags = {wMouse}
 
   method layout =
@@ -71,13 +72,13 @@ widget UXColorWheel:
     square.h = int16(radius) shl 1
 
   method event(state: ptr GUIState) =
-    if self.test(wGrab): return
     # Find Collide Widget
-    var found = self.first
-    if pointOnArea(self.last, state.mx, state.my):
-      found = self.last
-    # Forward Event
-    found.send(wsForward)
+    if state.kind == evCursorClick:
+      var found = self.first
+      if pointOnArea(self.last, state.mx, state.my):
+        found = self.last
+      # Forward Event
+      found.send(wsForward)
 
 # --------------------
 # Color Wheel Triangle
@@ -138,10 +139,10 @@ widget UXColorWheel0Triangle:
     check0 and check1 and check2
 
   method event(state: ptr GUIState) =
-    if self.test(wGrab): return
     # Find Collide Widget
-    var found = self.first
-    if self.collide(state.px, state.py):
-      found = self.last
-    # Propagate Event
-    found.send(wsForward)
+    if state.kind == evCursorClick:
+      var found = self.first
+      if self.collide(state.px, state.py):
+        found = self.last
+      # Propagate Event
+      found.send(wsForward)
