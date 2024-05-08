@@ -263,11 +263,11 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
     var next {.cursor.} = jump[]
     if isNil(next):
       next = widget
-    # Find Next Widget and Store Cache
-    next = next.find(state.mx, state.my)
-    jump[] = next.parent
+    # Find Next Innermost Widget
+    next = next.find(widget, state.mx, state.my)
     # Forward Event
     if next != widget:
+      jump[] = next.parent
       send(man.cbForward, next)
     else: send(man.cbLand)
   # Finalize Event Forwarding
@@ -316,7 +316,7 @@ proc forward*(man: GUIManager, widget: GUIWidget) =
   of evCursorClick, evCursorMove, evCursorRelease:
     var w {.cursor.} = widget
     if w.kind in {wkLayout, wkContainer}:
-      w = w.find(state.mx, state.my)
+      w = w.inside(state.mx, state.my)
     # Dispatch Forward if not Grabbed
     let outer {.cursor.} = man.stack[0].hover
     if wGrab notin outer.flags and state.kind != evCursorRelease:

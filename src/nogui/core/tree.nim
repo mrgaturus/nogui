@@ -26,13 +26,12 @@ proc inside*(widget: GUIWidget, x, y: int32): GUIWidget =
       return result.parent
     else: result = result.prev
 
-proc find*(pivot: GUIWidget, x, y: int32): GUIWidget =
+proc find*(pivot, outer: GUIWidget, x, y: int32): GUIWidget =
   # Initial Widget
   result = pivot
   var w {.cursor.} = pivot
   # Point Inside All Parents?
-  while w.parent != nil:
-    if wHold in w.flags: break
+  while w.parent != outer.parent:
     if not w.pointOnArea(x, y):
       result = w.parent
     w = w.parent
