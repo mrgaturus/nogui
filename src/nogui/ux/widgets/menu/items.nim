@@ -52,14 +52,19 @@ widget UXMenuItemOption of UXMenuItem:
     let
       lm = self.lm
       p = label(lm, self.rect)
+      colors = addr getApp().colors
       # Locate Circle Center
       cp = point(
         p.xi + lm.icon shr 1,
         p.yi + lm.icon shr 1)
       # Radius Size
       r = float32(lm.icon) * 0.4
-    # Draw Option Circle
-    ctx.color self.itemColor()
+    # Highlight Color
+    var color = colors.item
+    if self.selected:
+      color = colors.focus
+    # Draw Check Square
+    ctx.color(color)
     ctx.circle(cp, r)
     # If Checked Draw Circle Mark
     if self.option.peek[] == self.value:
@@ -90,10 +95,15 @@ widget UXMenuItemCheck of UXMenuItem:
     let
       lm = self.lm
       p = label(lm, self.rect)
-      # Locate Check Square
+      colors = addr getApp().colors
+    # Locate Check Square
     var r = rect(p.xi, p.yi, lm.icon, lm.icon)
+    # Highlight Color
+    var color = colors.item
+    if self.selected:
+      color = colors.focus
     # Draw Check Square
-    ctx.color self.itemColor()
+    ctx.color(color)
     ctx.fill(r)
     # If Checked Draw Circle Mark
     if self.check.peek[]:
@@ -114,34 +124,33 @@ widget UXMenuItemPopup of UXMenuItem:
   attributes: {.public.}:
     popup: GUIWidget
 
-  callback popupCB:
+  callback cbPopup:
     let 
       popup = self.popup
       rect = addr self.rect
-    if self.portal[] == self:
-      popup.open()
+    if self.slot[].current == self:
+      popup.send(wsOpen)
       # Move Nearly to Menu
-      popup.move(rect.x + rect.w, rect.y - 2)
-    else: popup.close()
+      let m = addr popup.metrics
+      m.x = int16(rect.x + rect.w)
+      m.y = int16(rect.y - 2)
+    # Close Menu if Leaved
+    else: popup.send(wsClose)
 
   new menuitem(label: string, popup: UXMenuOpaque):
     result.init0(label)
     result.popup = GUIWidget(popup)
-    result.onportal = result.popupCB
 
   method draw(ctx: ptr CTXRender) =
-    let 
-      app = getApp()
-      rect = rect self.rect
-      colors = addr app.colors
-      r = extra(self.lm, self.rect)
-    # Fill Selected Background
-    if not self.test(wHover) and self.portal[] == self:
-      ctx.color colors.item
-      ctx.fill rect
-    # Draw Menu Label
+    let r = extra(self.lm, self.rect)
+    # Draw Menu and Arrow
     self.draw0(ctx)
     ctx.arrowRight(r)
 
   method event(state: ptr GUIState) =
-    discard
+    if state.kind == evCursorClick:
+      getWindow().send(wsUngrab)
+
+  method handle(reason: GUIHandle) =
+    if reason == inHover:
+      self.slot[].select(self, self.cbPopup)

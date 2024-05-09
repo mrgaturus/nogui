@@ -5,7 +5,7 @@ from nogui/libs/gl import
   GL_DEPTH_BUFFER_BIT
 from nogui import createApp, executeApp
 from nogui/builder import controller, widget, child
-import nogui/values
+import nogui/ux/values/[chroma, linear, scroller]
 import nogui/ux/prelude
 import nogui/utf8
 import nogui/pack
@@ -19,8 +19,8 @@ import nogui/ux/widgets/[
   scroll,
   slider,
   textbox,
-  menu,
-  combo
+  menu
+  #combo
 ]
 
 import nogui/ux/widgets/menu/items
@@ -121,9 +121,9 @@ controller CXCallstackTest:
     echo "second call"
 
   callback cbInit:
-    delay(self.cbPostpone0)
-    delay(self.cbPostpone0)
-    delay(self.cbPostpone1)
+    relax(self.cbPostpone0)
+    relax(self.cbPostpone0)
+    relax(self.cbPostpone1)
     send(self.cbFirst)
     send(self.cbSecond)
 
@@ -134,12 +134,13 @@ controller CONPlayground:
   attributes:
     [a, b]: @ int32
     [check, check1]: @ bool
-    [v1, v2]: @ Lerp
+    [sv1, sv2]: @ Scroller
+    [v1, v2]: @ Linear
     widget: GUIDummy
     text: UTF8Input
     color: RGBColor
     hsv0: @ HSVColor
-    selected: ComboModel
+    #selected: ComboModel
     # Callstack Test
     cbtest: CXCallstackTest
 
@@ -147,22 +148,23 @@ controller CONPlayground:
     echo "hello world"
 
   proc createWidget: GUIDummy =
-    let 
+    let
       cb = self.cbHelloWorld
       textRect = GUIMetrics(
         x: 500, y: 80,
         w: 400, h: 268
       )
-    let cube = colorcube(addr self.hsv0)
+    let cube = colorcube(self.hsv0)
     cube.metrics.minW = 128
     cube.metrics.minH = 128
-    let circle = colorwheel(addr self.hsv0)
+    let circle = colorwheel(self.hsv0)
     circle.metrics.minW = 128
     circle.metrics.minH = 128
-    let triangle = colorcube0triangle(addr self.hsv0)
+    let triangle = colorcube0triangle(self.hsv0)
     triangle.metrics.minW = 128
     triangle.metrics.minH = 128
     # Selection Items
+    #[
     self.selected = 
       combomodel(): menu("").child:
           comboitem("Normal", iconBrush, 0)
@@ -195,10 +197,11 @@ controller CONPlayground:
           comboitem("Saturation", 22)
           comboitem("Color", 23)
           comboitem("Luminosity", 24)
+    ]#
 
     # Arrange Each Widget
     dummy().child:
-      combobox(self.selected).opaque.locateW(20, 30, 200)
+      #combobox(self.selected).opaque.locateW(20, 30, 200)
       button("Hello World 2", self.cbtest.cbInit).locate(20, 55)
       # Locate Nested Buttons
       panel().locate(20, 80, 128, 128).child:
@@ -221,8 +224,8 @@ controller CONPlayground:
         textbox(addr self.text).locateW(10, 10, 100)
         textbox(addr self.text).locateW(10, 35, 100)
       # Locate Scrollbars
-      scrollbar(addr self.v1, false).locateW(160, 360, 268)
-      scrollbar(addr self.v2, true).locateH(440, 80, 268)
+      scrollbar(addr self.sv1, false).locateW(160, 360, 268)
+      scrollbar(addr self.sv2, true).locateH(440, 80, 268)
       # Locate Top Labels
       panel().locate(textRect)
       label("Top-Left", hoLeft, veTop).locate(textRect)
@@ -297,8 +300,8 @@ controller CONPlayground:
     result.b = value(b)
     echo sizeof(result[])
     # Initialize Values
-    result.v1 = value lerp(20, 123)
-    result.v2 = value lerp(500, 268 * 8)
+    result.v1 = value linear(20, 123)
+    result.v2 = value linear(500, 268 * 8)
     # Create New Widget
     result.cbtest = cxcallstacktest()
     result.widget = result.createWidget()

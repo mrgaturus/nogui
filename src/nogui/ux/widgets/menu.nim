@@ -10,72 +10,61 @@ widget UXMenu:
   attributes:
     top: GUIWidget
     label: string
-    # Current Menu Handle
-    selected: UXMenuItem
+    # Menu Item Slot
+    slot: UXMenuSlot
 
   callback cbClose:
-    self.close()
+    self.send(wsClose)
     # Close Top Levels
     let top = self.top
     if not isNil(top) and top.vtable == self.vtable:
       let m = cast[UXMenu](top)
       send(m.cbClose)
     # Remove Selected
-    self.selected = nil
+    self.slot.unselect()
 
   new menu(label: string):
-    result.kind = wgMenu
-    result.flags = wStandard
+    result.kind = wkPopup
+    result.flags = {wMouse, wKeyboard}
     result.label = label
-
-  method draw(ctx: ptr CTXRender) =
-    let 
-      colors = addr getApp().colors
-      rect = rect self.rect
-    # Fill Menu Container
-    ctx.color(colors.panel)
-    ctx.fill(rect)
-    ctx.color(colors.darker)
-    ctx.line(rect, 2)
+    # Define Slot Done Callback
+    result.slot.ondone = result.cbClose
 
   method update =
-    const pad = 4
+    let pad = getApp().space.line shl 1
     # Initial Max Width
     var y, width: int16
     width = self.metrics.w - pad
     # Calculate Max Width
     for widget in forward(self.first):
       var w {.cursor.} = widget
-      # Warp submenu into a menuitem
+      # Warp menu into a menuitem
       if w.vtable == self.vtable:
         let 
           w0 = cast[UXMenu](w)
           w1 = cast[UXMenuOpaque](w0)
           item = menuitem(w0.label, w1)
-        # Change Top Level
-        w0.top = self
         # Warp into Item
+        w0.top = self
         w0.replace(item)
-        w0.kind = wgMenu
         w = item
-      # Bind Menu With Item
+      # Bind Menu Slot With Item
       if w of UXMenuItem:
         let item = cast[UXMenuItem](w)
-        item.ondone = self.cbClose
-        item.portal = addr self.selected
+        item.slot = addr self.slot
       # Calculate Max Width
       width = max(w.metrics.minW, width)
       y += w.metrics.minH
     # Offset Border
     width += pad
     y += pad
-    # Fit Menu Size
-    self.fit(width, y)
+    # Fit Menu Dimensions
+    self.metrics.fit(width, y)
 
   method layout =
-    const 
-      border = 2
-      pad = 4
+    let
+      border = getApp().space.line
+      pad = border shl 1
     var y: int16
     # Width for each widget
     let width = self.metrics.minW - pad
@@ -91,54 +80,65 @@ widget UXMenu:
       # Step Height
       y += h
 
-  method event(state: ptr GUIState) =
-    let top = self.top
-    if not self.test(wHover):
-      if not isNil(top) and 
-        self.vtable != top.vtable:
-          # TODO: event propagation
-          top.vtable.event(top, state)
-      elif isNil(top) and state.kind == evCursorClick:
-        # This is Top Level
-        self.close()
+  method draw(ctx: ptr CTXRender) =
+    let 
+      app = getApp()
+      colors = addr app.colors
+      border = float32(app.space.line)
+      # Menu Fill Region
+      rect = rect(self.rect)
+    # Fill Menu Container
+    ctx.color(colors.panel)
+    ctx.fill(rect)
+    ctx.color(colors.darker)
+    ctx.line(rect, border)
 
-  method handle(kind: GUIHandle) =
-    let s = self.selected
-    if kind == outFrame and not isNil(s):
-      send(s.onportal)
-      # Remove Selected
-      self.selected = nil
+  method event(state: ptr GUIState) =
+    if self.test(wGrab): return
+    # Propagate Event to Outside
+    let top {.cursor.} = self.top
+    if not self.test(wHover) and not isNil(top):
+      top.send(wsForward)
+    elif isNil(top) and state.kind == evCursorRelease:
+      self.send(wsClose)
+
+  method handle(reason: GUIHandle) =
+    if reason == outFrame:
+      self.slot.unselect()
 
 # -----------------
-# GUI Menu Bar Item
+# GUI MenuBar Item
 # -----------------
 
 widget UXMenuBarItem:
   attributes:
     menu: UXMenu
-    # Current Selected Handle
-    portal: ptr UXMenuBarItem
+    slot: ptr UXMenuSlot
 
-  proc onportal() =
-    let menu {.cursor.} = self.menu
-    # Open Menu or Close Menu
-    if self.portal[] == self:
-      let rect = addr self.rect
-      menu.open()
-      # Move Down Menu Item
-      menu.move(rect.x, rect.y + rect.h)
-    else: menu.close()
+  callback cbPopup:
+    let 
+      popup = self.menu
+      rect = addr self.rect
+    if self.slot[].current == self:
+      popup.send(wsOpen)
+      # Move Down Menu Bar Item
+      let m = addr popup.metrics
+      m.x = int16(rect.x)
+      m.y = int16(rect.y + rect.h)
+    # Close Menu if Leaved
+    else: popup.send(wsClose)
 
-  callback cbMenuClose:
-    self.portal[] = nil
-    # Close Menu
-    let m {.cursor.} = self.menu
-    m.selected = nil
-    m.close()
+  callback cbClose:
+    self.slot[].unselect()
 
   new menubar0(menu: UXMenuOpaque):
-    result.flags = {wMouse}
-    result.menu = cast[UXMenu](menu)
+    result.flags = {wMouse, wKeyboard}
+    # Hook Menu Callbacks
+    let menu = cast[UXMenu](menu)
+    menu.cbClose = result.cbClose
+    menu.slot.ondone = result.cbClose
+    # Define Menu
+    result.menu = menu
 
   method update =
     let
@@ -167,8 +167,8 @@ widget UXMenuBarItem:
       # Font Metrics
       ox = self.metrics.minW - (pad0 shl 1)
       oy = font.baseline
-    # Fill Background
-    if self.test(wHover) or self.portal[] == self:
+    # Fill Menubar Item Highlight
+    if self.test(wHover) or self.slot[].current == self:
       ctx.color colors.item
       ctx.fill rect rect[]
     # Draw Text Centered
@@ -179,47 +179,37 @@ widget UXMenuBarItem:
       self.menu.label)
 
   method event(state: ptr GUIState) =
-    # Remove Grab Flags
-    self.flags.excl(wGrab)
+    if state.kind == evCursorClick:
+      getWindow().send(wsUnGrab)
     # Open or Close Menu with Click
     if state.kind == evCursorClick:
       let
-        portal = self.portal
-        select = portal[]
+        slot = self.slot
+        current = slot[].current
       # Open or Close Menu
-      if isNil(select):
-        portal[] = self
-      elif select == self:
-        portal[] = nil
-      # Update Current Menu
-      self.onportal()
+      if current != self:
+        slot[].select(self, self.cbPopup)
+      else: slot[].unselect()
 
-  method handle(kind: GUIHandle) =
-    if kind == inHover:
-      let 
-        portal = self.portal
-        w = portal[]
-      if not isNil(w) and w != self:
-        portal[] = self
-        # React to Change
-        w.onportal()
-        self.onportal()
+  method handle(reason: GUIHandle) =
+    if reason == inHover and not isNil(self.slot[].current):
+      self.slot[].select(self, self.cbPopup)
 
-# ------------
-# GUI Menu Bar
-# ------------
+# -----------
+# GUI MenuBar
+# -----------
 
 widget UXMenuBar:
   attributes:
-    # Selected Menu Item
-    selected: UXMenuBarItem
+    slot: UXMenuSlot
 
   new menubar():
-    result.flags = {wMouse}
+    result.flags = {wMouse, wKeyboard}
+    result.kind = wkForward
 
   method update =
     var x, height: int16
-    let portal = addr self.selected
+    let slot = addr self.slot
     # Get Max Height and Warp Menus
     for widget in forward(self.first):
       var w {.cursor.} = widget
@@ -231,19 +221,17 @@ widget UXMenuBar:
         # Warp Into Item
         w0.replace(item)
         w0.top = self
-        w0.kind = wgPopup
-        w0.cbClose = item.cbMenuClose
         w = item
-        # Update New Menu
+        # Update Created Menu
         item.vtable.update(item)
       # Bind Portal to MenuBarItem
       if w of UXMenuBarItem:
-        cast[UXMenuBarItem](w).portal = portal
+        cast[UXMenuBarItem](w).slot = slot
       # Calculate Max Height
       height = max(height, w.metrics.minH)
       x += w.metrics.minW
-    # Fit Menu Bar
-    self.fit(x, height)
+    # Fit Menu Bar Dimensions
+    self.metrics.fit(x, height)
 
   method layout =
     var x: int16
@@ -263,15 +251,8 @@ widget UXMenuBar:
       x += w
 
   method event(state: ptr GUIState) =
-    # Find Inner Widget
-    if not isNil(self.selected):
-      # TODO: event propagation
-      let w = self.find(state.mx, state.my)
-      if w.parent == self:
-        w.vtable.handle(w, inHover)
-        w.vtable.event(w, state)
-      # Close Cursor When Clicked Outside
-      elif state.kind == evCursorClick:
-        let prev {.cursor.} = self.selected
-        self.selected = nil
-        prev.onportal()
+    if self.test(wHover): return
+    if state.kind == evCursorClick:
+      getWindow().send(wsUnGrab)
+    elif state.kind == evCursorRelease:
+      self.slot.unselect()

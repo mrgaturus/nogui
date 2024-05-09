@@ -1,23 +1,98 @@
 import ../../[prelude, labeling]
 export prelude, labeling
 
-# --------------------------------
-# TODO: Move this to widget module
-# --------------------------------
+# ------------------
+# GUI Menu Item Slot
+# ------------------
 
-# TODO: Move to widget module
-proc fit*(self: GUIWidget, w, h: int32) =
-  let 
-    m = addr self.metrics
-    r = addr self.rect
-  # Ajust Relative
-  m.minW = int16 w
-  m.minH = int16 h
-  m.w = m.minW
-  m.h = m.minH
-  # Ajust Absolute
-  r.w = w
-  r.h = h
+type
+  UXMenuSlot* = object
+    item {.cursor.}: GUIWidget
+    # Slot Callbacks
+    ondone*: GUICallback
+    onslot*: GUICallback
+
+proc current*(slot: UXMenuSlot): GUIWidget =
+  slot.item
+
+proc select*(slot: var UXMenuSlot, item: GUIWidget) =
+  if slot.item == item: return
+  slot.item = item
+  # Consume Slot Callback
+  send(slot.onslot)
+  slot.onslot = default(GUICallback)
+
+proc select*(slot: var UXMenuSlot, item: GUIWidget, cb: GUICallback) =
+  slot.select(item)
+  # Send Changed Callback
+  slot.onslot = cb
+  cb.send()
+
+proc unselect*(slot: var UXMenuSlot) {.inline.} =
+  slot.select(nil)
+
+# ------------------
+# GUI Menu Item Base
+# ------------------
+
+widget UXMenuItem:
+  attributes:
+    label: string
+    icon: CTXIconID
+    lm: GUIMenuMetrics
+    # Menu Selected Slot
+    {.public.}:
+      slot: ptr UXMenuSlot
+
+  proc selected*: bool {.inline.} =
+    self.test(wHover) or self.slot[].current == self
+
+  proc init0*(label: string, icon = CTXIconEmpty) =
+    self.flags = {wMouse}
+    # Labeling Attributes
+    self.icon = icon
+    self.label = label
+
+  proc draw0*(ctx: ptr CTXRender) =
+    let
+      colors = addr getApp().colors
+      rect = addr self.rect
+      p = label(self.lm, self.rect)
+    # Fill Menu Item Highlight
+    if self.selected:
+      ctx.color colors.item
+      ctx.fill rect rect[]
+    # Draw Menu Item Text
+    ctx.color(colors.text)
+    ctx.text(p.xt, p.yt, self.label)
+
+  proc event0*(state: ptr GUIState): bool =
+    if state.kind == evCursorClick:
+      getWindow().send(wsUnGrab)
+    # Check if was Clicked and Send ondone Callback
+    result = state.kind == evCursorRelease and self.test(wHover)
+    if result: send(self.slot.ondone)
+
+  method update =
+    let
+      m = addr self.metrics
+      # Application Padding
+      pad0 = getApp().space.pad
+      pad1 = pad0 shl 1
+      # Calculate Label Metrics
+      lm = metricsMenu(self.label, self.icon)
+    # Change Min Size
+    m.minW = lm.width + pad1
+    m.minH = lm.h + pad0
+    # Change Label Metrics
+    self.lm = lm
+
+  method handle(reason: GUIHandle) =
+    let slot = self.slot
+    if reason == inHover:
+      slot[].select(self)
+    elif reason == outHover:
+      slot[].unselect()
 
 # ------------------
 # GUI Menu Separator
@@ -84,73 +159,3 @@ widget UXMenuSeparatorLabel:
       rect.x + oy,
       rect.y + (rect.h - oy) shr 1, 
       self.label)
-
-# ------------------
-# GUI Menu Item Base
-# ------------------
-
-widget UXMenuItem:
-  attributes:
-    label: string
-    icon: CTXIconID
-    lm: GUIMenuMetrics
-    # Menu Item Action
-    {.public.}:
-      [ondone, onportal]: GUICallback
-      portal: ptr UXMenuItem
-
-  proc select() =
-    if isNil(self.portal):
-      return
-    # Notify Prev Portal
-    let prev = self.portal[]
-    if not isNil(prev):
-      send(prev.onportal)
-    # Notify Self Portal
-    send(self.onportal)
-    # Change Portal
-    self.portal[] = self
-
-  proc init0*(label: string, icon = CTXIconEmpty) =
-    self.flags = {wMouse}
-    # Labeling Attributes
-    self.icon = icon
-    self.label = label
-
-  proc draw0*(ctx: ptr CTXRender) =
-    let
-      colors = addr getApp().colors
-      rect = addr self.rect
-      p = label(self.lm, self.rect)
-    # Fill Background
-    if self.test(wHover):
-      ctx.color colors.item
-      ctx.fill rect rect[]
-    # Draw Menu Item Text
-    ctx.color(colors.text)
-    ctx.text(p.xt, p.yt, self.label)
-    
-  proc event0*(state: ptr GUIState): bool =
-    # Remove Grab Flag
-    self.flags.excl(wGrab)
-    # Check if was actioned and send ondone callback
-    result = state.kind == evCursorRelease and self.test(wHover)
-    if result: send(self.ondone)
-
-  method update =
-    let
-      m = addr self.metrics
-      # Application Padding
-      pad0 = getApp().space.pad
-      pad1 = pad0 shl 1
-      # Calculate Label Metrics
-      lm = metricsMenu(self.label, self.icon)
-    # Change Min Size
-    m.minW = lm.width + pad1
-    m.minH = lm.h + pad0
-    # Change Label Metrics
-    self.lm = lm
-
-  method handle(reason: GUIHandle) =
-    if reason in {inHover, inFocus}:
-      self.select()
