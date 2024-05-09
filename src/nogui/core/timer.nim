@@ -42,23 +42,24 @@ proc useTimers*(): ptr GUITimers =
 
 proc nogui_timers_pump*(timers: ptr GUITimers) =
   var
-    prev: TimerCallback
+    prev, next: TimerCallback
     timer = timers.list
   # Check Dispatched Timers
   let now = nogui_time_now()
   while not isNil(timer):
-    # Check if time surpassed
+    next = timer.next
+    # Check if Time Surpassed
     if now > timer.stamp:
       # Remove Timer From List
       if timer == timers.list:
-        timers.list = timer.next
-      else: prev.next = timer.next
+        timers.list = next
+      else: prev.next = next
       # Consume Timer
       send(timer.cb)
       dealloc(timer)
     # Next Timer Check
-    prev = timer
-    timer = timer.next
+    else: prev = timer
+    timer = next
 
 proc `=destroy`(timers: GUITimers) =
   var
@@ -80,19 +81,24 @@ proc timeout*(cb: GUICallback, ms: int32) =
     timers = addr queue
     stamp = nogui_time_now() + nogui_time_ms(ms)
   # Find if Callback was not Queued
-  var timer = timers.list
+  var
+    timer = timers.list
+    last = timer
   while not isNil(timer):
     # Avoid Adding Again
     if timer.cb == cb:
       return
+    # Next Timer
+    last = timer
     timer = timer.next
   # Create new Timer
   timer = create(Timer)
   timer.stamp = stamp
   timer.cb = cb
   # Add Timer to Queue
-  timer.next = timers.list
-  timers.list = timer
+  if isNil(last):
+    timers.list = timer
+  else: last.next = timer
 
 proc timestop*(cb: GUICallback) =
   let timers = addr queue
@@ -101,7 +107,7 @@ proc timestop*(cb: GUICallback) =
     timer = timers.list
     prev: TimerCallback
   while not isNil(timer):
-    # Avoid Adding Again
+    # Found Timer to Stop
     if timer.cb == cb:
       break
     prev = timer
