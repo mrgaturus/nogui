@@ -137,6 +137,9 @@ proc organize(widget: GUIWidget) =
   var
     w {.cursor.} = widget
     clip: GUIClipping
+  # Clip Parent Rect
+  if not isNil(w.parent):
+    clip.push(w.parent.rect)
   # Traverse Children
   while true:
     w.absolute(clip)
