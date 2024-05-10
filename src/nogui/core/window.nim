@@ -77,7 +77,7 @@ proc title*(win: GUIClient, name: cstring) =
 proc class*(win: GUIWindow, id, name: cstring) =
   nogui_native_id(win.native, id, name)
 
-proc dimensions*(win: GUIClient): tuple[w, h: int32] =
+proc rect*(win: GUIClient): GUIRect =
   let info = nogui_native_info(win.native)
   result.w = info.width
   result.h = info.height
