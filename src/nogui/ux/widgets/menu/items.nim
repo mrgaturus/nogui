@@ -124,15 +124,10 @@ widget UXMenuItemPopup of UXMenuItem:
     map: UXMenuMapper
 
   callback cbPopup:
-    let
-      map = addr self.map
-      rect = addr self.rect
-      border = getApp().space.line
-    # Open Menu and Locate Pivot
+    let map = addr self.map
+    # Open/Close Menu Popup
     if self.slot[].current == self:
-      map[].locate(rect.x + rect.w, rect.y - border)
       map[].open()
-    # Close Menu if Leaved
     else: map[].close()
 
   new menuitem(label: string, map: UXMenuMapper):
@@ -144,6 +139,17 @@ widget UXMenuItemPopup of UXMenuItem:
     # Draw Menu and Arrow
     self.draw0(ctx)
     ctx.arrowRight(r)
+
+  method layout =
+    let
+      border = getApp().space.line
+      pivot = addr self.map.pivot
+    # Locate Mapping Pivot
+    pivot.mode = menuHorizontal
+    self.map.locate(self.rect)
+    # Apply Pivot Border
+    pivot.y -= border
+    pivot.oy -= border
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:

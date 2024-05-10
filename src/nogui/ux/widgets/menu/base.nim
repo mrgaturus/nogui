@@ -2,9 +2,17 @@ import ../../[prelude, labeling]
 export prelude, labeling
 
 type
-  UXMenuOpaque* = distinct GUIWidget
+  UXMenuPivotMode = enum
+    menuHorizontal
+    menuVerticalSimple
+    menuVerticalClip
   UXMenuPivot* = object
+    x*, y*: int32
     ox*, oy*: int32
+    # Vertical Location
+    mode*: UXMenuPivotMode
+  # Menu Popup Mapping
+  UXMenuOpaque* = distinct GUIWidget
   UXMenuMapper* = object
     menu*: GUIWidget
     # Pivot Handling
@@ -17,6 +25,73 @@ type
     ondone*: GUICallback
     onslot*: GUICallback
 
+# ---------------------
+# GUI Menu Pivot Helper
+# ---------------------
+
+proc locate*(pivot: var UXMenuPivot, rect: GUIRect) =
+  if pivot.mode >= menuVerticalSimple:
+    pivot.x = rect.x
+    pivot.y = rect.y + rect.h
+    # Alternative Pivot
+    pivot.ox = pivot.x
+    pivot.oy = rect.y
+  # Horizontal Pivot Location
+  elif pivot.mode == menuHorizontal:
+    pivot.x = rect.x + rect.w
+    pivot.y = rect.y
+    # Alternative Pivot
+    pivot.ox = rect.x
+    pivot.oy = pivot.y
+
+proc locate*(pivot: var UXMenuPivot, x, y: int32) =
+  pivot.x = x
+  pivot.y = y
+  # Alternative Pivot
+  pivot.ox = x
+  pivot.oy = y
+
+proc swep(rect: var GUIRect, clip: GUIRect) =
+  rect.x -= max(rect.x + rect.w - clip.w, 0)
+  rect.y -= max(rect.y + rect.h - clip.h, 0)
+  rect.x = max(rect.x, 0)
+  rect.y = max(rect.y, 0)
+  # Trim Vertical Dimension
+  rect.h -= max(rect.y + rect.h - clip.h, 0)
+
+proc apply*(self: GUIWidget, pivot: UXMenuPivot) =
+  let
+    clip = getWindow().rect
+    m = addr self.metrics
+  # Location Rect
+  assert self.kind == wkPopup
+  var rect = GUIRect(w: m.w, h: m.h)
+  # Locate Pivot Point
+  rect.x = pivot.x
+  rect.y = pivot.y
+  # Handle Pivot Clipping
+  case pivot.mode
+  of menuHorizontal:
+    if rect.x + rect.w > clip.w:
+      rect.x = pivot.ox - rect.w
+  of menuVerticalSimple, menuVerticalClip:
+    let rect0 = rect
+    rect.y = pivot.oy - rect.h
+    if rect.y < clip.h - (rect.y + rect.h):
+      rect = rect0
+    # Avoid Swep Clipping First
+    if pivot.mode == menuVerticalClip:
+      rect = intersect(rect, clip)
+      rect.x = rect0.x
+      rect.w = rect0.w
+  # Swep Rect to Clip
+  rect.swep(clip)
+  # Replace Metrics
+  m.x = int16(rect.x)
+  m.y = int16(rect.y)
+  m.w = int16(rect.w)
+  m.h = int16(rect.h)
+
 # ---------------
 # GUI Menu Mapper
 # ---------------
@@ -24,19 +99,22 @@ type
 proc open*(map: var UXMenuMapper) =
   let menu {.cursor.} = map.menu
   # Open Popup Menu
-  send(map.cb, map.pivot)
-  menu.send(wsOpen)
+  if not menu.test(wVisible):
+    send(map.cb, map.pivot)
+    menu.send(wsOpen)
 
 proc close*(map: var UXMenuMapper) =
   let menu {.cursor.} = map.menu
-  menu.send(wsClose)
+  if menu.test(wVisible):
+    menu.send(wsClose)
 
 proc update*(map: var UXMenuMapper) =
-  send(map.cb, map.pivot)
+  if map.menu.test(wVisible):
+    send(map.cb, map.pivot)
 
-proc locate*(map: var UXMenuMapper, ox, oy: int32) =
-  map.pivot.ox = ox
-  map.pivot.oy = oy
+proc locate*(map: var UXMenuMapper, rect: GUIRect) =
+  map.pivot.locate(rect)
+  map.update()
 
 # ------------------
 # GUI Menu Item Slot

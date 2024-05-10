@@ -1,3 +1,4 @@
+import ../../../core/shortcut
 import ../../containers/scroll
 import base, items
 
@@ -71,7 +72,8 @@ widget UXMenu:
     top: GUIWidget
     label: string
     slot: UXMenuSlot
-    [ox, oy]: int32
+    pivot: UXMenuPivot
+    watchdog: GUIObserver
     # Triangle Aim
     p0: CTXPoint
     [aim, listed]: bool
@@ -94,14 +96,15 @@ widget UXMenu:
     self.slot.unselect()
 
   callback cbPivot(p: UXMenuPivot):
-    let m = addr self.metrics
-    # Send Layout Signal
-    if p.ox != m.x or p.oy != m.y:
-      if self.test(wVisible):
-        self.send(wsLayout)
-    # Pivot Coordinates
-    self.ox = p.ox
-    self.oy = p.oy
+    let p0 = addr self.pivot
+    if p0[] != p[] and self.test(wVisible):
+      self.relax(wsLayout)
+    # Change Pivot
+    p0[] = p[]
+
+  callback cbWatchResize:
+    if self.test(wVisible):
+      self.relax(wsLayout)
 
   new menu(label: string):
     result.kind = wkPopup
@@ -109,9 +112,11 @@ widget UXMenu:
     result.label = label
     # Define Slot Done Callback
     result.slot.ondone = result.cbClose
+    let obs = observer(result.cbWatchResize, {evWindowResize})
+    result.watchdog = obs
 
   # -- Menu Configure --
-  proc map: UXMenuMapper =
+  proc map*: UXMenuMapper =
     result.menu = self
     result.cb = self.cbPivot
 
@@ -150,17 +155,22 @@ widget UXMenu:
     let
       m0 = addr self.metrics
       border = getApp().space.line shl 1
-    m0.x = int16(self.ox)
-    m0.y = int16(self.oy)
     # Configure UXMenu Children
     if not self.listed:
       self.gather()
     # Fit Minimum Size
-    let m1 = addr self.list.metrics
+    var m1 = addr self.list.metrics
     m0.minW = m1.minW + border
     m0.minH = m1.minH + border
     m0.w = m0.minW
     m0.h = m0.minH
+    # Apply Pivot Position
+    let h0 = m0.h
+    self.apply(self.pivot)
+    if h0 != m0.h:
+      m1 = addr self.view.metrics
+      m0.minW = m1.minW + border
+      m0.w = m0.minW
 
   method layout =
     let
@@ -217,11 +227,19 @@ widget UXMenu:
 
   method handle(reason: GUIHandle) =
     if reason == inFrame:
-      let state = getApp().state
+      let
+        state = getApp().state
+        obs = getWindow().observers
       # Configure Menu Triangle Point
       self.p0 = point(state.px, state.py)
       self.aim = true
-    if reason == outFrame:
+      # Register Resize Watchdog
+      echo "opened:", cast[pointer](self).repr
+      obs[].register(self.watchdog)
+    elif reason == outFrame:
       timestop(self.cbNear)
       self.slot.unselect()
       self.aim = false
+      # Unregister Resize Watchdog
+      echo "closed:", cast[pointer](self).repr
+      unregister(self.watchdog)

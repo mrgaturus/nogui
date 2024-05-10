@@ -14,20 +14,17 @@ privateAccess(UXMenu)
 
 widget UXMenuBarItem:
   attributes:
-    menu: UXMenu
+    {.cursor.}:
+      menu: UXMenu
+    map: UXMenuMapper
     slot: ptr UXMenuSlot
 
   callback cbPopup:
-    let 
-      popup = self.menu
-      rect = addr self.rect
+    let map = addr self.map
+    # Open/Close Menu Popup
     if self.slot[].current == self:
-      popup.send(wsOpen)
-      # Move Down Menu Bar Item
-      popup.ox = int16(rect.x)
-      popup.oy = int16(rect.y + rect.h)
-    # Close Menu if Leaved
-    else: popup.send(wsClose)
+      map[].open()
+    else: map[].close()
 
   callback cbClose:
     self.slot[].unselect()
@@ -37,9 +34,9 @@ widget UXMenuBarItem:
     # Hook Menu Callbacks
     let menu = cast[UXMenu](menu)
     menu.cbClose = result.cbClose
-    menu.slot.ondone = result.cbClose
     # Define Menu Widget
     result.menu = menu
+    result.map = menu.map()
 
   method update =
     let
@@ -55,6 +52,12 @@ widget UXMenuBarItem:
     # Set Minimun Size
     m.minW = w + pad1
     m.minH = h + pad0
+
+  method layout =
+    let pivot = addr self.map.pivot
+    # Locate Menu Popup Pivot
+    pivot.mode = menuVerticalClip
+    self.map.locate(self.rect)
 
   method draw(ctx: ptr CTXRender) =
     let
