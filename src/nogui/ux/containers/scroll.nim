@@ -109,11 +109,21 @@ widget UXScrollView:
 
   method update =
     let
+      target {.cursor.} = self.target
+      # Scrollview Metrics
       m0 = addr self.metrics
-      m1 = addr self.target.metrics
+      m1 = addr target.metrics
+      border = getApp().font.asc shr 2
     # Copy Min Size
     m0.minW = m1.minW
     m0.minH = m1.minH
+    # Append Scrollbar Size
+    if target.vertical:
+      let m2 = addr self.barV.metrics
+      m0.minW += border + m2.minH
+    if target.horizontal:
+      let m2 = addr self.barH.metrics
+      m0.minW += border + m2.minW
 
   method layout =
     let
