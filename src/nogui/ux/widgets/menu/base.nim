@@ -1,16 +1,46 @@
 import ../../[prelude, labeling]
 export prelude, labeling
 
-# ------------------
-# GUI Menu Item Slot
-# ------------------
-
 type
+  UXMenuOpaque* = distinct GUIWidget
+  UXMenuPivot* = object
+    ox*, oy*: int32
+  UXMenuMapper* = object
+    menu*: GUIWidget
+    # Pivot Handling
+    pivot*: UXMenuPivot
+    cb*: GUICallbackEX[UXMenuPivot]
+  # Menu Selected Slot
   UXMenuSlot* = object
     item {.cursor.}: GUIWidget
     # Slot Callbacks
     ondone*: GUICallback
     onslot*: GUICallback
+
+# ---------------
+# GUI Menu Mapper
+# ---------------
+
+proc open*(map: var UXMenuMapper) =
+  let menu {.cursor.} = map.menu
+  # Open Popup Menu
+  send(map.cb, map.pivot)
+  menu.send(wsOpen)
+
+proc close*(map: var UXMenuMapper) =
+  let menu {.cursor.} = map.menu
+  menu.send(wsClose)
+
+proc update*(map: var UXMenuMapper) =
+  send(map.cb, map.pivot)
+
+proc locate*(map: var UXMenuMapper, ox, oy: int32) =
+  map.pivot.ox = ox
+  map.pivot.oy = oy
+
+# ------------------
+# GUI Menu Item Slot
+# ------------------
 
 proc current*(slot: UXMenuSlot): GUIWidget =
   slot.item

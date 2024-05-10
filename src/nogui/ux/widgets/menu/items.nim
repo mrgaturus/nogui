@@ -119,27 +119,25 @@ widget UXMenuItemCheck of UXMenuItem:
 # GUI Menu Popover
 # ----------------
 
-type UXMenuOpaque* = distinct GUIWidget
 widget UXMenuItemPopup of UXMenuItem:
   attributes: {.public.}:
-    popup: GUIWidget
+    map: UXMenuMapper
 
   callback cbPopup:
-    let 
-      popup = self.popup
+    let
+      map = addr self.map
       rect = addr self.rect
+      border = getApp().space.line
+    # Open Menu and Locate Pivot
     if self.slot[].current == self:
-      popup.send(wsOpen)
-      # Move Nearly to Menu
-      let m = addr popup.metrics
-      m.x = int16(rect.x + rect.w)
-      m.y = int16(rect.y - 2)
+      map[].locate(rect.x + rect.w, rect.y - border)
+      map[].open()
     # Close Menu if Leaved
-    else: popup.send(wsClose)
+    else: map[].close()
 
-  new menuitem(label: string, popup: UXMenuOpaque):
+  new menuitem(label: string, map: UXMenuMapper):
     result.init0(label)
-    result.popup = GUIWidget(popup)
+    result.map = map
 
   method draw(ctx: ptr CTXRender) =
     let r = extra(self.lm, self.rect)

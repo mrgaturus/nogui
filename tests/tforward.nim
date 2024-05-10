@@ -38,9 +38,8 @@ widget UXForwardTest:
 
   method event(state: ptr GUIState) =
     #echo "Forward: ", state.mx, " ", state.my
-    #if self.test(wGrab):
-    #  self.send(wsStop)
-    send(self.first, wsForward)
+    if not self.test(wGrab):
+      send(self.first, wsForward)
 
   method handle(reason: GUIHandle) =
     echo cast[pointer](self).repr, " ", reason
