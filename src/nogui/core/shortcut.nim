@@ -191,6 +191,7 @@ proc unregister*(obs: GUIObserver) =
   # Remove Observer from Table
   let idx = table.list.find(obs)
   table.list.del(idx)
+  obs.table = nil
 
 # -----------------------
 # Shortcut Table Dispatch
