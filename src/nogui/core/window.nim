@@ -67,15 +67,20 @@ proc relax*(win: GUIClient, widget: GUIWidget, msg: WidgetMessage) =
 proc relax*(win: GUIClient, msg: WindowMessage) =
   relax(win.cbWindow, msg)
 
-# -------------------
-# Window Client Title
-# -------------------
+# -------------------------
+# Window Client Information
+# -------------------------
 
 proc title*(win: GUIClient, name: cstring) =
   nogui_native_title(win.native, name)
 
 proc class*(win: GUIWindow, id, name: cstring) =
   nogui_native_id(win.native, id, name)
+
+proc dimensions*(win: GUIClient): tuple[w, h: int32] =
+  let info = nogui_native_info(win.native)
+  result.w = info.width
+  result.h = info.height
 
 # -----------------------
 # Window Client Shortcuts

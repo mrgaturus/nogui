@@ -126,6 +126,7 @@ controller CXCallstackTest:
     relax(self.cbPostpone1)
     send(self.cbFirst)
     send(self.cbSecond)
+    echo getWindow().dimensions
 
   new cxcallstacktest():
     discard
