@@ -7,9 +7,10 @@ from nogui/libs/gl import
 from nogui import createApp, executeApp, class
 from nogui/builder import controller, child
 import nogui/ux/prelude
+import nogui/ux/tooltip
 # Import All Widgets
 import nogui/ux/layouts/[box, misc]
-import nogui/ux/widgets/color
+import nogui/ux/widgets/[button, color]
 import nogui/ux/values/chroma
 import nogui/pack
 
@@ -63,8 +64,8 @@ widget UXFocusTest:
     if state.kind == evKeyDown:
       echo name(state.key)
       self.shape = cast[GUICursorSys]((ord(self.shape) + 1) mod (1 + ord high GUICursorSys))
-      if self.test(wHover):
-        getWindow().cursor(self.shape)
+      #if self.test(wHover):
+        #getWindow().cursor(self.shape)
       echo self.shape
 
   method update =
@@ -83,10 +84,10 @@ widget UXFocusTest:
   method handle(reason: GUIHandle) =
     echo "-- ", cast[pointer](self).repr, " ", reason
     let win = getWindow()
-    case reason
-    of inHover: win.cursor(cursorPepper)
-    of outHover: win.cursorReset()
-    else: discard
+    #case reason
+    #of inHover: win.cursor(cursorPepper)
+    #of outHover: win.cursorReset()
+    #else: discard
 
 controller CONLayout:
   attributes:
@@ -103,15 +104,24 @@ controller CONLayout:
     let state = getApp().state
     echo "observer", state.mx, " ", state.my
 
+  proc createTooltip: GUIWidget =
+    preferred(200, 100):
+      horizontal().child:
+        colorwheel(self.color)
+        vertical().child:
+          button("This is", self.cbHello)
+          button("a Custom", self.cbHello)
+          button("Tooltip", self.cbHello)
+
   proc createWidget: GUIWidget =
     # Create Layout
     margin(16): horizontal().child:
       min: focustest()
       # Sub Layout
       vertical().child:
-        min: focustest()
-        focustest()
-        min: focustest()
+        min: tooltip("Hello World"): focustest()
+        tooltip(self.createTooltip): focustest()
+        min: tooltip("Tooltip :D"): focustest()
         # Sub Sub Layout
         forwardtest:
           horizontal().child:

@@ -8,7 +8,7 @@ widget UXLayoutPreferred:
   attributes:
     [w, h]: int16
 
-  new preferred(widget: GUIWidget, w, h: int32):
+  new preferred(w, h: int32, widget: GUIWidget):
     result.kind = wkLayout
     result.add(widget)
     # Preferred Min Size
