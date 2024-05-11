@@ -276,12 +276,14 @@ proc render*(win: GUIWindow) =
 proc poll*(win: GUIWindow): bool =
   result = win.running
   let native = win.native
-  # Pump Native Events
+  # Check if was Executed
   if not result:
     return result
   # Pump Native Events
   nogui_native_pump(native)
   nogui_timers_pump(win.timers)
   # Poll Native Pumped Events
-  while result and nogui_native_poll(native) != 0:
-    result = result and win.running
+  while nogui_native_poll(native) != 0:
+    result = win.running
+    if not result:
+      return result
