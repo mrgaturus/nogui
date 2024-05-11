@@ -1,5 +1,28 @@
 import base
 
+# ------------------
+# GUI Preferred Size
+# ------------------
+
+widget UXLayoutPreferred:
+  attributes:
+    [w, h]: int16
+
+  new preferred(widget: GUIWidget, w, h: int32):
+    result.kind = wkLayout
+    result.add(widget)
+    # Preferred Min Size
+    result.w = int16 w
+    result.h = int16 h
+  
+  method update =
+    self.metrics.minW = self.w
+    self.metrics.minH = self.h
+  
+  method layout =
+    let m1 = addr self.first.metrics
+    m1[].fit(self.metrics)
+
 # ---------------
 # GUI Adjust Cell
 # ---------------
