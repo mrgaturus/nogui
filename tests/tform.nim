@@ -109,7 +109,7 @@ controller CONLayout:
       field("Scroller"): scrollbar(self.scroll, false)
     # Create Scroll Layout
     result = scrollview:
-      preferred(widget, 600, 400)
+      preferred(600, 400, widget)
 
 
   new conlayout():

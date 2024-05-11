@@ -60,7 +60,7 @@ widget UXScrollOffset:
       oy[].view(float32 m0.h)
       # Layout Vertical Metric
       m1.y -= int16 oy[].position
-      m1.h = m1.minH
+      m1.h = max(m1.h, m1.minH)
     # Horizontal Offset
     if self.horizontal:
       let ox = (addr self.ox).peek()
@@ -69,7 +69,7 @@ widget UXScrollOffset:
       ox[].view(float32 m0.w)
       # Layout Horizontal Metric
       m1.x -= int16 ox[].position
-      m1.w = m1.minW
+      m1.w = max(m1.w, m1.minW)
 
 # ----------------------
 # Scroll View Forwarding

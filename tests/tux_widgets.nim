@@ -17,7 +17,6 @@ import nogui/ux/widgets/[
   label,
   radio,
   scroll,
-  slider,
   textbox,
   menu,
   combo
@@ -29,10 +28,10 @@ icons "tatlas", 16:
   brush := "brush.svg"
   clear := "clear.svg"
   reset := "reset.svg"
-  close := "close.svg"
-  color := "color.png"
-  right := "right.svg"
-  left := "left.svg"
+  #close := "close.svg"
+  #color := "color.png"
+  #right := "right.svg"
+  #left := "left.svg"
 
 # -----------------------
 # Simple Widget Forwarder

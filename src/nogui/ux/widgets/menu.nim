@@ -136,7 +136,7 @@ widget UXMenuBar:
       height = max(height, w.metrics.minH)
       x += w.metrics.minW
     # Fit Menu Bar Dimensions
-    self.metrics.fit(x, height)
+    self.metrics.minfit(x, height)
 
   method layout =
     var x: int16

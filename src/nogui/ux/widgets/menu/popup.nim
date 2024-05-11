@@ -45,7 +45,7 @@ widget UXMenuList:
       width = max(w.metrics.minW, width)
       y += w.metrics.minH
     # Fit Dimensions
-    self.metrics.fit(width, y)
+    self.metrics.minfit(width, y)
 
   method layout =
     var y: int16
