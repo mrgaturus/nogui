@@ -417,6 +417,8 @@ proc open*(man: GUIManager, widget: GUIWidget) =
   widget.arrange()
 
 proc close*(man: GUIManager, widget: GUIWidget) =
+  if wVisible notin widget.flags: return
+  # Detach Widget from Layer
   let la = man.layer(widget)
   if isNil(la): return
   la[].detach(widget)

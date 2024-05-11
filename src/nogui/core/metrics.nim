@@ -55,26 +55,26 @@ proc clear*(clip: var GUIClipping) {.inline.} =
 # Relative Metrics Helpers 
 # ------------------------
 
-proc mimic*(parent: var GUIMetrics, m: GUIMetrics) =
-  parent.minW = m.minW
-  parent.minH = m.minH
+proc minfit*(m: var GUIMetrics, m0: GUIMetrics) =
+  m.minW = m0.minW
+  m.minH = m0.minH
   # Maximun Dimensions
-  parent.maxW = m.maxW
-  parent.maxH = m.maxH
+  m.maxW = m0.maxW
+  m.maxH = m0.maxH
 
-proc fit*(m: var GUIMetrics, parent: GUIMetrics) =
-  m.w = parent.w
-  m.h = parent.h
-  # Zero Position
-  m.x = 0
-  m.y = 0
-
-proc fit*(m: var GUIMetrics, w, h: int32) =
+proc minfit*(m: var GUIMetrics, w, h: int32) =
   # Ajust Relative
   m.minW = int16 w
   m.minH = int16 h
   m.w = m.minW
   m.h = m.minH
+
+proc fit*(m: var GUIMetrics, m0: GUIMetrics) =
+  m.w = m0.w
+  m.h = m0.h
+  # Zero Position
+  m.x = 0
+  m.y = 0
 
 proc inset*(m: var GUIMetrics, border: int16) =
   m.x += border
@@ -91,6 +91,12 @@ proc clip*(m: var GUIMetrics, m0: GUIMetrics) =
   m.y = max(m.y, m0.y)
   m.w = min(m.w, m0.x + m0.w) - m.x
   m.h = min(m.h, m0.y + m0.h) - m.y
+
+proc swep*(m: var GUIMetrics, w, h: int16) =
+  m.x -= max(m.x + m.w - w, 0)
+  m.y -= max(m.y + m.h - h, 0)
+  m.x = max(m.x, 0)
+  m.y = max(m.y, 0)
 
 # -------------------
 # Math Metrics Helper
