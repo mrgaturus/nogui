@@ -40,8 +40,6 @@ widget UXColor0Square:
     # Black/Color Elements
     ctx.triangle(6, 4,5,6)
     ctx.triangle(9, 5,6,7)
-    # 3 -- Draw Color Bar
-    ctx.addVerts(14, 36)
 
   proc drawCursor(ctx: ptr CTXRender) =
     let
