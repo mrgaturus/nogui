@@ -165,9 +165,12 @@ widget UXMenu:
     m0.w = m0.minW
     m0.h = m0.minH
     # Apply Pivot Position
-    let h0 = m0.h
+    let
+      h0 = m0.h
+      w0 = m0.w
     self.apply(self.pivot)
-    if h0 != m0.h:
+    # Adjust to Minimum Scrollview Size
+    if h0 != m0.h and w0 == m0.w:
       m1 = addr self.view.metrics
       m0.minW = m1.minW + border
       m0.w = m0.minW
@@ -212,18 +215,30 @@ widget UXMenu:
     self.p0 = p
 
   method event(state: ptr GUIState) =
-    if self.test(wGrab): return
+    let
+      top {.cursor.} = self.top
+      outside = not self.test(wHover)
+    # Handle Outside Click
+    if isNil(top) and outside:
+      var flags = self.flags
+      if state.kind == evCursorClick:
+        getWindow().send(wsUnGrab)
+        flags.incl(wHold)
+      elif state.kind == evCursorRelease and wHold in flags:
+        self.send(wsClose)
+        flags.excl(wHold)
+      # Replace Flags
+      self.flags = flags
+    # Avoid Stole Grabbed
+    elif self.test(wGrab):
+      return
     # Propagate Event to Outside
-    let top {.cursor.} = self.top
-    # Check Nearly to Forward Next Menu
-    if not self.test(wHover) and not isNil(top):
+    elif outside and not isNil(top):
       if self.nearly(state) or not self.aim:
         top.send(wsForward)
         # Renew Nearout Timer
         timestop(self.cbNear)
         timeout(self.cbNear, 250)
-    elif isNil(top) and state.kind == evCursorRelease:
-      self.send(wsClose)
 
   method handle(reason: GUIHandle) =
     if reason == inFrame:
@@ -234,12 +249,11 @@ widget UXMenu:
       self.p0 = point(state.px, state.py)
       self.aim = true
       # Register Resize Watchdog
-      echo "opened:", cast[pointer](self).repr
       obs[].register(self.watchdog)
     elif reason == outFrame:
       timestop(self.cbNear)
       self.slot.unselect()
       self.aim = false
       # Unregister Resize Watchdog
-      echo "closed:", cast[pointer](self).repr
+      self.flags.excl(wHold)
       unregister(self.watchdog)

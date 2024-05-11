@@ -11,6 +11,7 @@ type
     ox*, oy*: int32
     # Vertical Location
     mode*: UXMenuPivotMode
+    forced*: int32
   # Menu Popup Mapping
   UXMenuOpaque* = distinct GUIWidget
   UXMenuMapper* = object
@@ -76,14 +77,16 @@ proc apply*(self: GUIWidget, pivot: UXMenuPivot) =
       rect.x = pivot.ox - rect.w
   of menuVerticalSimple, menuVerticalClip:
     let rect0 = rect
-    rect.y = pivot.oy - rect.h
-    if rect.y < clip.h - (rect.y + rect.h):
-      rect = rect0
+    if clip.h - rect0.y < pivot.oy:
+      rect.y = pivot.oy - rect.h
     # Avoid Swep Clipping First
     if pivot.mode == menuVerticalClip:
       rect = intersect(rect, clip)
       rect.x = rect0.x
       rect.w = rect0.w
+    # Grow Horizontal to Widget
+    if pivot.forced > 0:
+      rect.w = pivot.forced
   # Swep Rect to Clip
   rect.swep(clip)
   # Replace Metrics

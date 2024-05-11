@@ -19,8 +19,8 @@ import nogui/ux/widgets/[
   scroll,
   slider,
   textbox,
-  menu
-  #combo
+  menu,
+  combo
 ]
 
 import nogui/ux/widgets/menu/items
@@ -141,7 +141,7 @@ controller CONPlayground:
     text: UTF8Input
     color: RGBColor
     hsv0: @ HSVColor
-    #selected: ComboModel
+    selected: ComboModel
     # Callstack Test
     cbtest: CXCallstackTest
 
@@ -165,7 +165,6 @@ controller CONPlayground:
     triangle.metrics.minW = 128
     triangle.metrics.minH = 128
     # Selection Items
-    #[
     self.selected = 
       combomodel(): menu("").child:
           comboitem("Normal", iconBrush, 0)
@@ -198,11 +197,10 @@ controller CONPlayground:
           comboitem("Saturation", 22)
           comboitem("Color", 23)
           comboitem("Luminosity", 24)
-    ]#
 
     # Arrange Each Widget
     dummy().child:
-      #combobox(self.selected).opaque.locateW(20, 30, 200)
+      combobox(self.selected).clear().locateW(20, 400, 200)
       button("Hello World 2", self.cbtest.cbInit).locate(20, 55)
       # Locate Nested Buttons
       panel().locate(20, 80, 128, 128).child:

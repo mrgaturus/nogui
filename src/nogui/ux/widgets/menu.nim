@@ -34,6 +34,7 @@ widget UXMenuBarItem:
     # Hook Menu Callbacks
     let menu = cast[UXMenu](menu)
     menu.cbClose = result.cbClose
+    menu.slot.ondone = result.cbClose
     # Define Menu Widget
     result.menu = menu
     result.map = menu.map()

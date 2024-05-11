@@ -1,7 +1,8 @@
-import menu, menu/base
+import menu/[base, popup]
 from ../../builder import controller
 # Menu Item Attributes
 privateAccess(UXMenuItem)
+privateAccess(UXMenu)
 
 # -----------------------
 # Combobox Selected Value
@@ -13,7 +14,6 @@ type
     # Labeling Info
     label: string
     icon: CTXIconID
-    # Labeling Metrics
     lm: GUIMenuMetrics
 
 proc combovalue*(label: string, icon: CTXIconID, value: int): ComboValue =
@@ -25,6 +25,9 @@ proc combovalue*(label: string, icon: CTXIconID, value: int): ComboValue =
   if icon == CTXIconEmpty:
     result.lm.w -= result.lm.icon
 
+proc combovalue*(label: string, value: int): ComboValue =
+  combovalue(label, CTXIconEmpty, value)
+
 # -------------
 # Combobox Item
 # -------------
@@ -32,7 +35,6 @@ proc combovalue*(label: string, icon: CTXIconID, value: int): ComboValue =
 widget UXComboItem of UXMenuItem:
   attributes:
     value: int
-    # Portal to ComboModel
     selected: ptr ComboValue
 
   new comboitem(label: string, value: int):
@@ -69,16 +71,15 @@ widget UXComboItem of UXMenuItem:
 controller ComboModel:
   attributes:
     menu: UXMenu
-    flatten: seq[pointer]
     ondone: GUICallback
+    flatten: seq[pointer]
     # Usable Data
     {.public.}: 
       selected: ComboValue
       onchange: GUICallback
 
   callback cbMenuDone:
-    close(self.menu)
-    # Send User Defined Callback
+    send(self.ondone)
     send(self.onchange)
 
   proc select*(value: int) =
@@ -92,6 +93,7 @@ controller ComboModel:
     # Replace Found
     if not isNil(found):
       self.selected = found.combovalue
+      send(self.onchange)
 
   proc configure(menu: UXMenu) =
     let portal = addr self.selected
@@ -110,10 +112,10 @@ controller ComboModel:
     # Replace Menu Callback
     self.ondone = menu.cbClose
     menu.cbClose = self.cbMenuDone
-    menu.kind = wgPopup
     # Configure Menu
     self.flatten = newSeq[pointer](0)
     self.configure(menu)
+    menu.vtable.update(menu)
     # Select First Item and Get Combovalue
     let peek = cast[UXComboItem](self.flatten[0])
     self.selected = peek.combovalue
@@ -128,27 +130,29 @@ controller ComboModel:
 
 widget UXComboBox:
   attributes:
+    map: UXMenuMapper
     model: ComboModel
-    opaque: bool
+    # Combobox Style
+    clear: bool
 
-  callback cbOpenMenu:
-    let 
-      rect = addr self.rect
-      menu {.cursor.} = self.model.menu
-    # Close Menu if Visible
-    if menu.test(wVisible):
-      menu.close()
-    menu.open()
-    # Open Menu to Combobox
-    menu.move(rect.x, rect.y + rect.h + 2)
-    menu.metrics.w = int16 rect.w
+  callback cbPopup:
+    let
+      map = addr self.map
+      menu = map.menu
+    # Open/Close Menu Popup
+    if not menu.test(wVisible):
+      map[].open()
+    else: map[].close()
 
   new combobox(model: ComboModel):
     result.flags = {wMouse}
     result.model = model
+    # Configure Menu to ComboBox
+    let menu {.cursor.} = model.menu
+    result.map = menu.map()
 
-  proc opaque*: UXComboBox {.inline.} =
-    self.opaque = true; self
+  proc clear*: UXComboBox {.inline.} =
+    self.clear = true; self
 
   method update =
     let
@@ -164,6 +168,18 @@ widget UXComboBox:
     m.minW = size + pad1
     m.minH = size + pad0
 
+  method layout =
+    let
+      border = getApp().space.line
+      pivot = addr self.map.pivot
+    # Locate Mapping Pivot
+    pivot.forced = self.metrics.w
+    pivot.mode = menuVerticalClip
+    self.map.locate(self.rect)
+    # Apply Pivot Border
+    pivot.y += border
+    pivot.oy -= border
+
   method draw(ctx: ptr CTXRender) =
     let 
       s = addr self.model.selected
@@ -171,9 +187,9 @@ widget UXComboBox:
     # Labeling Position
     var p = label(s.lm, self.rect)
     # Decide Current Color
-    let bgColor = if not self.opaque:
+    let bgColor = if not self.clear:
       self.itemColor()
-    else: self.opaqueColor()
+    else: self.clearColor()
     # Fill Background Color
     ctx.color bgColor
     ctx.fill rect(self.rect)
@@ -186,5 +202,5 @@ widget UXComboBox:
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:
-      self.flags.excl(wGrab)
-      send(self.cbOpenMenu)
+      getWindow().send(wsUngrab)
+      send(self.cbPopup)
