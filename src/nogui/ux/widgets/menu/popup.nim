@@ -117,6 +117,8 @@ widget UXMenu:
 
   # -- Menu Configure --
   proc map*: UXMenuMapper =
+    if isNil(self): return
+    # Configure Menu Mapping
     result.menu = self
     result.cb = self.cbPivot
 

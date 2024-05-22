@@ -2,7 +2,7 @@ import ../../[prelude, labeling]
 export prelude, labeling
 
 type
-  UXMenuPivotMode = enum
+  UXMenuPivotMode* = enum
     menuHorizontal
     menuVerticalSimple
     menuVerticalClip
