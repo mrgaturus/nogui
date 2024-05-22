@@ -136,10 +136,14 @@ proc prepare(widget: GUIWidget) =
 proc organize(widget: GUIWidget) =
   var
     w {.cursor.} = widget
+    w0 {.cursor.} = w.parent
     clip: GUIClipping
-  # Clip Parent Rect
-  if not isNil(w.parent):
-    clip.push(w.parent.rect)
+  # Accumulate Parents Clip
+  while not isNil(w0):
+    if w0.kind >= wkContainer:
+      clip.push(w0.rect)
+    # Next Parent
+    w0 = w0.parent
   # Traverse Children
   while true:
     w.absolute(clip)

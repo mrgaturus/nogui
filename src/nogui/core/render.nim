@@ -66,7 +66,7 @@ type
 # GUI PRIMITIVE CREATION PROCS
 # ----------------------------
 
-proc rgba*(r, g, b, a: uint8): CTXColor {.compileTime.} =
+proc rgba*(r, g, b, a: uint32): CTXColor {.compileTime.} =
   result = r or (g shl 8) or (b shl 16) or (a shl 24)
 
 proc rect*(x, y, w, h: int32): CTXRect {.inline.} =
