@@ -2,15 +2,6 @@ import ../../../core/shortcut
 import ../../containers/scroll
 import base, items
 
-# dear imgui: imgui.cpp: ImTriangleContainsPoint
-proc inside(a, b, c, p: CTXPoint): bool =
-  let
-    b1 = ((p.x - b.x) * (a.y - b.y) - (p.y - b.y) * (a.x - b.x)) < 0.0
-    b2 = ((p.x - c.x) * (b.y - c.y) - (p.y - c.y) * (b.x - c.x)) < 0.0
-    b3 = ((p.x - a.x) * (c.y - a.y) - (p.y - a.y) * (c.x - a.x)) < 0.0
-  # Check Point Inside Triangle
-  (b1 == b2) and (b2 == b3)
-
 # -------------
 # GUI Menu List
 # -------------
@@ -72,19 +63,16 @@ widget UXMenu:
     top: GUIWidget
     label: string
     slot: UXMenuSlot
+    # Menu Pivot Position
     pivot: UXMenuPivot
     watchdog: GUIObserver
-    # Triangle Aim
-    p0: CTXPoint
-    [aim, listed]: bool
     # Menu List
+    listed: bool
     {.cursor.}:
       list: UXMenuList
       view: UXScrollview
 
-  callback cbNear:
-    self.aim = false
-
+  # -- Menu Toplevel --
   callback cbClose:
     self.send(wsClose)
     # Close Top Levels
@@ -106,6 +94,7 @@ widget UXMenu:
     if self.test(wVisible):
       self.relax(wsLayout)
 
+  # -- Menu Configure --
   new menu(label: string):
     result.kind = wkPopup
     result.flags = {wMouse, wKeyboard}
@@ -115,7 +104,6 @@ widget UXMenu:
     let obs = observer(result.cbWatchResize, {evWindowResize})
     result.watchdog = obs
 
-  # -- Menu Configure --
   proc map*: UXMenuMapper =
     if isNil(self): return
     # Configure Menu Mapping
@@ -129,7 +117,7 @@ widget UXMenu:
       let 
         w0 = cast[UXMenu](w)
         item = menuitem(w0.label, w0.map)
-      # Warp into Item
+      # Warp into MenuItem
       w0.top = self
       w0.replace(item)
       w = item
@@ -198,30 +186,18 @@ widget UXMenu:
     ctx.color(colors.darker)
     ctx.line(rect, border)
 
-  proc nearly(state: ptr GUIState): bool =
-    let
-      top {.cursor.} = self.top
-      r = rect(self.rect)
-      # Nearly Triangle
-      a = point(r.x0, r.y0)
-      b = point(r.x0, r.y1)
-      p = point(state.px, state.py)
-    # Check Point Inside Top Menu
-    let area = top.pointOnArea(state.mx, state.my)
-    if not area or self.vtable != top.vtable:
-      self.aim = false
-    # Calculate Current Point
-    elif not inside(a, b, self.p0, p):
-      result = true
-    # Reduce Nearly
-    self.p0 = p
-
   method event(state: ptr GUIState) =
     let
       top {.cursor.} = self.top
-      outside = not self.test(wHover)
-    # Handle Outside Click
-    if isNil(top) and outside:
+      forward = not isNil(top)
+    # Escape from Grab Event
+    if self.test(wGrab) and forward:
+      self.send(wsEscape)
+    # Forward Event to Next Menu
+    if self.test(wHover): return
+    elif forward: top.send(wsForward)
+    # Fallback Outside Click
+    else:
       var flags = self.flags
       if state.kind == evCursorClick:
         getWindow().send(wsUnGrab)
@@ -229,33 +205,15 @@ widget UXMenu:
       elif state.kind == evCursorRelease and wHold in flags:
         self.send(wsClose)
         flags.excl(wHold)
-      # Replace Flags
+      # Replace Widget Flags
       self.flags = flags
-    # Avoid Stole Grabbed
-    elif self.test(wGrab):
-      return
-    # Propagate Event to Outside
-    elif outside and not isNil(top):
-      if self.nearly(state) or not self.aim:
-        top.send(wsForward)
-        # Renew Nearout Timer
-        timestop(self.cbNear)
-        timeout(self.cbNear, 250)
 
   method handle(reason: GUIHandle) =
     if reason == inFrame:
-      let
-        state = getApp().state
-        obs = getWindow().observers
-      # Configure Menu Triangle Point
-      self.p0 = point(state.px, state.py)
-      self.aim = true
-      # Register Resize Watchdog
+      let obs = getWindow().observers
       obs[].register(self.watchdog)
     elif reason == outFrame:
-      timestop(self.cbNear)
       self.slot.unselect()
-      self.aim = false
       # Unregister Resize Watchdog
       self.flags.excl(wHold)
       unregister(self.watchdog)

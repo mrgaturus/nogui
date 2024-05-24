@@ -160,10 +160,10 @@ widget UXMenuBar:
     var flags = self.flags
     # Handle Clicking Outside Menus
     if state.kind == evCursorClick:
-      flags.incl(wHold)
       getWindow().send(wsUnGrab)
+      flags.incl(wHold)
     elif state.kind == evCursorRelease and wHold in flags:
-      flags.excl(wHold)
       self.slot.unselect()
+      flags.excl(wHold)
     # Replace Flags
     self.flags = flags
