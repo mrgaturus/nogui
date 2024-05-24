@@ -209,11 +209,18 @@ widget UXMenu:
       self.flags = flags
 
   method handle(reason: GUIHandle) =
-    if reason == inFrame:
+    let slot = addr self.slot
+    # Process Handle Reason
+    case reason
+    of inFrame:
       let obs = getWindow().observers
       obs[].register(self.watchdog)
-    elif reason == outFrame:
-      self.slot.unselect()
+    of outFrame:
+      slot[].reset()
       # Unregister Resize Watchdog
       self.flags.excl(wHold)
       unregister(self.watchdog)
+    # Renew Selected Slot
+    of inHover: slot.noslot = false
+    of outHover: slot[].restore()
+    else: discard

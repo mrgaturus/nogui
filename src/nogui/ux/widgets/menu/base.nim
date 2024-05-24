@@ -21,10 +21,13 @@ type
     cb*: GUICallbackEX[UXMenuPivot]
   # Menu Selected Slot
   UXMenuSlot* = object
-    item {.cursor.}: GUIWidget
-    # Slot Callbacks
+    item* {.cursor.}: GUIWidget
     ondone*: GUICallback
-    onslot*: GUICallback
+    # Submenu Manager
+    sub0, sub: ptr UXMenuMapper
+    item0 {.cursor.}: GUIWidget
+    # Submenu Delayed
+    nodelay*, noslot*: bool
 
 # ---------------------
 # GUI Menu Pivot Helper
@@ -123,24 +126,49 @@ proc locate*(map: var UXMenuMapper, rect: GUIRect) =
 # GUI Menu Item Slot
 # ------------------
 
-proc current*(slot: UXMenuSlot): GUIWidget =
-  slot.item
+proc subchange(slot: ptr UXMenuSlot) =
+  if slot.sub == slot.sub0: return
+  # Close and Open Submenu
+  if not isNil(slot.sub0):
+    slot.sub0[].close()
+  if not isNil(slot.sub):
+    slot.sub[].open()
+  # Replace Current Submenu
+  slot.item0 = slot.item
+  slot.sub0 = slot.sub
 
-proc select*(slot: var UXMenuSlot, item: GUIWidget) =
-  if slot.item == item: return
+proc select*(slot: var UXMenuSlot, item: GUIWidget, sub: ptr UXMenuMapper) =
+  if slot.item == item or slot.noslot: return
+  let cb = unsafeCallback(addr slot, subchange)
+  # Change Item and Submenu
   slot.item = item
-  # Consume Slot Callback
-  send(slot.onslot)
-  slot.onslot = default(GUICallback)
+  slot.sub = sub
+  # Request Submenu Change
+  if not slot.nodelay:
+    cb.timestop()
+    cb.timeout(250)
+  else: cb.force()
 
-proc select*(slot: var UXMenuSlot, item: GUIWidget, cb: GUICallback) =
-  slot.select(item)
-  # Send Changed Callback
-  slot.onslot = cb
-  cb.send()
+proc select*(slot: var UXMenuSlot, item: GUIWidget) {.inline.} =
+  slot.select(item, nil)
 
 proc unselect*(slot: var UXMenuSlot) {.inline.} =
-  slot.select(nil)
+  slot.select(nil, nil)
+
+proc restore*(slot: var UXMenuSlot) =
+  if isNil(slot.sub0): slot.unselect()
+  else: slot.select(slot.item0, slot.sub0)
+  # Avoid Accidental Slot Changes
+  slot.noslot = true
+
+proc reset*(slot: var UXMenuSlot) =
+  slot.noslot = false
+  slot.item = nil
+  slot.sub = nil
+  # Remove Current Menu
+  let cb = unsafeCallback(addr slot, subchange)
+  cb.timestop()
+  cb.force()
 
 # ------------------
 # GUI Menu Item Base
@@ -156,7 +184,7 @@ widget UXMenuItem:
       slot: ptr UXMenuSlot
 
   proc selected*: bool {.inline.} =
-    self.test(wHover) or self.slot[].current == self
+    self.test(wHover) or self.slot.item == self
 
   proc init0*(label: string, icon = CTXIconEmpty) =
     self.flags = {wMouse}
@@ -200,6 +228,7 @@ widget UXMenuItem:
 
   method handle(reason: GUIHandle) =
     let slot = self.slot
+    # Select Menu Item
     if reason == inHover:
       slot[].select(self)
     elif reason == outHover:

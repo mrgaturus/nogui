@@ -19,15 +19,8 @@ widget UXMenuBarItem:
     map: UXMenuMapper
     slot: ptr UXMenuSlot
 
-  callback cbPopup:
-    let map = addr self.map
-    # Open/Close Menu Popup
-    if self.slot[].current == self:
-      map[].open()
-    else: map[].close()
-
   callback cbClose:
-    self.slot[].unselect()
+    self.slot[].reset()
 
   new menubar0(menu: UXMenuOpaque):
     result.flags = {wMouse, wKeyboard}
@@ -73,7 +66,7 @@ widget UXMenuBarItem:
       ox = self.metrics.minW - (pad0 shl 1)
       oy = font.baseline
     # Fill Menubar Item Highlight
-    if self.test(wHover) or self.slot[].current == self:
+    if self.test(wHover) or self.slot.item == self:
       ctx.color colors.item
       ctx.fill rect rect[]
     # Draw Text Centered
@@ -90,15 +83,15 @@ widget UXMenuBarItem:
     if state.kind == evCursorClick:
       let
         slot = self.slot
-        current = slot[].current
+        current = slot.item
       # Open or Close Menu
       if current != self:
-        slot[].select(self, self.cbPopup)
+        slot[].select(self, addr self.map)
       else: slot[].unselect()
 
   method handle(reason: GUIHandle) =
-    if reason == inHover and not isNil(self.slot[].current):
-      self.slot[].select(self, self.cbPopup)
+    if reason == inHover and not isNil(self.slot.item):
+      self.slot[].select(self, addr self.map)
 
 # -----------
 # GUI MenuBar
@@ -111,6 +104,8 @@ widget UXMenuBar:
   new menubar():
     result.flags = {wMouse, wKeyboard}
     result.kind = wkForward
+    # Avoid Delay Menu Mapping
+    result.slot.nodelay = true
 
   method update =
     var x, height: int16

@@ -123,13 +123,6 @@ widget UXMenuItemPopup of UXMenuItem:
   attributes: {.public.}:
     map: UXMenuMapper
 
-  callback cbPopup:
-    let map = addr self.map
-    # Open/Close Menu Popup
-    if self.slot[].current == self:
-      map[].open()
-    else: map[].close()
-
   new menuitem(label: string, map: UXMenuMapper):
     result.init0(label)
     result.map = map
@@ -156,5 +149,9 @@ widget UXMenuItemPopup of UXMenuItem:
       getWindow().send(wsUngrab)
 
   method handle(reason: GUIHandle) =
+    let slot = self.slot
+    # Select Menu Popup
     if reason == inHover:
-      self.slot[].select(self, self.cbPopup)
+      slot[].select(self, addr self.map)
+    elif reason == outHover:
+      slot[].unselect()
