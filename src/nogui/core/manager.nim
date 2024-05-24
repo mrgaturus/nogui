@@ -183,9 +183,7 @@ proc hover*(man: GUIManager, widget: GUIWidget) =
     man.unhover(i)
     man.stack[i] = default(GUIForward)
   else: return
-  # Handle Hover In
-  widget.flags.incl(wHover)
-  widget.vtable.handle(widget, inHover)
+  # Current Hover Stack Widget
   man.stack[i].hover = widget
 
 # ----------------------
