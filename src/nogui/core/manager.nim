@@ -252,7 +252,7 @@ proc cursorForward(man: GUIManager, widget: GUIWidget) =
   if wMouse in flags:
     widget.vtable.event(widget, state)
   # Forward Stack if was Grabbing
-  if wGrab in (flags + widget.flags):
+  if wGrab in flags:
     if depth < high(man.stack):
       let next = man.stack[depth + 1].hover
       send(man.cbForward, next)
@@ -327,6 +327,15 @@ proc forward*(man: GUIManager, widget: GUIWidget) =
   # Skip Invalid Event
   else: discard
 
+proc escape*(man: GUIManager, widget: GUIWidget) =
+  let depth = man.depth - 1
+  # Unhover Widget if is Current and Remove from Stack
+  if depth >= 0 and man.stack[depth].hover == widget:
+    man.unhover(depth)
+    man.stack.delete(depth)
+    # Backwards Depth
+    man.depth = depth
+
 proc stop*(man: GUIManager, widget: GUIWidget) =
   let
     depth = man.depth - 1
@@ -392,6 +401,9 @@ proc ungrab*(man: GUIManager) =
     if wGrab in w.flags:
       w.flags.excl(wGrab)
       w.vtable.handle(w, outGrab)
+  # Stop Grab Propagation
+  if man.state.kind == evCursorClick:
+    man.state.kind = evCursorMove
 
 # -----------------------
 # Widget Toplevel Manager

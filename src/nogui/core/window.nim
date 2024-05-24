@@ -19,7 +19,9 @@ type
   WidgetMessage* = enum
     wsFocus
     wsLayout
+    # Event Forward
     wsForward
+    wsEscape
     wsStop
     # Toplevel
     wsOpen
@@ -143,6 +145,7 @@ proc procWidget(win: GUIWindow, signal: ptr WidgetSignal) =
   of wsLayout: layout(man, widget)
   of wsFocus: focus(man, widget)
   of wsForward: forward(man, widget)
+  of wsEscape: escape(man, widget)
   of wsStop: stop(man, widget)
   # Window Manager Open
   of wsOpen: open(man, widget)
