@@ -80,6 +80,7 @@ widget UXDockPanel:
     # Replace Header Content
     self.content = content[]
     self.header.content = content[]
+    # Relayout Dock Panel
     self.relax(wsLayout)
 
   callback cbDetach(content: UXDockContent):
@@ -173,5 +174,5 @@ widget UXDockPanel:
     rect.x += pad0; rect.y += pad0
     rect.w -= pad1; rect.h -= pad1
     # Draw Background Rect
-    ctx.color colors.panel and 0xEFFFFFFF'u32
+    ctx.color colors.panel and 0xF0FFFFFF'u32
     ctx.fill rect(rect)
