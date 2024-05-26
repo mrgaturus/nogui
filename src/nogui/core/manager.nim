@@ -227,6 +227,8 @@ proc cursorGrab(widget: GUIWidget, state: ptr GUIState) =
   let
     handle = widget.vtable.handle
     check = flags.delta(widget.flags)
+  # Replace Widget Flags
+  widget.flags = flags
   # React to Hover Changes
   if wHover in check:
     if wHover in flags: handle(widget, inHover)
@@ -235,8 +237,6 @@ proc cursorGrab(widget: GUIWidget, state: ptr GUIState) =
   if wGrab in check:
     if wGrab in flags: handle(widget, inGrab)
     else: handle(widget, outGrab)
-  # Replace Widget Flags
-  widget.flags = flags
 
 proc cursorForward(man: GUIManager, widget: GUIWidget) =
   let
