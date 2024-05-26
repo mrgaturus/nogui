@@ -30,8 +30,10 @@ widget UXDockSession:
     assert panel.parent == self
     assert panel != self.root
     # Reattach to Last Widget
+    GC_ref(panel)
     panel.detach()
     attachNext(self.last, panel)
+    GC_unref(panel)
 
   method update =
     let

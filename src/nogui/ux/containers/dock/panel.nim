@@ -18,9 +18,13 @@ widget UXDockPanel:
     # Dock Current Content
     content: UXDockContent
 
-  # -- Dock Panel Callbacks --
   callback cbClose:
-    discard
+    self.header.detach(self.content)
+    let content = self.header.content
+    # Detach or Select Content
+    if isNil(content):
+      self.detach()
+    else: content.select()
 
   callback cbFold:
     let
@@ -40,6 +44,7 @@ widget UXDockPanel:
     # Relayout Dock Widgets
     self.send(wsLayout)
 
+  # -- Dock Panel Manipulation --
   callback cbMove:
     let
       state = getApp().state
@@ -77,14 +82,11 @@ widget UXDockPanel:
     # Use Content Dimensions
     m.w = content.w
     m.h = content.h
-    # Replace Header Content
-    self.content = content[]
+    # Replace Header Selected
     self.header.content = content[]
+    self.content = content[]
     # Relayout Dock Panel
     self.relax(wsLayout)
-
-  callback cbDetach(content: UXDockContent):
-    discard
 
   # -- Dock Panel Creation --
   new dockpanel():
@@ -104,13 +106,6 @@ widget UXDockPanel:
     # Configure Dock Widgets
     result.header = header
     result.widget = widget
-
-  proc add*(content: UXDockContent) =
-    content.onselect = self.cbSelect
-    content.ondetach = self.cbDetach
-    # Add and Select Content
-    self.header.add(content)
-    content.select()
 
   # -- Dock Panel Methods --
   method update =
@@ -176,3 +171,59 @@ widget UXDockPanel:
     # Draw Background Rect
     ctx.color colors.panel and 0xF0FFFFFF'u32
     ctx.fill rect(rect)
+
+# ----------------------------
+# UX Dock Panel Attach/Dettach
+# ----------------------------
+
+proc add*(self: UXDockPanel, content: UXDockContent)
+template cb0(self: UXDockPanel, fn: proc): GUICallbackEX[UXDockContent] =
+  let self0 = cast[pointer](self)
+  unsafeCallbackEX[UXDockContent](self0, fn)
+
+proc extract0(self: UXDockPanel, content: ptr UXDockContent) =
+  let
+    c0 = content[]
+    panel = dockpanel()
+    pivot = addr self.header.pivot
+  # Add Content to Panel
+  panel.add(c0)
+  GC_unref(c0)
+  # Locate at the same Pivot
+  panel.header.pivot = pivot[]
+  pivot[].wasMoved()
+  # Locate at the same Metrics
+  panel.metrics = self.metrics
+  panel.rect = self.rect
+  send(panel.cbMove)
+  # Attach to Last Session
+  self.parent.add(panel)
+  self.parent.send(wsLayout)
+  # Continue Grabbing Window
+  getWindow().send(wsUnHover)
+  getApp().state.kind = evCursorClick
+  panel.send(wsForward)
+
+proc detach0(self: UXDockPanel, content: ptr UXDockContent) =
+  let
+    c0 = content[]
+    header = self.header
+    pivot = addr header.pivot
+    # Extract Callback
+    cbExtract = self.cb0(extract0)
+  # Remove Selected Content
+  header.detach(c0)
+  header.content.select()
+  # Create New Dock
+  if pivot.locked:
+    GC_ref(c0)
+    send(cbExtract, c0)
+
+proc add*(self: UXDockPanel, content: UXDockContent) =
+  let cbDetach = self.cb0(detach0)
+  # Define Context Callbacks
+  content.onselect = self.cbSelect
+  content.ondetach = cbDetach
+  # Add and Select Content
+  self.header.add(content)
+  content.select()

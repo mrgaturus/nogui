@@ -46,6 +46,9 @@ controller UXDockContent:
   attributes:
     title: string
     icon: CTXIconID
+    # Content Tab
+    {.public, cursor.}:
+      tab: GUIWidget
     # Content Attributes
     {.public.}:
       serial: uint32
@@ -70,6 +73,18 @@ controller UXDockContent:
     result.icon = iconFallback
     # Content Widget
     result.widget = widget
+
+  proc attached*: bool =
+    not isNil(self.tab)
+
+  proc dismiss*() =
+    wasMoved(self.onselect)
+    wasMoved(self.ondetach)
+    wasMoved(self.tab)
+    # Reset Dimensions
+    self.folded = false
+    self.w = 0
+    self.h = 0
 
   proc select*() = send(self.onselect, self)
   proc detach*() = send(self.ondetach, self)
@@ -137,8 +152,6 @@ widget UXDockTab:
     self.x0 = x
 
   method event(state: ptr GUIState) =
-    self.cursor[] = self
-    # Only Interact if Unique
     if self.alone: return
     let content {.cursor.} = self.content
     # Select Dock Content when Clicked if is not Same
@@ -180,8 +193,13 @@ widget UXDockTab:
   method handle(reason: GUIHandle) =
     let cursor = self.cursor
     # Change Selected Tab
-    if reason == inHover: cursor[] = self
-    elif reason == outHover: cursor[] = nil
+    case reason
+    of inGrab, inHover:
+      cursor[] = self
+    of outGrab, outHover:
+      if not self.some({wGrab, wHover}):
+        cursor[] = nil
+    else: discard
 
 # ----------------------
 # UX Dock Header Tabbing
@@ -205,9 +223,35 @@ widget UXDockTabbing:
     result.flags = {wMouse}
     result.kind = wkForward
 
-  proc configure(tab: UXDockTab) =
+  proc add(content: UXDockContent) =
+    let tab = docktab(content)
+    content.tab = tab
+    self.add(tab)
+    # Configure Dock Tab
     tab.current = self.current
     tab.cursor = addr self.cursor
+    # Change Selected Content
+    self.current[] = content
+
+  proc detach(content: UXDockContent) =
+    let
+      tab = content.tab
+      current = self.current
+    assert tab.parent == self
+    # Move Selected Content
+    if content == current[]:
+      var t {.cursor.} = cast[UXDockTab](tab)
+      t.content = nil
+      # Change Selected to a Slibing
+      if not isNil(t.next):
+        t = cast[UXDockTab](t.next)
+      elif not isNil(t.prev):
+        t = cast[UXDockTab](t.prev)
+      # Change Selected Content
+      current[] = t.content
+    # Detach Dock Tab
+    content.dismiss()
+    tab.detach()
 
   method update =
     let content {.cursor.} = self.current[]
@@ -217,8 +261,6 @@ widget UXDockTabbing:
       let
         tab {.cursor.} = UXDockTab(w0)
         m = addr tab.metrics
-      # Configure Dock Tab
-      self.configure(tab)
       # Calculate Endpoints
       min0 += m.maxW
       min2 += m.minW
@@ -392,8 +434,10 @@ widget UXDockHeader:
     result.buttons = buttons
 
   proc add*(content: UXDockContent) =
-    let tab = docktab(content)
-    self.tabs.add(tab)
+    self.tabs.add(content)
+
+  proc detach*(content: UXDockContent) =
+    self.tabs.detach(content)
 
   # -- Widget Methods --
   method update =
