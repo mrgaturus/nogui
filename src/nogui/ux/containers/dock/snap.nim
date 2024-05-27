@@ -23,19 +23,28 @@ type
 
 proc resizePivot*(m: GUIMetrics, x, y: int32): DockPivot =
   let
+    app = getApp()
+    # Relative Position
     x0 = x - m.x
     y0 = y - m.y
     # Resize Borders
-    pad = getApp().space.margin
-    thr = pad + (pad shr 1)
+    pad = app.space.margin
+    thr0 = pad + (pad shr 1)
+    thr1 = app.font.asc
+    # Check Small Sides
+    check0 = x0 >= thr0 and x0 <= m.w - thr0
+    check1 = y0 >= thr0 and y0 <= m.h - thr0
+  # Check Pivot Small Sides
+  if check0 and check1:
+    return
   # Reside Pivot Sides
   var sides: DockSides
   # Check Horizontal Sides
-  if x0 >= m.w - thr: sides.incl dockRight
-  elif x0 < thr: sides.incl dockLeft
+  if x0 > m.w - thr1: sides.incl dockRight
+  elif x0 < thr1: sides.incl dockLeft
   # Check Vertical Sides
-  if y0 >= m.h - thr: sides.incl dockDown
-  elif y0 < thr: sides.incl dockTop
+  if y0 > m.h - thr1: sides.incl dockDown
+  elif y0 < thr1: sides.incl dockTop
   # Create New Pivot
   DockPivot(
     x: x, y: y,

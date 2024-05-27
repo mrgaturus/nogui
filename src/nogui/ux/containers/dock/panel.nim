@@ -9,7 +9,6 @@ import ../../prelude
 
 widget UXDockPanel:
   attributes:
-    folded: bool
     pivot: DockPivot
     # Dock Widgets
     {.cursor.}:
@@ -38,13 +37,17 @@ widget UXDockPanel:
     else:
       m.w = content.w
       m.h = content.h
-    # Change Dock Folded
-    self.folded = folded
+    # Update Dock Panel Layout
     content.folded = folded
-    # Relayout Dock Widgets
     self.send(wsLayout)
 
   # -- Dock Panel Manipulation --
+  proc relative(state: ptr GUIState): tuple[x, y: int32] =
+    let r = addr self.parent.rect
+    # Cursor Relative to Parent
+    result.x = state.mx - r.x
+    result.y = state.my - r.y
+
   callback cbMove:
     let
       state = getApp().state
@@ -58,8 +61,9 @@ widget UXDockPanel:
       getWindow().cursor(cursorMove)
     # Calculate Cursor Delta
     let
-      dx = state.mx - pivot.mx
-      dy = state.my - pivot.my
+      p = self.relative(state)
+      dx = p.x - pivot.mx
+      dy = p.y - pivot.my
     # Locate New Window Position
     let m = addr self.metrics
     m.x = int16(m0.x + dx)
@@ -76,10 +80,6 @@ widget UXDockPanel:
     if w0 != w:
       w0.replace(w)
       self.widget = w
-    # Store Content Dimensions
-    if not isNil(self.content):
-      self.content.w = m.w
-      self.content.h = m.h
     # Use Content Dimensions
     m.w = content.w
     m.h = content.h
@@ -136,6 +136,7 @@ widget UXDockPanel:
 
   method layout =
     let
+      content {.cursor.} = self.content
       pad = getApp().space.margin
       pad0 = pad + (pad shr 1)
       # Dock Widget Metrics
@@ -148,33 +149,37 @@ widget UXDockPanel:
     m0.w = m.w - (pad0 shl 1)
     m0.h = m0.minH
     # Locate Body Widget
-    if not self.folded:
+    if not content.folded:
       m1.x = m0.x
       m1.w = m0.w
       m1.y = m0.y + m0.h + pad
       m1.h = m.h - m1.y - pad0
+      # Update Content Dimensions
+      content.w = m.w
+      content.h = m.h
 
   # -- Dock Panel Interaction --
-  proc resize(state: ptr GUIState) =
+  proc resize(x, y: int32) =
     let pivot = addr self.pivot
     if pivot.sides == {}: return
     # Resize Dock Panel and Relayout
-    self.metrics = pivot[].resize(state.mx, state.my)
+    self.metrics = pivot[].resize(x, y)
     self.send(wsLayout)
 
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:
       let session = cast[UXDockSession](self.parent)
       session.elevate(self)
+    # Avoid Resize when Folded
+    elif self.content.folded:
+      return
     # Calculate Resize Pivot
-    if self.folded: return
-    if not self.test(wGrab):
-      self.pivot = resizePivot(
-        self.metrics, state.mx, state.my)
-      # Change Cursor to Resize Side
+    let p = self.relative(state)
+    if self.flags * {wHover, wGrab} == {wHover}:
+      self.pivot = resizePivot(self.metrics, p.x, p.y)
       getWindow().cursor(resizeCursor self.pivot)
-    # Resize Dock Panel
-    else: self.resize(state)
+    # Resize Dock Panel to Point
+    else: self.resize(p.x, p.y)
 
   method handle(reason: GUIHandle) =
     if reason in {outGrab, outHover}:

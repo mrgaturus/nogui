@@ -81,10 +81,8 @@ controller UXDockContent:
     wasMoved(self.onselect)
     wasMoved(self.ondetach)
     wasMoved(self.tab)
-    # Reset Dimensions
+    # Remove Folded
     self.folded = false
-    self.w = 0
-    self.h = 0
 
   proc select*() = send(self.onselect, self)
   proc detach*() = send(self.ondetach, self)
