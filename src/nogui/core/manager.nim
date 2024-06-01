@@ -7,6 +7,7 @@ type
     last* {.cursor.}: GUIWidget
   GUIForward = object
     hover {.cursor.}: GUIWidget
+    skip {.cursor.}: GUIWidget
     jump {.cursor.}: GUIWidget
   # GUI Window Manager
   GUIManager* = ref object
@@ -25,7 +26,9 @@ type
     # Window Hover State
     stack: seq[GUIForward]
     backup: seq[GUIForward]
+    # Window Hover Cursor
     depth, stops: int
+    grab, locked: bool
 
 # --------------------
 # Layer Attach Manager
@@ -170,6 +173,9 @@ proc unhover*(man: GUIManager) =
   # Clear Hover Stack
   setLen(man.stack, 0)
   man.depth = 0
+  # Remove Grab
+  man.grab = false
+  man.locked = false
 
 proc hover*(man: GUIManager, widget: GUIWidget) =
   let i = man.depth
@@ -181,21 +187,20 @@ proc hover*(man: GUIManager, widget: GUIWidget) =
   elif widget != man.stack[i].hover:
     man.land()
     man.unhover(i)
-    man.stack[i] = default(GUIForward)
   else: return
-  # Current Hover Stack Widget
-  man.stack[i].hover = widget
+  # Define Current Stack Hover
+  let fw = addr man.stack[i]
+  fw.hover = widget
+  fw.jump = widget
+  fw.skip = widget
 
 # ----------------------
 # Cursor Forward Manager
 # ----------------------
 
 proc cursorOuter(man: GUIManager, x, y: int32): GUIWidget =
-  if len(man.stack) > 0:
-    let outer = man.stack[0].hover
-    # Return Grabbed Outermost
-    if wGrab in outer.flags:
-      return outer
+  if man.locked:  
+    return man.stack[0].hover
   # Find Current Hold
   if not isNil(man.hold):
     result = man.hold
@@ -212,17 +217,16 @@ proc cursorOuter(man: GUIManager, x, y: int32): GUIWidget =
   if isNil(result):
     result = man.root
 
-proc cursorGrab(widget: GUIWidget, state: ptr GUIState) =
+proc cursorGrab(man: GUIManager, widget: GUIWidget) =
+  let state = man.state
   var flags = widget.flags
   # Change Widget Hover
   if widget.pointOnArea(state.mx, state.my):
     flags.incl(wHover)
   else: flags.excl(wHover)
   # Change Widget Grab
-  if state.kind == evCursorClick:
-    flags.incl(wGrab)
-  elif state.kind == evCursorRelease:
-    flags.excl(wGrab)
+  if man.grab: flags.incl(wGrab)
+  else: flags.excl(wGrab)
   # Check Flags Changes
   let
     handle = widget.vtable.handle
@@ -238,55 +242,88 @@ proc cursorGrab(widget: GUIWidget, state: ptr GUIState) =
     if wGrab in flags: handle(widget, inGrab)
     else: handle(widget, outGrab)
 
-proc cursorForward(man: GUIManager, widget: GUIWidget) =
+proc cursorSkip(man: GUIManager): bool =
+  let
+    state = man.state
+    locked = man.locked
+    # Current Forward
+    depth = man.depth - 1
+    fw = addr man.stack[depth]
+  # Find Skip Innermost Widget
+  var w {.cursor.} = fw.jump
+  let skip {.cursor.} = fw.skip
+  if skip.kind in {wkLayout, wkContainer} and not locked:
+    w = w.find(skip, state.mx, state.my)
+  # Skip Forward if has Grab of Hover
+  let inside = w != skip or w.pointOnArea(state.mx, state.my)
+  if locked or inside:
+    send(man.cbForward, w)
+    fw.jump = w
+    # Forward Skiped
+    return true
+  # Remove Cursor Skip
+  fw.skip = fw.hover
+  fw.jump = fw.hover
+
+proc cursorStep(man: GUIManager, widget: GUIWidget) =
   let
     state = man.state
     depth = man.depth
-    flags = widget.flags
-  # Configure Cursor Hover
-  man.hover(widget)
-  widget.cursorGrab(state)
   # Dispatch Cursor Event
-  if wMouse in flags:
+  if wMouse in widget.flags:
     widget.vtable.event(widget, state)
-  # Forward Stack if was Grabbing
-  if wGrab in flags:
-    if depth < high(man.stack):
-      let next = man.stack[depth + 1].hover
-      send(man.cbForward, next)
-      return
+  # Forward to Stack Next if Locked
+  if man.locked and depth < len(man.stack):
+    let next {.cursor.} = man.stack[depth].hover
+    send(man.cbForward, next)
   # Forward to Next Inside Widget
   elif widget.kind >= wkRoot or widget.kind == wkForward:
-    let jump = addr man.stack[depth].jump
-    # Prepare Next Pivot
-    var next {.cursor.} = jump[]
-    if isNil(next):
-      next = widget
-    # Find Next Innermost Widget
+    let fw = addr man.stack[depth - 1]
+    # Find Next Inside Widget
+    var next {.cursor.} = fw.jump
     next = next.find(widget, state.mx, state.my)
-    # Forward Event
     if next != widget:
-      jump[] = next.parent
+      fw.jump = next
       send(man.cbForward, next)
+
+proc cursorForward(man: GUIManager, widget: GUIWidget) =
+  var fw: ptr GUIForward
+  let depth = man.depth
+  # Avoid Redundant Widget Forward
+  var idx = man.depth - 1
+  while idx >= 0:
+    fw = addr man.stack[idx]
+    if fw.hover == widget:
       return
-  # Finalize Forwarding
-  send(man.cbLand)
+    dec(idx)
+  # Prepare Cursor Step
+  man.hover(widget)
+  man.cursorGrab(widget)
+  # Step Forward if was not Skipped
+  fw = addr man.stack[depth]
+  if fw.skip == widget or not man.cursorSkip():
+    man.cursorStep(widget)
 
 # ----------------------
 # Event Dispatch Manager
 # ----------------------
 
 proc cursorEvent*(man: GUIManager, state: ptr GUIState) =
-  let outer = man.cursorOuter(state.mx, state.my)
-  # Prepare Cursor Event
   man.state = state
   man.depth = 0
   man.stops = 0
-  # Elevate Outer Frame when Clicked
-  if state.kind == evCursorClick and outer.kind == wkFrame:
-    elevate(man.frame, outer)
+  # Check Cursor Grab Status
+  let outer = man.cursorOuter(state.mx, state.my)
+  if state.kind == evCursorClick:
+    man.grab = true
+    # Elevate Outer Frame when Clicked
+    if outer.kind == wkFrame:
+      elevate(man.frame, outer)
+  elif state.kind == evCursorRelease:
+    man.grab = false
   # Dispatch Cursor Event
   man.cursorForward(outer)
+  send(man.cbLand)
 
 proc keyEvent*(man: GUIManager, state: ptr GUIState): bool =
   let
@@ -316,7 +353,7 @@ proc forward*(man: GUIManager, widget: GUIWidget) =
     var w {.cursor.} = widget
     if w.kind in {wkLayout, wkContainer}:
       w = w.inside(state.mx, state.my)
-    # Dispatch Forward
+    # Forward Widget
     man.cursorForward(w)
   # Forward Key Event
   of evKeyDown, evKeyUp:
@@ -325,14 +362,18 @@ proc forward*(man: GUIManager, widget: GUIWidget) =
   # Skip Invalid Event
   else: discard
 
-proc escape*(man: GUIManager, widget: GUIWidget) =
-  let depth = man.depth - 1
-  # Unhover Widget if is Current and Remove from Stack
-  if depth >= 0 and man.stack[depth].hover == widget:
-    man.unhover(depth)
-    man.stack.delete(depth)
-    # Backwards Depth
-    man.depth = depth
+proc redirect*(man: GUIManager, widget: GUIWidget) =
+  let
+    state = man.state
+    hover = widget.pointOnArea(state.mx, state.my)
+  # Mark Current Forward as Redirect
+  if man.locked or hover:
+    let depth = man.depth - 1
+    if depth >= 0:
+      man.stack[depth].skip = widget
+      man.stack[depth].jump = widget
+    # Step Forward Widget
+    man.forward(widget)
 
 proc stop*(man: GUIManager, widget: GUIWidget) =
   let
@@ -393,15 +434,18 @@ proc unhold*(man: GUIManager) =
   man.hold = nil
 
 proc ungrab*(man: GUIManager) =
-  for fw in man.stack:
-    let w {.cursor.} = fw.hover
+  var i = high(man.stack)
+  while i >= 0:
     # Ungrab Widgets From Stack
+    let w {.cursor.} = man.stack[i].hover
     if wGrab in w.flags:
       w.flags.excl(wGrab)
       w.vtable.handle(w, outGrab)
-  # Stop Grab Propagation
-  if man.state.kind == evCursorClick:
-    man.state.kind = evCursorMove
+    # Next Forward
+    dec(i)
+  # Stop Manager Grabbed
+  man.grab = false
+  man.locked = false
 
 # -----------------------
 # Widget Toplevel Manager
@@ -432,18 +476,20 @@ proc close*(man: GUIManager, widget: GUIWidget) =
   let la = man.layer(widget)
   if isNil(la): return
   la[].detach(widget)
+  # Remove Widget Visible
+  widget.flags.excl(wVisible)
   # Remove Focus if was Inside
   let focus {.cursor.} = man.focus
   if not isNil(focus) and not focus.focusable():
     man.unfocus()
   # Handle Widget Detach
-  widget.flags.excl(wVisible)
   widget.vtable.handle(widget, outFrame)
   # Floor Stack to Next Toplevel if not Holded
   if not isNil(man.hold): return
   let l = len(man.stack)
   for i in 0 ..< l:
-    if man.stack[i].hover.kind >= wkRoot:
+    let hover {.cursor.} = man.stack[i].hover
+    if hover.kind >= wkRoot and hover != widget:
       man.floor(i)
       break
 
@@ -468,6 +514,8 @@ proc onforward(man: GUIManager, widget: ptr GUIWidget) =
     man.cursorForward widget[]
 
 proc onland(man: GUIManager) =
+  man.locked = man.grab
+  # Remove Current Hovered
   if man.stops == 0:
     man.land()
 

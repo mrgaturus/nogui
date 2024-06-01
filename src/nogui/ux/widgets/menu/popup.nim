@@ -190,12 +190,14 @@ widget UXMenu:
     let
       top {.cursor.} = self.top
       forward = not isNil(top)
-    # Escape from Grab Event
-    if self.test(wGrab) and forward:
-      self.send(wsEscape)
-    # Forward Event to Next Menu
-    if self.test(wHover): return
-    elif forward: top.send(wsForward)
+    # Avoid Disturb Submenu Grab
+    if forward and top.test(wGrab):
+      discard
+    # Decide Widget Forward
+    elif self.test(wHover):
+      send(self.view, wsRedirect)
+    elif forward:
+      top.send(wsForward)
     # Fallback Outside Click
     else:
       var flags = self.flags

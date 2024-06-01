@@ -21,7 +21,7 @@ type
     wsLayout
     # Event Forward
     wsForward
-    wsEscape
+    wsRedirect
     wsStop
     # Toplevel
     wsOpen
@@ -47,9 +47,11 @@ type
     # Window Running
     lazy: int32
     running: bool
-  # GUI Window Client
-  GUIWindow* = ref Window
-  GUIClient* = ptr Window
+  Client {.borrow.} =
+    distinct Window
+  # Window Pointers
+  GUIClient* = ptr Client
+  GUIWindow* = ptr Window
 
 # -----------------------
 # Window Client Messenger
@@ -145,7 +147,7 @@ proc procWidget(win: GUIWindow, signal: ptr WidgetSignal) =
   of wsLayout: layout(man, widget)
   of wsFocus: focus(man, widget)
   of wsForward: forward(man, widget)
-  of wsEscape: escape(man, widget)
+  of wsRedirect: redirect(man, widget)
   of wsStop: stop(man, widget)
   # Window Manager Open
   of wsOpen: open(man, widget)
@@ -220,7 +222,7 @@ proc messenger(win: GUIWindow, native: ptr GUINative) =
   callback.messenger(native)
 
 proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
-  new result
+  result = create(Window)
   # Define Window Native
   result.native = native
   result.timers = useTimers()
@@ -230,6 +232,10 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   # Define Window Queue
   result.messenger(native)
   result.ctx = newCTXRender(atlas)
+
+proc destroy*(win: GUIWindow) =
+  `=destroy` win[]
+  dealloc(win)
 
 # -----------------------
 # Window Client Execution

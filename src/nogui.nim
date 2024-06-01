@@ -54,6 +54,7 @@ type
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
   # Destroy Native Platform
+  destroy(app.window)
   nogui_native_destroy(app.native)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
@@ -162,8 +163,9 @@ proc getApp*(): GUIApplication =
   # Return Current App
   result = addr app
 
-proc getWindow*(): GUIClient {.inline.} =
-  result = cast[GUIClient](getApp().window)
+proc getWindow*(): GUIClient =
+  let win {.cursor.} = getApp().window
+  result = cast[GUIClient](win)
 
 # ----------------------------
 # Application Class Identifier

@@ -31,12 +31,13 @@ proc find*(pivot, outer: GUIWidget, x, y: int32): GUIWidget =
   result = pivot
   var w {.cursor.} = pivot
   # Point Inside All Parents?
-  while w.parent != outer.parent:
+  while w != outer:
     if not w.pointOnArea(x, y):
       result = w.parent
     w = w.parent
-  # Find Inside of Outside
-  result = inside(result, x, y)
+  # Find Inside of Outside Pivot
+  if result == outer or result.kind >= wkLayout:
+    result = inside(result, x, y)
 
 # -------------------------
 # Widget Tree Finder: Focus

@@ -19,7 +19,7 @@ cursors 64:
 
 widget UXForwardTest:
   new forwardtest(w: GUIWidget):
-    result.kind = wkWidget
+    result.kind = wkForward
     result.flags = {wMouse}
     # Add Child Widget
     result.add w
@@ -38,12 +38,17 @@ widget UXForwardTest:
     m1.h = m0.h
 
   method event(state: ptr GUIState) =
-    #echo "Forward: ", state.mx, " ", state.my
-    if not self.test(wGrab):
-      send(self.first, wsForward)
+    echo "Forward: ", state.mx, " ", state.my
+    if not isNil(self.first.first):
+      send(self.first.first, wsRedirect)
 
   method handle(reason: GUIHandle) =
     echo cast[pointer](self).repr, " ", reason
+
+  method draw(ctx: ptr CTXRender) =
+    if self.test(wHover):
+      ctx.color rgba(255, 255, 0, 32)
+      ctx.fill rect(self.rect)
 
 widget UXFocusTest:
   attributes:
@@ -127,7 +132,9 @@ controller CONLayout:
           horizontal().child:
             forwardtest:
               vertical().child:
-                focustest()
+                horizontal().child:
+                  focustest()
+                  focustest()
                 focustest()
                 focustest()
             colorwheel(self.color)
@@ -144,7 +151,7 @@ controller CONLayout:
       s0.mode = shortHold; s0
     shorts[].register shortcut(result.cbShortcut, NK_A + {Mod_Control})
     # Register Observer
-    observers[].register observer(result.cbObserveCursor, {evCursorMove})
+    #observers[].register observer(result.cbObserveCursor, {evCursorMove})
     # Create New Widget
     result.widget = result.createWidget()
 
