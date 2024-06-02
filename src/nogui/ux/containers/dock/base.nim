@@ -6,15 +6,9 @@ import ../../layouts/level
 # Import Builder Macros
 import ../../../[builder, pack]
 
-# ----------------------
-# UX Dock Header Helpers
-# ----------------------
-
-proc away(state: ptr GUIState, pivot: ptr GUIStatePivot): bool =
-  pivot[].capture(state)
-  # Check if Dragging is Outside Enough
-  let away0 = float32 getApp().font.asc shr 1
-  result = pivot.away >= away0
+# -------------------
+# UX Dock Tab Helpers
+# -------------------
 
 proc inside(rect: GUIRect, x: int32): bool =
   let
@@ -93,22 +87,23 @@ controller UXDockContent:
 
 widget UXDockTab:
   attributes:
+    pivot: ptr GUIStatePivot
+    onfold: ptr GUICallback
+    # Tab Dock Content
     content: UXDockContent
-    lm: GUILabelMetrics
-    # Dock Header Status
     current: ptr UXDockContent
-    cursor: ptr UXDockTab
     # Tab Arrange
+    lm: GUILabelMetrics
     x0: int32
 
   new docktab(content: UXDockContent):
     result.content = content
     result.flags = {wMouse}
 
-  proc alone: bool {.inline.} =
+  proc alone*: bool {.inline.} =
     self.prev == nil and self.next == nil
 
-  proc selected: bool {.inline.} =
+  proc selected*: bool {.inline.} =
     self.content == self.current[]
 
   method update =
@@ -150,17 +145,26 @@ widget UXDockTab:
     self.x0 = x
 
   method event(state: ptr GUIState) =
-    if self.alone: return
-    let content {.cursor.} = self.content
+    let
+      pivot = self.pivot
+      content {.cursor.} = self.content
+      selected = self.current[] == content
     # Select Dock Content when Clicked if is not Same
     if state.kind == evCursorRelease and self.test(wHover):
-      if self.current[] != content:
+      if not selected:
         content.select()
+        pivot.clicks = 0
+    # Fold Content When Double Click
+    elif pivot.clicks == 2:
+      self.onfold[].send()
+      pivot.clicks = 0
     # Manipulate Tab if Selected
-    if self.selected and self.test(wGrab):
+    elif selected and self.test(wGrab):
       if inplace(self.rect, state.my):
+        GC_ref(self)
         self.reorder(state)
-      # Detach Content if Not in Height
+        GC_unref(self)
+      # Detach Content if not Inplace
       else: content.detach()
 
   method draw(ctx: ptr CTXRender) =
@@ -189,15 +193,8 @@ widget UXDockTab:
       ctx.text(p.xt + pad, p.yt, co.title)
 
   method handle(reason: GUIHandle) =
-    let cursor = self.cursor
-    # Change Selected Tab
-    case reason
-    of inGrab, inHover:
-      cursor[] = self
-    of outGrab, outHover:
-      if not self.some({wGrab, wHover}):
-        cursor[] = nil
-    else: discard
+    if reason in {inHover, outHover}:
+      self.pivot.clicks = 0
 
 # ----------------------
 # UX Dock Header Tabbing
@@ -206,7 +203,6 @@ widget UXDockTab:
 widget UXDockTabbing:
   attributes:
     pivot: ptr GUIStatePivot
-    onhead: ptr GUICallback
     onfold: ptr GUICallback
     current: ptr UXDockContent
     # Tab Dispatched
@@ -226,8 +222,9 @@ widget UXDockTabbing:
     content.tab = tab
     self.add(tab)
     # Configure Dock Tab
+    tab.pivot = self.pivot
+    tab.onfold = self.onfold
     tab.current = self.current
-    tab.cursor = addr self.cursor
     # Change Selected Content
     self.current[] = content
 
@@ -304,30 +301,9 @@ widget UXDockTabbing:
       m.w = w; m.h = h
       # Next Tab Widget
       x += w
-
-  method event(state: ptr GUIState) =
-    let
-      cursor {.cursor.} = self.cursor
-      pivot = self.pivot
-      # Check if Was Dragged Away and not Selected
-      alone = self.first == self.last
-      nothing = isNil(cursor) or not cursor.selected()
-      check = state.away(pivot)
-    # Move Widget Frame
-    if check and (nothing or alone):
-      self.onhead[].send()
-      self.send(wsStop)
-    # Fold Widget Frame when Double Clicked
-    elif not nothing or alone:
-      if pivot.clicks == 2:
-        self.onfold[].send()
-      else: return
-    # Reset Pivot Clicks
-    pivot.clicks = 0
-
-  method handle(reason: GUIHandle) =
-    if reason in {inHover, outHover}:
-      self.pivot.clicks = 0
+    # Extends Unique Tab
+    if self.first == self.last:
+      self.first.metrics.w = self.metrics.w
 
 # ----------------------
 # UX Dock Header Buttons
@@ -344,8 +320,6 @@ widget UXDockButtons of UXLayoutHLevel:
       onfold: GUICallback
       onclose: GUICallback
     # Dock Manipulation
-    pivot: ptr GUIStatePivot
-    onhead: ptr GUICallback
     menu: ptr UXMenuMapper
 
   proc cb0fold = force(self.onfold)
@@ -378,7 +352,7 @@ widget UXDockButtons of UXLayoutHLevel:
     result.btnFold = btnFold
     result.btnClose = btnClose
     # Define Widget Kind
-    result.kind = wkForward
+    result.kind = wkLayout
     result.flags = {wMouse}
 
   proc updateButtons*(folded: bool) =
@@ -387,11 +361,6 @@ widget UXDockButtons of UXLayoutHLevel:
     self.btnFold.icon =
       if folded: iconFold
       else: iconVisible
-
-  method event(state: ptr GUIState) =
-    if state.away(self.pivot):
-      self.onhead[].send()
-      self.send(wsStop)
 
 # --------------
 # UX Dock Header
@@ -405,9 +374,7 @@ widget UXDockHeader:
     {.public.}:
       pivot: GUIStatePivot
       buttons: UXDockButtons
-      # Header Dock Content
       content: UXDockContent
-      onhead: GUICallback
 
   new dockheader():
     result.kind = wkContainer
@@ -415,14 +382,10 @@ widget UXDockHeader:
     let
       tabs = docktabbing()
       buttons = dockbuttons()
-    # Configure Dock Tabs
+    # Configure Dock Widgets
     tabs.pivot = addr result.pivot
-    tabs.onhead = addr result.onhead
     tabs.onfold = addr buttons.onfold
     tabs.current = addr result.content
-    # Configure Dock Buttons
-    buttons.pivot = addr result.pivot
-    buttons.onhead = addr result.onhead
     buttons.menu = addr result.menu
     # Add Dock Widgets
     result.add(tabs)

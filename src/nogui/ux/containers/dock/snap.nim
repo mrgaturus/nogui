@@ -1,4 +1,4 @@
-from ../../prelude import GUIMetrics, getApp
+from ../../prelude import GUIWidget, GUIMetrics, getApp
 from ../../../native/cursor import GUICursorSys
 
 type
@@ -7,8 +7,8 @@ type
     dockDown
     dockLeft
     dockRight
-    # No Sides
-    dockNothing
+    # Dock Moving
+    dockMove
   DockSides* = set[DockSide]
   # Dock Resize-Move Pivot
   DockPivot* = object
@@ -21,12 +21,13 @@ type
 # Dock Panel Resize
 # -----------------
 
-proc resizePivot*(m: GUIMetrics, x, y: int32): DockPivot =
+proc resizePivot*(panel: GUIWidget, x, y: int32): DockPivot =
   let
     app = getApp()
+    m = panel.metrics
     # Relative Position
-    x0 = x - m.x
-    y0 = y - m.y
+    x0 = x - panel.rect.x
+    y0 = y - panel.rect.y
     # Resize Borders
     pad = app.space.margin
     thr0 = pad + (pad shr 1)

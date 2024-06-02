@@ -3,7 +3,7 @@ from math import sqrt
 
 type
   GUIStatePivot* = object
-    locked*: bool
+    locked*, hold*: bool
     # Pivot Position
     px*, py*: float32
     mx*, my*: int32
@@ -69,7 +69,9 @@ proc capture*(pivot: var GUIStatePivot, state: ptr GUIState) =
   of evCursorRelease:
     pivot.dist = 0
     pivot.away = 0
+    # Release Locked
     pivot.locked = false
+    pivot.hold = false
     # Check Clicks Timeout
     pivot.timeout(renew = false)
   # Capture Distance

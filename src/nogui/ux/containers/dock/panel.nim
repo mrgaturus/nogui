@@ -1,7 +1,7 @@
-import base, session, snap
+import base, snap
 # Dock Widget Creations
 import ../../layouts/base
-import ../../prelude
+import ../../[prelude, pivot]
 
 # -------------
 # UX Dock Panel
@@ -10,12 +10,14 @@ import ../../prelude
 widget UXDockPanel:
   attributes:
     pivot: DockPivot
+    content: UXDockContent
     # Dock Widgets
     {.cursor.}:
       header: UXDockHeader
       widget: GUIWidget
-    # Dock Current Content
-    content: UXDockContent
+    # Dock Grouped
+    {.public.}:
+      grouped: bool
 
   callback cbClose:
     self.header.detach(self.content)
@@ -39,36 +41,6 @@ widget UXDockPanel:
       m.h = content.h
     # Update Dock Panel Layout
     content.folded = folded
-    self.send(wsLayout)
-
-  # -- Dock Panel Manipulation --
-  proc relative(state: ptr GUIState): tuple[x, y: int32] =
-    let r = addr self.parent.rect
-    # Cursor Relative to Parent
-    result.x = state.mx - r.x
-    result.y = state.my - r.y
-
-  callback cbMove:
-    let
-      state = getApp().state
-      pivot = addr self.header.pivot
-      m0 = addr self.pivot.metrics
-    # Backup Dock Rect
-    if pivot.locked:
-      m0[] = self.metrics
-      pivot.locked = false
-      # Change Cursor to Moving
-      getWindow().cursor(cursorMove)
-    # Calculate Cursor Delta
-    let
-      p = self.relative(state)
-      dx = p.x - pivot.mx
-      dy = p.y - pivot.my
-    # Locate New Window Position
-    let m = addr self.metrics
-    m.x = int16(m0.x + dx)
-    m.y = int16(m0.y + dy)
-    # Relayout Widget
     self.send(wsLayout)
 
   callback cbSelect(content: UXDockContent):
@@ -95,11 +67,10 @@ widget UXDockPanel:
       header = dockheader()
       widget = dummy()
     # Configure Dock Header
-    header.onhead = result.cbMove
     header.buttons.onfold = result.cbFold
     header.buttons.onclose = result.cbClose
     # Configure Dock Kind
-    result.kind = wkForward
+    result.kind = wkWidget
     result.flags = {wMouse}
     # Configure Widgets to Panel
     result.add(header)
@@ -159,31 +130,89 @@ widget UXDockPanel:
       content.h = m.h
 
   # -- Dock Panel Interaction --
-  proc resize(x, y: int32) =
-    let pivot = addr self.pivot
-    if pivot.sides == {}: return
-    # Resize Dock Panel and Relayout
-    self.metrics = pivot[].resize(x, y)
+  proc move(state: ptr GUIState) =
+    let
+      pivot = addr self.header.pivot
+      m0 = addr self.pivot.metrics
+      m = addr self.metrics
+      # Calculate Cursor Delta
+      dx = state.mx - pivot.mx
+      dy = state.my - pivot.my
+    # Locate New Position
+    m.x = int16(m0.x + dx)
+    m.y = int16(m0.y + dy)
+    # Relayout Widget
     self.send(wsLayout)
 
-  method event(state: ptr GUIState) =
-    if state.kind == evCursorClick:
-      let session = cast[UXDockSession](self.parent)
-      session.elevate(self)
-    # Avoid Resize when Folded
-    elif self.content.folded:
-      return
+  proc resize(state: ptr GUIState) =
+    let pivot = addr self.pivot
+    # Move Dock Panel
+    if pivot.sides == {}: discard
+    elif pivot.sides == {dockMove}:
+      self.move(state)
+    # Resize Dock Panel and Layout Panel
+    elif not (self.grouped or self.content.folded):
+      self.metrics = pivot[].resize(state.mx, state.my)
+      self.send(wsLayout)
+
+  proc capture(state: ptr GUIState) =
+    let
+      p0 = addr self.pivot
+      p1 = addr self.header.pivot
+      win = getWindow()
     # Calculate Resize Pivot
-    let p = self.relative(state)
-    if self.flags * {wHover, wGrab} == {wHover}:
-      self.pivot = resizePivot(self.metrics, p.x, p.y)
-      getWindow().cursor(resizeCursor self.pivot)
-    # Resize Dock Panel to Point
-    else: self.resize(p.x, p.y)
+    var flags = self.flags
+    if flags * {wHover, wGrab} == {wHover}:
+      p0[] = self.resizePivot(state.mx, state.my)
+      win.cursor(resizeCursor self.pivot)
+    # Calculate Move Pivot
+    p1[].capture(state)
+    let away0 = float32 getApp().font.asc shr 1
+    if p0.sides == {} and p1.away > away0:
+      p0.metrics = self.metrics
+      p0.sides = {dockMove}
+    # Change Cursor as Moving
+    if p0.sides == {dockMove}:
+      win.cursor(cursorMove)
+
+  proc redirect(widget: GUIWidget, state: ptr GUIState): bool =
+    let
+      inside = widget.pointOnArea(state.mx, state.my)
+      grab = state.kind != evCursorClick and self.test(wGrab)
+    # Redirect Only if not Grabbed and Inside
+    result = inside and not grab
+    if not result: return result
+    # Reset Frame Pivot
+    wasMoved(self.pivot)
+    wasMoved(self.header.pivot)
+    getWindow().cursorReset()
+    # Redirect to Widget
+    widget.send(wsRedirect)
+
+  method event(state: ptr GUIState) =
+    let
+      widget {.cursor.} = self.widget
+      header {.cursor.} = self.header
+      # Content Selected Tab
+      tab {.cursor.} = self.content.tab
+      unique = isNil(tab.next) and isNil(tab.prev)
+      grab = self.test(wGrab) or state.kind == evCursorRelease
+      check = grab and (unique or {wGrab, wHover} * tab.flags == {})
+    # Capture Selected Sides
+    let sides = self.pivot.sides
+    self.capture(state)
+    # Check Selected Sides
+    if sides != {} and check:
+      self.resize(state)
+      self.send(wsStop)
+    # Forward to Content Widget
+    elif self.redirect(widget, state): discard
+    elif header.pointOnArea(state.mx, state.my):
+      header.send(wsForward)
 
   method handle(reason: GUIHandle) =
     if reason in {outGrab, outHover}:
-      # Reset Cursor When not Hovered
+      # Reset Cursor when was Manipulating
       if not self.test(wGrab):
         getWindow().cursorReset()
 
@@ -215,23 +244,23 @@ proc extract0(self: UXDockPanel, content: ptr UXDockContent) =
   let
     c0 = content[]
     panel = dockpanel()
-    pivot = addr self.header.pivot
+    header {.cursor.} = self.header
   # Add Content to Panel
   panel.add(c0)
   GC_unref(c0)
-  # Locate at the same Pivot
-  panel.header.pivot = pivot[]
-  pivot[].wasMoved()
   # Locate at the same Metrics
+  panel.header.pivot = header.pivot
+  panel.pivot = self.pivot
   panel.metrics = self.metrics
   panel.rect = self.rect
-  send(panel.cbMove)
+  # Clear Panel Pivot
+  wasMoved(self.pivot)
+  wasMoved(header.pivot)
   # Attach to Session Last
   self.parent.add(panel)
   self.parent.send(wsLayout)
   # Continue Grabbing Window
   getWindow().send(wsUnHover)
-  getApp().state.kind = evCursorClick
   panel.send(wsForward)
 
 proc detach0(self: UXDockPanel, content: ptr UXDockContent) =
@@ -242,7 +271,7 @@ proc detach0(self: UXDockPanel, content: ptr UXDockContent) =
   header.detach(c0)
   header.content.select()
   # Extract to New Panel if Dragging
-  if header.pivot.locked:
+  if self.pivot.sides == {dockMove}:
     let cbExtract = self.cb0(extract0)
     send(cbExtract, c0)
     GC_ref(c0)
