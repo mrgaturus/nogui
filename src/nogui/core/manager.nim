@@ -173,9 +173,6 @@ proc unhover*(man: GUIManager) =
   # Clear Hover Stack
   setLen(man.stack, 0)
   man.depth = 0
-  # Remove Grab
-  man.grab = false
-  man.locked = false
 
 proc hover*(man: GUIManager, widget: GUIWidget) =
   let i = man.depth
@@ -312,6 +309,9 @@ proc cursorEvent*(man: GUIManager, state: ptr GUIState) =
   man.state = state
   man.depth = 0
   man.stops = 0
+  # Avoid Grab to Nothing
+  if man.locked and len(man.stack) == 0:
+    return
   # Check Cursor Grab Status
   let outer = man.cursorOuter(state.mx, state.my)
   if state.kind == evCursorClick:
