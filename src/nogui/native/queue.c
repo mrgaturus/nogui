@@ -40,7 +40,7 @@ int nogui_cb_equal(nogui_cb_t* a, nogui_cb_t* b) {
   long bytes1 = b->bytes - sizeof(void**);
 
   // Compare if is the same Callback
-  return (bytes0 == bytes1) && memcmp(a0, b0, bytes0);
+  return (bytes0 != bytes1) || memcmp(a0, b0, bytes0);
 }
 
 // --------------------
