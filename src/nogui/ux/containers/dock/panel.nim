@@ -142,7 +142,7 @@ widget UXDockPanel:
     m.x = int16(m0.x + dx)
     m.y = int16(m0.y + dy)
     # Relayout Widget
-    self.send(wsLayout)
+    self.relax(wsLayout)
 
   proc resize(state: ptr GUIState) =
     let pivot = addr self.pivot
@@ -153,7 +153,7 @@ widget UXDockPanel:
     # Resize Dock Panel and Layout Panel
     elif pivot.sides != {dockLocked}:
       self.metrics = pivot[].resize(state.mx, state.my)
-      self.send(wsLayout)
+      self.relax(wsLayout)
 
   proc capture(state: ptr GUIState) =
     let

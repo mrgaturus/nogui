@@ -88,7 +88,7 @@ controller CXDockTesting:
       row0 = self.createRow0(x, y)
       row1 = self.createRow1(x, y)
     # Register Rows to Group
-    result = dockgroup().child:
+    result = dockgroup: dockcolumns().child:
       row0
       row1
     # Locate Panel Position

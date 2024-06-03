@@ -1,6 +1,4 @@
-import ../../../core/tree
 import ../../prelude
-# Import Group
 import group
 
 # ------------
@@ -74,8 +72,9 @@ widget UXDockSession:
     let
       docks = self.docks
       clicked = state.kind == evCursorClick
+      grab = self.test(wGrab) or state.kind == evCursorRelease
     # Escape from Widget Grab
-    if self.test(wGrab) and not clicked:
+    if grab and not clicked:
       return
     # Find Container Widgets
     for dock in reverse(docks.last):
@@ -85,9 +84,12 @@ widget UXDockSession:
           dock.send(wsForward)
           return
         # Forward Dock Group
-        let w = dock.inside(state.mx, state.my)
-        if w.vtable != dock.vtable:
-          if clicked: docks.elevate(dock)
+        let
+          group {.cursor.} = cast[UXDockGroup](dock)
+          w = group.inside(state.mx, state.my)
+        # Forward if Found Something
+        if w.vtable != group.vtable:
+          if clicked: docks.elevate(group)
           w.send(wsForward)
           return
     # Forward Root Widget
