@@ -61,6 +61,7 @@ type
     sys: array[GUICursorSys, GUICursor]
     # Current Cursor
     active: GUICursor
+    current: GUICursor
 
 # ----------------------
 # Native Cursor Creation
@@ -101,14 +102,34 @@ proc destroy*(c: GUICursors) =
     if not isNil(cursor):
       nogui_cursor_destroy(native, cursor)
 
+# ----------------------
+# Native Cursor Callback
+# ----------------------
+
+proc onchange(c: GUICursors, p: pointer) =
+  let cursor = c.current
+  if cursor == c.active: return
+  # Present Native Cursor
+  if not isNil(cursor):
+    nogui_native_cursor(c.native, cursor)
+  else: nogui_native_cursor_reset(c.native)
+  # Replace Current Native
+  c.active = cursor
+
+proc change(c: GUICursors, cursor: GUICursor) =
+  if c.current == cursor: return
+  c.current = cursor
+  # Prepare Change Callback
+  let cb = nogui_cb_create(0)
+  cb.self = cast[pointer](c)
+  cb.fn = cast[GUINativeProc](onchange)
+  # Relax Cursor Change Callback
+  let queue = nogui_native_queue(c.native)
+  nogui_queue_relax(queue, cb)
+
 # ---------------------
 # Native Cursor Manager
 # ---------------------
-
-proc change(c: GUICursors, cursor: GUICursor) =
-  if cursor != c.active:
-    nogui_native_cursor(c.native, cursor)
-    c.active = cursor
 
 proc change*(c: GUICursors, id: GUICursorSys) =
   let native = c.native
@@ -122,11 +143,7 @@ proc change*(c: GUICursors, id: GUICursorSys) =
 
 proc change*(c: GUICursors, id: GUICursorID) =
   let cursor = c.custom[int32 id]
-  # Change Current Cursor
   c.change(cursor)
 
 proc reset*(c: GUICursors) =
-  if isNil(c.active): return
-  nogui_native_cursor_reset(c.native)
-  # Remove Active Cursor
-  c.active = nil
+  c.change(nil)
