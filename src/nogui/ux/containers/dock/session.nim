@@ -21,6 +21,7 @@ widget UXDockContainer:
 
   proc elevate*(panel: GUIWidget) =
     assert panel.parent == self
+    if self.last == panel: return
     # Reattach to Last Widget
     GC_ref(panel)
     panel.detach()

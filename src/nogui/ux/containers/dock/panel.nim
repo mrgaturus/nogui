@@ -151,29 +151,32 @@ widget UXDockPanel:
     elif pivot.sides == {dockMove}:
       self.move(state)
     # Resize Dock Panel and Layout Panel
-    elif not (self.grouped or self.content.folded):
+    elif pivot.sides != {dockLocked}:
       self.metrics = pivot[].resize(state.mx, state.my)
       self.send(wsLayout)
 
   proc capture(state: ptr GUIState) =
     let
+      win = getWindow()
+      # Dock Panel Pivots
       p0 = addr self.pivot
       p1 = addr self.header.pivot
-      win = getWindow()
-    # Calculate Resize Pivot
-    var flags = self.flags
-    if flags * {wHover, wGrab} == {wHover}:
+      locked = self.grouped or self.content.folded
+    # Calculate Resize Pivot when not Grabbed
+    if {wHover, wGrab} * self.flags == {wHover}:
       p0[] = self.resizePivot(state.mx, state.my)
-      win.cursor(resizeCursor self.pivot)
     # Calculate Move Pivot
     p1[].capture(state)
     let away0 = float32 getApp().font.asc shr 1
     if p0.sides == {} and p1.away > away0:
       p0.metrics = self.metrics
       p0.sides = {dockMove}
-    # Change Cursor as Moving
+    # Change Cursor to Panel Side
     if p0.sides == {dockMove}:
       win.cursor(cursorMove)
+    elif locked and p0.sides != {}:
+      p0.sides = {dockLocked}
+    else: win.cursor(resizeCursor self.pivot)
 
   proc redirect(widget: GUIWidget, state: ptr GUIState): bool =
     let
@@ -206,14 +209,17 @@ widget UXDockPanel:
       self.resize(state)
       self.send(wsStop)
     # Forward to Content Widget
+    elif tab.test(wGrab): discard
     elif self.redirect(widget, state): discard
     elif header.pointOnArea(state.mx, state.my):
       header.send(wsForward)
 
   method handle(reason: GUIHandle) =
     if reason in {outGrab, outHover}:
-      # Reset Cursor when was Manipulating
-      if not self.test(wGrab):
+      # Reset Pivot if not Grab and Hover
+      if {wGrab, wHover} * self.flags == {}:
+        wasMoved(self.pivot)
+        wasMoved(self.header.pivot)
         getWindow().cursorReset()
 
   # -- Dock Panel Background --

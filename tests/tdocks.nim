@@ -8,7 +8,7 @@ from nogui/ux/layouts/base import dummy
 import nogui/ux/prelude
 import nogui/builder
 # Import Docks Containers
-import nogui/ux/containers/dock/[panel, session, base]
+import nogui/ux/containers/dock/[panel, session, base, group]
 
 # -------------
 # Helper Widget
@@ -43,8 +43,60 @@ controller CXDockTesting:
     root: GUIWidget
     widget: UXDockSession
 
+  proc createRow0(x, y: int16): UXDockRow =
+    result = dockrow()
+    let
+      panel0 = dockpanel()
+      panel1 = dockpanel()
+      panel2 = dockpanel()
+    panel0.grouped = true
+    panel1.grouped = true
+    panel2.grouped = true
+    # Register Content
+    panel0.add dockcontent("Panel 1", dockbodytest(0x00FFFFFF'u32, 210, 120))
+    panel1.add dockcontent("Panel 2", dockbodytest(0x00FFFFFF'u32, 300, 230))
+    panel2.add dockcontent("Panel 3", dockbodytest(0x00FFFFFF'u32, 100, 80))
+    # Register Panels to Row
+    result = dockrow().child:
+      panel0
+      panel1
+      panel2
+    # Locate Panel Position
+    result.metrics.x = x
+    result.metrics.y = x
+
+  proc createRow1(x, y: int16): UXDockRow =
+    result = dockrow()
+    let
+      panel0 = dockpanel()
+      panel1 = dockpanel()
+    panel0.grouped = true
+    panel1.grouped = true
+    # Register Content
+    panel0.add dockcontent("Panel 1", dockbodytest(0x00FFFFFF'u32, 100, 200))
+    panel1.add dockcontent("Panel 2", dockbodytest(0x00FFFFFF'u32, 210, 100))
+    # Register Panels to Row
+    result = dockrow().child:
+      panel0
+      panel1
+    # Locate Panel Position
+    result.metrics.x = x
+    result.metrics.y = x
+
+  proc createGroup(x, y: int16): UXDockGroup =
+    let
+      row0 = self.createRow0(x, y)
+      row1 = self.createRow1(x, y)
+    # Register Rows to Group
+    result = dockgroup().child:
+      row0
+      row1
+    # Locate Panel Position
+    result.metrics.x = x
+    result.metrics.y = x
+
   proc createWidget: UXDockSession =
-    self.root = dummy()
+    self.root = dockbodytest(0x2FFFFFFF'u32, 210, 120)
     # Create Some Panels
     let
       panel0 = dockpanel0test(280, 20)
@@ -60,10 +112,22 @@ controller CXDockTesting:
     # Create Unique Tab
     panel2.add dockcontent("My Tool", dockbodytest(0x0000FF00'u32, 250, 200))
     # Create Dock Session
-    result = docksession(self.root).child:
+    result = docksession(self.root)
+    discard result.docks.child:
       panel0
       panel1
       panel2
+      # Add A Random Row
+      self.createRow0(20, 10)
+      self.createGroup(20, 10)
+
+  #proc createWidget2: UXDockSession =
+  #  self.root = dummy()
+  #  result = docksession(self.root)
+  #  let panel = dockpanel0test(20, 20)
+  #  panel.add dockcontent("Nested Docks", self.createWidget())
+  #  discard result.docks.child:
+  #    panel
 
   new docktesting():
     result.widget = result.createWidget()

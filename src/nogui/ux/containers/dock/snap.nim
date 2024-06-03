@@ -7,8 +7,9 @@ type
     dockDown
     dockLeft
     dockRight
-    # Dock Moving
+    # Dock Extra
     dockMove
+    dockLocked
   DockSides* = set[DockSide]
   # Dock Resize-Move Pivot
   DockPivot* = object
