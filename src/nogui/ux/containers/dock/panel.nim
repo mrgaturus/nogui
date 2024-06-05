@@ -15,8 +15,9 @@ widget UXDockPanel:
     {.cursor.}:
       header: UXDockHeader
       widget: GUIWidget
-    # Dock Grouped
+    # Dock Session Watcher
     {.public.}:
+      onwatch: GUICallbackEX[UXDockPanel]
       grouped: bool
 
   callback cbClose:
@@ -130,30 +131,23 @@ widget UXDockPanel:
       content.h = m.h
 
   # -- Dock Panel Interaction --
-  proc move(state: ptr GUIState) =
+  proc geometry(state: ptr GUIState) =
     let
-      pivot = addr self.header.pivot
-      m0 = addr self.pivot.metrics
-      m = addr self.metrics
-      # Calculate Cursor Delta
-      dx = state.mx - pivot.mx
-      dy = state.my - pivot.my
-    # Locate New Position
-    m.x = int16(m0.x + dx)
-    m.y = int16(m0.y + dy)
-    # Relayout Widget
-    self.relax(wsLayout)
-
-  proc resize(state: ptr GUIState) =
-    let pivot = addr self.pivot
+      pivot = addr self.pivot
+      x = state.mx
+      y = state.my
     # Move Dock Panel
-    if pivot.sides == {}: discard
+    if pivot.sides == {}: return
+    elif state.kind == evCursorRelease: discard
     elif pivot.sides == {dockMove}:
-      self.move(state)
-    # Resize Dock Panel and Layout Panel
-    elif pivot.sides != {dockLocked}:
-      self.metrics = pivot[].resize(state.mx, state.my)
+      self.metrics = pivot[].move(x, y)
       self.relax(wsLayout)
+    # Resize Dock Panel Metrics
+    elif pivot.sides != {dockLocked}:
+      self.metrics = pivot[].resize(x, y)
+      self.relax(wsLayout)
+    # Watch Applied Metrics
+    send(self.onwatch, self)
 
   proc capture(state: ptr GUIState) =
     let
@@ -164,19 +158,19 @@ widget UXDockPanel:
       locked = self.grouped or self.content.folded
     # Calculate Resize Pivot when not Grabbed
     if {wHover, wGrab} * self.flags == {wHover}:
-      p0[] = self.resizePivot(state.mx, state.my)
+      p0[].resize0(self, state.mx, state.my)
     # Calculate Move Pivot
     p1[].capture(state)
-    let away0 = float32 getApp().font.asc shr 1
-    if p0.sides == {} and p1.away > away0:
-      p0.metrics = self.metrics
-      p0.sides = {dockMove}
-    # Change Cursor to Panel Side
-    if p0.sides == {dockMove}:
-      win.cursor(cursorMove)
+    let away0 = getApp().font.asc shr 1
+    if p0.sides == {} and p1.away > float32(away0):
+      p0[].move0(self, p1.mx, p1.my)
+    # Check if Panel is not Locked
+    if p0.sides == {dockMove}: discard
     elif locked and p0.sides != {}:
       p0.sides = {dockLocked}
-    else: win.cursor(resizeCursor self.pivot)
+      return
+    # Change Pivot Cursor
+    win.cursor(p0[].cursor)
 
   proc redirect(widget: GUIWidget, state: ptr GUIState): bool =
     let
@@ -206,7 +200,7 @@ widget UXDockPanel:
     self.capture(state)
     # Check Selected Sides
     if sides != {} and check:
-      self.resize(state)
+      self.geometry(state)
       self.send(wsStop)
     # Forward to Content Widget
     elif tab.test(wGrab): discard
@@ -221,6 +215,9 @@ widget UXDockPanel:
         wasMoved(self.pivot)
         wasMoved(self.header.pivot)
         getWindow().cursorReset()
+      # Watch When Grab Removed
+      if reason == outGrab:
+        send(self.onwatch, self)
 
   # -- Dock Panel Background --
   method draw(ctx: ptr CTXRender) =
@@ -267,6 +264,7 @@ proc extract0(self: UXDockPanel, content: ptr UXDockContent) =
   self.parent.send(wsLayout)
   # Continue Grabbing Window
   getWindow().send(wsUnHover)
+  panel.onwatch = self.onwatch
   panel.send(wsForward)
 
 proc detach0(self: UXDockPanel, content: ptr UXDockContent) =

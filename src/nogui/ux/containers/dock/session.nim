@@ -1,5 +1,5 @@
 import ../../prelude
-import group
+import group, panel, snap
 
 # ------------
 # UX Dock Hint
@@ -14,11 +14,39 @@ widget UXDockHint:
 # -----------------
 
 widget UXDockContainer:
+  attributes:
+    hint: UXDockHint
+
   new dockcontainer():
     result.kind = wkContainer
+    result.hint = dockhint()
 
-  proc elevate*(panel: GUIWidget) =
+  # -- Dock Panel Watcher --
+  callback watchDock(dog: UXDockPanel):
+    let dock {.cursor.} = dog[]
+
+  callback watchGroup(dog: UXDockGroup):
+    let group {.cursor.} = dog[]
+
+  proc watch(panel: GUIWidget) =
+    privateAccess(UXDockPanel)
+    privateAccess(UXDockGroup)
+    # Configure Panel
+    if panel of UXDockPanel:
+      let p {.cursor.} = cast[UXDockPanel](panel)
+      p.onwatch = self.watchDock
+      p.pivot.clip = addr self.metrics
+    # Configure Group Watcher
+    elif panel of UXDockGroup:
+      let g {.cursor.} = cast[UXDockGroup](panel)
+      g.onwatch = self.watchGroup
+      g.pivot.clip = addr self.metrics
+
+  # -- Dock Panel Elevation --
+  proc elevate(panel: GUIWidget) =
     assert panel.parent == self
+    # Watch Dock Panel
+    self.watch(panel)
     if self.last == panel: return
     # Reattach to Last Widget
     GC_ref(panel)
@@ -32,8 +60,6 @@ widget UXDockContainer:
 
 widget UXDockSession:
   attributes:
-    hint: UXDockHint
-    # Wrapper Widget
     {.cursor.}:
       root: GUIWidget
     {.cursor, public.}:
@@ -47,7 +73,6 @@ widget UXDockSession:
     result.root = root
     result.docks = docks
     # Define Session Hint
-    result.hint = dockhint()
     result.flags = {wMouse}
 
   method update =

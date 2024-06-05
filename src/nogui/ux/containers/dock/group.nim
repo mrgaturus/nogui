@@ -3,12 +3,6 @@ import ../../../core/tree
 # Import Dock Snap
 import snap
 
-proc away(state: ptr GUIState, pivot: ptr GUIStatePivot): bool =
-  pivot[].capture(state)
-  # Check if Dragging is Outside Enough
-  let away0 = float32 getApp().font.asc shr 1
-  result = pivot.away >= away0
-
 # -------------------------
 # Dock Group Row -> Columns
 # -------------------------
@@ -103,8 +97,10 @@ widget UXDockColumns:
 
 widget UXDockGroupBar:
   attributes:
-    pivot: GUIStatePivot
-    m0: GUIMetrics
+    p0: GUIStatePivot
+    pivot: ptr DockPivot
+    # Dock Group Watcher
+    onwatch: GUICallback
 
   new dockgroup0bar():
     result.flags = {wMouse}
@@ -115,28 +111,32 @@ widget UXDockGroupBar:
 
   method event(state: ptr GUIState) =
     let
-      pivot = addr self.pivot
-      away = state.away(pivot)
-      locked = pivot.locked
+      p0 = self.pivot
+      p1 = addr self.p0
+    p1[].capture(state)
+    # Check Pivot Away
+    let
+      away0 = getApp().font.asc shr 1
+      away = p1.away > float32(away0)
+      locked = p1.locked
     # Capture Parent Metrics
     if away and locked:
-      self.m0 = self.parent.metrics
-      getWindow().cursor(cursorMove)
+      p0[].move0(self.parent, p1.mx, p1.my)
+      getWindow().cursor(p0[].cursor)
       # Start Moving Parent
-      pivot.locked = false
+      p1.locked = false
     # Move Parent Metrics
     elif away and not locked:
-      let
-        m0 = addr self.m0
-        m = addr self.parent.metrics
-      m.x = m0.x + int16(state.mx - pivot.mx)
-      m.y = m0.y + int16(state.my - pivot.my)
+      let m = addr self.parent.metrics
+      m[] = p0[].move(state.mx, state.my)
       # Relayout Parent Metrics
       relax(self.parent, wsLayout)
+      send(self.onwatch)
 
   method handle(reason: GUIHandle) =
     if reason == outGrab:
       getWindow().cursorReset()
+      send(self.onwatch)
 
   method draw(ctx: ptr CTXRender) =
     let color = getApp().colors.item
@@ -150,12 +150,14 @@ widget UXDockGroupBar:
 
 widget UXDockGroupResize:
   attributes:
-    pivot: DockPivot
+    pivot: ptr DockPivot
     # Resize Targets
     {.cursor.}:
       group: GUIWidget
       row: GUIWidget
       target: GUIWidget
+    # Dock Group Watcher
+    onwatch: GUICallback
 
   new dockgroup0resize():
     result.flags = {wMouse, wVisible}
@@ -163,8 +165,10 @@ widget UXDockGroupResize:
   proc inside(panel: GUIWidget, x, y: int32): bool =
     var
       target {.cursor.} = panel
-      pivot = resizePivot(panel, x, y)
-      sides = pivot.sides
+      pivot = self.pivot[]
+    # Capture Resize Pivot
+    pivot.resize0(panel, x, y)
+    var sides = pivot.sides
     # Skip if not Side Selected
     if sides == {}:
       return false
@@ -179,12 +183,13 @@ widget UXDockGroupResize:
     if result:
       self.target = target
       self.row = target.parent
-      self.pivot = pivot
       self.rect = panel.rect
+      # Define Current Pivot
+      self.pivot[] = pivot
 
   proc resize(x, y: int32) =
     let
-      pivot = addr self.pivot
+      pivot = self.pivot
       delta = pivot[].resize(x, y)
       # Dock Resize Targets
       m0 = addr self.group.metrics
@@ -195,17 +200,19 @@ widget UXDockGroupResize:
     m0.y = delta.y
     m1.w = delta.w
     m2.h = delta.h
-    # Relayout Widget Group
-    self.group.relax(wsLayout)
 
   method event(state: ptr GUIState) =
     if {wHover, wGrab} * self.flags == {wHover}:
-      getWindow().cursor(resizeCursor self.pivot)
+      let pivot = self.pivot
+      getWindow().cursor(pivot[].cursor)
       # Store Cursor Pivot
-      self.pivot.x = state.mx
-      self.pivot.y = state.my
+      pivot.x = state.mx
+      pivot.y = state.my
     elif self.test(wGrab):
       self.resize(state.mx, state.my)
+      # Relayout Widget Group
+      relax(self.group, wsLayout)
+      send(self.onwatch)
 
   method handle(reason: GUIHandle) =
     if reason == inGrab:
@@ -221,8 +228,11 @@ widget UXDockGroupResize:
       m.h = m2.h
       # Store Min Width
       m.minW = m1.minW
+    # Reset When not Grabbing anymore
     elif {wHover, wGrab} * self.flags == {}:
       getWindow().cursorReset()
+    if reason == outGrab:
+      send(self.onwatch)
 
 # -----------------
 # Dock Group Widget
@@ -230,11 +240,18 @@ widget UXDockGroupResize:
 
 widget UXDockGroup:
   attributes:
+    pivot: DockPivot
     resize: UXDockGroupResize
     # Dock Group Widgets
     {.cursor.}:
       columns: UXDockColumns
       bar: UXDockGroupBar
+    # Dock Group Watcher
+    {.public.}:
+      onwatch: GUICallbackEX[UXDockGroup]
+
+  proc onwatch0() =
+    force(self.onwatch, addr self)
 
   new dockgroup(columns: UXDockColumns):
     let
@@ -247,6 +264,15 @@ widget UXDockGroup:
     # Configure Dock Resize
     resize.group = result
     result.resize = resize
+    # Configure Dock Watcher
+    let
+      pivot = addr result.pivot
+      self0 = cast[pointer](result)
+      onwatch = unsafeCallback(self0, onwatch0)
+    resize.onwatch = onwatch
+    resize.pivot = pivot
+    bar.onwatch = onwatch
+    bar.pivot = pivot
     # Add Dock Group Widgets
     result.add(columns)
     result.add(bar)
