@@ -35,7 +35,7 @@ widget UXDockPanel:
       content.select()
     # Detach Grouped
     elif self.grouped:
-      self.flags.excl(wVisible)
+      self.flags.excl(wMouse)
       force(self.onwatch, addr self)
     # Detach when Floating
     else: self.detach()

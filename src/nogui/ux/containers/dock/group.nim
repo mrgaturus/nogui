@@ -156,8 +156,6 @@ widget UXDockGroupResize:
       group: GUIWidget
       row: GUIWidget
       target: GUIWidget
-    # Dock Group Watcher
-    onwatch: GUICallback
 
   new dockgroup0resize():
     result.flags = {wMouse, wVisible}
@@ -213,7 +211,6 @@ widget UXDockGroupResize:
       self.resize(state.mx, state.my)
       # Relayout Widget Group
       relax(self.group, wsLayout)
-      send(self.onwatch)
 
   method handle(reason: GUIHandle) =
     if reason == inGrab:
@@ -232,8 +229,6 @@ widget UXDockGroupResize:
     # Reset When not Grabbing anymore
     elif {wHover, wGrab} * self.flags == {}:
       getWindow().cursorReset()
-    if reason == outGrab:
-      send(self.onwatch)
 
 # -----------------
 # Dock Group Widget
@@ -270,10 +265,9 @@ widget UXDockGroup:
       pivot = addr result.pivot
       self0 = cast[pointer](result)
       onwatch = unsafeCallback(self0, onwatch0)
-    resize.onwatch = onwatch
     resize.pivot = pivot
-    bar.onwatch = onwatch
     bar.pivot = pivot
+    bar.onwatch = onwatch
     # Add Dock Group Widgets
     result.add(columns)
     result.add(bar)

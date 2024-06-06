@@ -197,3 +197,108 @@ proc groupHint*(r: GUIRect, side: DockSide): GUIRect =
     result.y += result.h - thr
     result.h = thr
   else: discard
+
+# --------------------
+# Widget Dock Snapping
+# --------------------
+
+proc checkTop(a, b: GUIMetrics, thr: int32): bool =
+  if abs(a.y - b.y - b.h) < thr:
+    let
+      ax0 = a.x
+      ax1 = a.x + a.w
+      # Sticky Area
+      x0 = b.x
+      x1 = x0 + b.w
+      # X Distance Check A
+      check0a = ax0 >= x0 and ax0 <= x1
+      check1a = ax1 >= x0 and ax1 <= x1
+      # X Distance Check B
+      check0b = x0 >= ax0 and x0 <= ax1
+      check1b = x1 >= ax0 and x1 <= ax1
+      # Merge Distance Checks
+      check0 = check0a or check0b
+      check1 = check1a or check1b
+    # Check if is sticky to top side
+    result = check0 or check1
+
+proc checkLeft(a, b: GUIMetrics, thr: int32): bool =
+  if abs(a.x - b.x - b.w) < thr:
+    let
+      ay0 = a.y
+      ay1 = a.y + a.h
+      # Sticky Area
+      y0 = b.y
+      y1 = y0 + b.h
+      # X Distance Check
+      check0a = ay0 >= y0 and ay0 <= y1
+      check1a = ay1 >= y0 and ay1 <= y1
+      # X Distance Check B
+      check0b = y0 >= ay0 and y0 <= ay1
+      check1b = y1 >= ay0 and y1 <= ay1
+      # Merge Distance Checks
+      check0 = check0a or check0b
+      check1 = check1a or check1b
+    # Check if is sticky to top side
+    result = check0 or check1
+
+proc cornerX(a, b: GUIMetrics, thr: int32): int16 =
+  let 
+    d0 = a.x - b.x
+    d1 = d0 + a.w - b.w
+  # Check Nearly Deltas
+  if abs(d0) < thr: b.x
+  elif abs(d1) < thr:
+    b.x + b.w - a.w
+  else: a.x
+
+proc cornerY(a, b: GUIMetrics, thr: int32): int16 =
+  let 
+    d0 = a.y - b.y
+    d1 = d0 + a.h - b.h
+  # Check Nearly Deltas
+  if abs(d0) < thr: b.y
+  elif abs(d1) < thr:
+    b.y + b.h - a.h
+  else: a.y
+
+proc snap*(a, b: GUIWidget): tuple[x, y: int16] =
+  let
+    a0 = a.metrics
+    b0 = b.metrics
+    # TODO: allow custom margin
+    app = getApp()
+    thr = app.space.pad
+    pad = app.space.margin shr 1
+  # Calculate Where is
+  let side = 
+    if checkTop(a0, b0, thr): dockTop
+    elif checkLeft(a0, b0, thr): dockLeft
+    # Check Opposite Dock Sides
+    elif checkTop(b0, a0, thr): dockDown
+    elif checkLeft(b0, a0, thr): dockRight
+    # No Sticky Found
+    else: dockNothing
+  # Initial Position
+  var
+    x = a0.x
+    y = a0.y
+  # Calculate Sticky Position
+  case side
+  of dockTop: 
+    y = b0.y + b0.h - pad
+    x = cornerX(a0, b0, thr)
+  of dockDown: 
+    y = b0.y - a0.h + pad
+    x = cornerX(a0, b0, thr)
+  of dockLeft: 
+    x = b0.x + b0.w - pad
+    y = cornerY(a0, b0, thr)
+  of dockRight: 
+    x = b0.x - a0.w + pad
+    y = cornerY(a0, b0, thr)
+  # No Snapping Found
+  else: discard
+  # Return Sticky Info
+  result.x = x
+  result.y = y

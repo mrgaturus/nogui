@@ -47,6 +47,16 @@ widget UXDockContainer:
     result.kind = wkContainer
     result.hint = dockhint()
 
+  # -- Dock Panel Snapping --
+  proc snap(panel: GUIWidget) =
+    let m = addr panel.metrics
+    # Apply Widget Snapping
+    for dock in reverse(self.last):
+      if dock == panel: continue
+      let s = snap(panel, dock)
+      m.x = s.x
+      m.y = s.y
+
   # -- Dock Panel Grouper --
   proc tabAppend(target, panel: UXDockPanel) =
     privateAccess(UXDockPanel)
@@ -100,7 +110,7 @@ widget UXDockContainer:
       group {.cursor.} = columns.parent
     # Detach Dock Panel
     panel.detach()
-    if panel.test(wVisible):
+    if panel.test(wMouse):
       self.add(panel)
     # Detach Dock Row if Empty
     if isNil(row.first) and isNil(row.last):
@@ -141,6 +151,8 @@ widget UXDockContainer:
     if dock.grouped:
       self.groupExit(dock)
       return
+    # Apply Panel Snapping
+    self.snap(dock)
     # Find Candidate Dock
     dock.flags.excl(wVisible)
     let found = self.inside(x, y)
@@ -166,6 +178,8 @@ widget UXDockContainer:
 
   callback watchGroup(dog: UXDockGroup):
     let group {.cursor.} = dog[]
+    # Apply Group Snapping
+    self.snap(group)
 
   proc watch(panel: GUIWidget) =
     privateAccess(UXDockPanel)
