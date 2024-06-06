@@ -111,8 +111,10 @@ converter unwrap*(self: GUITarget): GUIWidget {.inline.} =
 
 proc add*(self, widget: GUIWidget) =
   widget.parent = self
+  widget.next = nil
   # Add Widget to List
-  if self.first.isNil:
+  if isNil(self.first):
+    widget.prev = nil
     self.first = widget
   else: # Add to Last
     widget.prev = self.last
@@ -147,15 +149,12 @@ proc replace*(self, widget: GUIWidget) =
       w.last = widget
 
 proc attachNext*(self, widget: GUIWidget) =
-  var w {.cursor.}: GUIWidget
-  # Replace Next Previous
-  w = self.next
-  if not isNil(w):
-    w.prev = widget
-  # Replace Sides
+  var w {.cursor.} = self.next
   widget.next = w
   widget.prev = self
   # Replace Next
+  if not isNil(w):
+    w.prev = widget
   self.next = widget
   # Replace Parent
   w = self.parent
@@ -164,15 +163,12 @@ proc attachNext*(self, widget: GUIWidget) =
   widget.parent = w
 
 proc attachPrev*(self, widget: GUIWidget) =
-  var w {.cursor.}: GUIWidget
-  # Replace Previous Next
-  w = self.prev
-  if not isNil(w):
-    w.next = widget
-  # Replace Sides
+  var w {.cursor.} = self.prev
   widget.next = self
   widget.prev = w
-  # Replace Prev
+  # Replace Previous
+  if not isNil(w):
+    w.next = widget
   self.prev = widget
   # Replace Parent
   w = self.parent

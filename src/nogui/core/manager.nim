@@ -6,7 +6,7 @@ type
     first*: GUIWidget
     last* {.cursor.}: GUIWidget
   GUIForward = object
-    hover {.cursor.}: GUIWidget
+    hover: GUIWidget
     skip {.cursor.}: GUIWidget
     jump {.cursor.}: GUIWidget
   # GUI Window Manager
@@ -21,12 +21,10 @@ type
     popup*: GUILayer
     tooltip*: GUILayer
     # Window Focus State
-    focus {.cursor.}: GUIWidget
-    hold {.cursor.}: GUIWidget
+    focus: GUIWidget
+    hold: GUIWidget
     # Window Hover State
     stack: seq[GUIForward]
-    backup: seq[GUIForward]
-    # Window Hover Cursor
     depth, stops: int
     grab, locked: bool
 
@@ -130,27 +128,6 @@ proc unhover(man: GUIManager, idx: int) =
   if wHover in flags:
     hover.flags.excl(wHover)
     hover.vtable.handle(hover, outHover)
-
-proc floor(man: GUIManager, idx: int) =
-  let
-    d = man.depth
-    l = man.stack.len
-    r = max(l - idx, 0)
-    i0 = min(l, idx)
-  # Handle Hover Out
-  var i = i0 - 1
-  while i >= 0:
-    man.unhover(i)
-    # Next Hover
-    dec(i)
-  # Floor Hover Elements
-  copyMem(
-    addr man.stack[0],
-    addr man.stack[i0],
-    GUIForward.sizeof * r)
-  # Floor Hover Stack
-  setLen(man.stack, r)
-  man.depth = max(d - i0, 0)
 
 proc land(man: GUIManager) =
   let depth = man.depth
@@ -391,42 +368,24 @@ proc stop*(man: GUIManager, widget: GUIWidget) =
 
 proc hold*(man: GUIManager, widget: GUIWidget) =
   if not isNil(man.hold): return
-  # Remove Focus
+  # Preserve Hover and Grab
+  var flags = widget.flags + {wHold}
+  widget.flags = flags - {wHover, wGrab}
+  # Remove Focus & Hover
   man.unfocus()
-  # Floor Stack to Hold
-  let l = len(man.stack)
-  for i in 0 ..< l:
-    if man.stack[i].hover == widget:
-      man.backup = man.stack
-      setLen(man.backup, i)
-      # Floor Stack
-      man.floor(i)
-      break
+  man.unhover()
   # Handle Hold Change
-  widget.flags.incl(wHold)
+  widget.flags = flags
   widget.vtable.handle(widget, inHold)
   # Define Window Hold
+  man.hover(widget)
   man.hold = widget
 
 proc unhold*(man: GUIManager) =
   if isNil(man.hold): return
-  let
-    hold = man.hold
-    shift = len(man.backup)
+  let hold {.cursor.} = man.hold
   # Remove Focus
   man.unfocus()
-  # Restore Hover Stack
-  if shift > 0:
-    let l = len(man.stack)
-    setLen(man.stack, l + shift)
-    # Copy Backup Shift to Stack
-    const bytes = sizeof(GUIForward)
-    moveMem(addr man.stack[shift], addr man.stack[0], bytes * l)
-    copyMem(addr man.stack[0], addr man.backup[0], bytes * shift)
-    # Remove Backup Stack
-    wasMoved(man.backup)
-  # Remove Hover Otherwise
-  else: man.unhover()
   # Handle Hold Change
   hold.flags.excl(wHold)
   hold.vtable.handle(hold, outHold)
@@ -484,14 +443,6 @@ proc close*(man: GUIManager, widget: GUIWidget) =
     man.unfocus()
   # Handle Widget Detach
   widget.vtable.handle(widget, outFrame)
-  # Floor Stack to Next Toplevel if not Holded
-  if not isNil(man.hold): return
-  let l = len(man.stack)
-  for i in 0 ..< l:
-    let hover {.cursor.} = man.stack[i].hover
-    if hover.kind >= wkRoot and hover != widget:
-      man.floor(i)
-      break
 
 # ---------------------
 # Widget Layout Manager
