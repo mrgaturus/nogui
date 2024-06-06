@@ -49,9 +49,6 @@ controller CXDockTesting:
       panel0 = dockpanel()
       panel1 = dockpanel()
       panel2 = dockpanel()
-    panel0.grouped = true
-    panel1.grouped = true
-    panel2.grouped = true
     # Register Content
     panel0.add dockcontent("Panel 1", dockbodytest(0x00FFFFFF'u32, 210, 120))
     panel1.add dockcontent("Panel 2", dockbodytest(0x00FFFFFF'u32, 300, 230))
@@ -70,8 +67,6 @@ controller CXDockTesting:
     let
       panel0 = dockpanel()
       panel1 = dockpanel()
-    panel0.grouped = true
-    panel1.grouped = true
     # Register Content
     panel0.add dockcontent("Panel 1", dockbodytest(0x00FFFFFF'u32, 100, 200))
     panel1.add dockcontent("Panel 2", dockbodytest(0x00FFFFFF'u32, 210, 100))
@@ -118,7 +113,6 @@ controller CXDockTesting:
       panel1
       panel2
       # Add A Random Row
-      self.createRow0(20, 10)
       self.createGroup(20, 10)
 
   #proc createWidget2: UXDockSession =

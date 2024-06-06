@@ -1,5 +1,5 @@
 import ../../[prelude, pivot]
-import ../../../core/tree
+from ../../../core/tree import inside
 # Import Dock Snap
 import snap
 
@@ -176,6 +176,7 @@ widget UXDockGroupResize:
     let top {.cursor.} = panel.prev
     if dockTop in sides and not isNil(top):
       sides = sides - {dockTop} + {dockDown}
+      pivot.metrics = top.metrics
       target = top
     # Check if is at Resize Side
     pivot.sides = sides
@@ -307,9 +308,9 @@ widget UXDockGroup:
     m0.x = 0
     m0.y = m1.y + m1.h
 
-  method draw(ctx: ptr CTXRender) =
-    ctx.color rgba(255, 255, 0, 255)
-    ctx.fill rect(self.rect)
+  #method draw(ctx: ptr CTXRender) =
+  #  ctx.color rgba(255, 255, 0, 255)
+  #  ctx.fill rect(self.rect)
 
   # -- Dock Group Finder --
   proc inside*(x, y: int32): GUIWidget =

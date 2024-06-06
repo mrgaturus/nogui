@@ -16,17 +16,29 @@ widget UXDockPanel:
       header: UXDockHeader
       widget: GUIWidget
     # Dock Session Watcher
-    {.public.}:
+    {.public, cursor.}:
       onwatch: GUICallbackEX[UXDockPanel]
-      grouped: bool
+
+  proc grouped*: bool {.inline.} =
+    let parent {.cursor.} = self.parent
+    not isNil(parent) and parent.kind == wkLayout
+
+  proc unique*: bool {.inline.} =
+    let tab {.cursor.} = self.content.tab
+    tab.next == tab.prev
 
   callback cbClose:
-    self.header.detach(self.content)
-    let content = self.header.content
-    # Detach or Select Content
-    if isNil(content):
-      self.detach()
-    else: content.select()
+    if not self.unique:
+      self.header.detach(self.content)
+      let content = self.header.content
+      # Select Near Tab
+      content.select()
+    # Detach Grouped
+    elif self.grouped:
+      self.flags.excl(wVisible)
+      force(self.onwatch, addr self)
+    # Detach when Floating
+    else: self.detach()
 
   callback cbFold:
     let
@@ -60,7 +72,10 @@ widget UXDockPanel:
     self.header.content = content[]
     self.content = content[]
     # Relayout Dock Panel
-    self.relax(wsLayout)
+    var s {.cursor.}: GUIWidget = self
+    if self.grouped:
+      s = s.parent
+    s.relax(wsLayout)
 
   # -- Dock Panel Creation --
   new dockpanel():
@@ -137,17 +152,17 @@ widget UXDockPanel:
       x = state.mx
       y = state.my
     # Move Dock Panel
-    if pivot.sides == {}: return
+    if pivot.sides == {}: discard
     elif state.kind == evCursorRelease: discard
     elif pivot.sides == {dockMove}:
       self.metrics = pivot[].move(x, y)
       self.relax(wsLayout)
+      # Send Watch Dock
+      send(self.onwatch, self)
     # Resize Dock Panel Metrics
     elif pivot.sides != {dockLocked}:
       self.metrics = pivot[].resize(x, y)
       self.relax(wsLayout)
-    # Watch Applied Metrics
-    send(self.onwatch, self)
 
   proc capture(state: ptr GUIState) =
     let
@@ -188,15 +203,16 @@ widget UXDockPanel:
 
   method event(state: ptr GUIState) =
     let
+      pivot = addr self.pivot
       widget {.cursor.} = self.widget
       header {.cursor.} = self.header
       # Content Selected Tab
       tab {.cursor.} = self.content.tab
-      unique = isNil(tab.next) and isNil(tab.prev)
+      unique = tab.next == tab.prev
       grab = self.test(wGrab) or state.kind == evCursorRelease
       check = grab and (unique or {wGrab, wHover} * tab.flags == {})
     # Capture Selected Sides
-    let sides = self.pivot.sides
+    let sides = pivot.sides
     self.capture(state)
     # Check Selected Sides
     if sides != {} and check:
@@ -210,14 +226,17 @@ widget UXDockPanel:
 
   method handle(reason: GUIHandle) =
     if reason in {outGrab, outHover}:
+      # Check if Dock was Moved
+      let
+        moved = dockMove in self.pivot.sides
+        tab = wGrab in self.content.tab.flags
+      if reason == outGrab and moved and not tab:
+        send(self.onwatch, self)
       # Reset Pivot if not Grab and Hover
       if {wGrab, wHover} * self.flags == {}:
         wasMoved(self.pivot)
         wasMoved(self.header.pivot)
         getWindow().cursorReset()
-      # Watch When Grab Removed
-      if reason == outGrab:
-        send(self.onwatch, self)
 
   # -- Dock Panel Background --
   method draw(ctx: ptr CTXRender) =
@@ -261,7 +280,6 @@ proc extract0(self: UXDockPanel, content: ptr UXDockContent) =
   wasMoved(header.pivot)
   # Attach to Session Last
   self.parent.add(panel)
-  self.parent.send(wsLayout)
   # Continue Grabbing Window
   getWindow().send(wsUnHover)
   panel.onwatch = self.onwatch

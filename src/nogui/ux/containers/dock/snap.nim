@@ -158,3 +158,42 @@ proc resize*(pivot: DockPivot, x, y: int32): GUIMetrics =
   # Clamp Resized Metrics
   result.clamp(pivot)
   result.clip(pivot)
+
+# --------------------
+# Widget Dock Grouping
+# --------------------
+
+proc groupSide*(r: GUIRect, x, y: int32): DockSide =
+  # Move Point As Relative
+  let
+    x0 = x - r.x
+    y0 = y - r.y
+    thr = getApp().font.height shl 1
+  # Check Inside Rectangle
+  if x0 >= 0 and y0 >= 0 and x0 < r.w and y0 < r.h:
+    # Check Vertical Sides
+    if y0 >= 0 and y0 <= thr: dockTop
+    elif y0 >= r.h - thr and y0 < r.h: dockDown
+    # Check Horizontal Sides
+    elif x0 >= 0 and x0 <= thr: dockLeft
+    elif x0 >= r.w - thr and x0 < r.w: dockRight
+    # Otherwise Nothing
+    else: dockNothing
+  else: dockNothing
+
+proc groupHint*(r: GUIRect, side: DockSide): GUIRect =
+  let thr = getApp().font.height
+  # Calculate Hint Rect
+  result = r
+  case side
+  of dockLeft:
+    result.w = thr
+  of dockRight:
+    result.x += r.w - thr
+    result.w = thr
+  of dockTop:
+    result.h = thr
+  of dockDown:
+    result.y += result.h - thr
+    result.h = thr
+  else: discard

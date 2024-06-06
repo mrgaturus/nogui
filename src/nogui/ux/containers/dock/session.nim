@@ -1,4 +1,5 @@
 import ../../prelude
+from ../../../core/tree import inside
 import group, panel, snap
 
 # ------------
@@ -7,7 +8,32 @@ import group, panel, snap
 
 widget UXDockHint:
   new dockhint():
+    # Show As Tooltip
     result.kind = wkTooltip
+  
+  proc show(panel: UXDockPanel, x, y: int32, side: DockSide) =
+    let r = groupHint(panel.rect, side)
+    # Locate Hightlight
+    let m = addr self.metrics
+    m.x = int16 r.x
+    m.y = int16 r.y
+    m.w = int16 r.w
+    m.h = int16 r.h
+    # Extend Hightlight to Row
+    if panel.grouped and side in {dockLeft, dockRight}:
+      let r0 = addr panel.parent.rect
+      m.y = int16 r0.y
+      m.h = int16 r0.h
+    # Show Dock Hint
+    if self.test(wVisible):
+      self.send(wsLayout)
+    else: self.send(wsOpen)
+
+  method draw(ctx: ptr CTXRender) =
+    const mask = 0xE0FFFFFF'u32
+    let colors = addr getApp().colors
+    ctx.color colors.text and mask
+    ctx.fill rect(self.rect)
 
 # -----------------
 # UX Dock Container
@@ -21,9 +47,122 @@ widget UXDockContainer:
     result.kind = wkContainer
     result.hint = dockhint()
 
+  # -- Dock Panel Grouper --
+  proc tabAppend(target, panel: UXDockPanel) =
+    privateAccess(UXDockPanel)
+    if not panel.unique: return
+    # Destroy Panel
+    panel.detach()
+    panel.flags.excl(wVisible)
+    # Append Content to Target
+    target.add(panel.content)
+    self.relax(wsLayout)
+
+  proc groupAppend(target, panel: UXDockPanel, side: DockSide) =
+    let row {.cursor.} = target.parent
+    panel.detach()
+    # Attach Panel to Group
+    case side
+    of dockTop: target.attachPrev(panel)
+    of dockDown: target.attachNext(panel)
+    of dockLeft, dockRight:
+      let row0 = dockrow()
+      row0.metrics = panel.metrics
+      row0.add(panel)
+      # Attach Created Row
+      if side == dockLeft:
+        row.attachPrev(row0)
+      else: row.attachNext(row0)
+    else: discard
+    # Relayout Container
+    self.relax(wsLayout)
+
+  proc groupCreate(target, panel: UXDockPanel, side: DockSide) =
+    let
+      row = dockrow()
+      columns = dockcolumns()
+      group = dockgroup(columns)
+    # Detach Target
+    target.detach()
+    # Assemble Dock Group
+    row.add(target)
+    columns.add(row)
+    self.add(group)
+    # Append Panel to Group
+    group.metrics.x = target.metrics.x
+    group.metrics.y = target.metrics.y
+    self.groupAppend(target, panel, side)
+
+  proc groupExit(panel: UXDockPanel) =
+    let
+      row {.cursor.} = panel.parent
+      columns {.cursor.} = row.parent
+      group {.cursor.} = columns.parent
+    # Detach Dock Panel
+    panel.detach()
+    if panel.test(wVisible):
+      self.add(panel)
+    # Detach Dock Row if Empty
+    if isNil(row.first) and isNil(row.last):
+      row.detach()
+    # Detach Dock Group if is Dangling
+    let row0 {.cursor.} = columns.first
+    if not isNil(row0) and row0.next == row0.prev and row0.first == row0.last:
+      let dangle = cast[UXDockPanel](row0.first)
+      if not isNil(dangle):
+        dangle.rect.x = columns.rect.x
+        dangle.rect.y = columns.rect.y
+        self.groupExit(dangle)
+      # Detach Group
+      group.detach()
+    # Adjust Panel Metrics
+    let
+      m = addr panel.metrics
+      r1 = addr panel.rect
+      r0 = addr self.rect
+    # Exit Position from Row
+    m.x = int16(r1.x - r0.x)
+    m.y = int16(r1.y - r0.y)
+    # Update Pivot Metrics
+    privateAccess(UXDockPanel)
+    panel.pivot.metrics = m[]
+    self.relax(wsLayout)
+
   # -- Dock Panel Watcher --
   callback watchDock(dog: UXDockPanel):
-    let dock {.cursor.} = dog[]
+    let
+      dock = dog[]
+      hint = self.hint
+      state = getApp().state
+      # Cursor Position
+      x = state.mx
+      y = state.my
+    # Remove From Group
+    if dock.grouped:
+      self.groupExit(dock)
+      return
+    # Find Candidate Dock
+    dock.flags.excl(wVisible)
+    let found = self.inside(x, y)
+    dock.flags.incl(wVisible)
+    # Check Hint Sides
+    if found.vtable == dock.vtable:
+      let
+        fo {.cursor.} = cast[UXDockPanel](found)
+        side = groupSide(fo.rect, x, y)
+      # Hightlight Dock Hint
+      if side == dockNothing and not dock.unique: discard
+      elif state.kind != evCursorRelease:
+        hint.show(fo, x, y, side)
+        return
+      # Attach Dock to Tab/Group
+      elif side == dockNothing:
+        self.tabAppend(fo, dock)
+      elif fo.grouped:
+        self.groupAppend(fo, dock, side)
+      else: self.groupCreate(fo, dock, side)
+    # Close Watch Hint
+    hint.send(wsClose)
 
   callback watchGroup(dog: UXDockGroup):
     let group {.cursor.} = dog[]
@@ -114,7 +253,9 @@ widget UXDockSession:
           w = group.inside(state.mx, state.my)
         # Forward if Found Something
         if w.vtable != group.vtable:
-          if clicked: docks.elevate(group)
+          if clicked:
+            docks.elevate(group)
+            docks.watch(w)
           w.send(wsForward)
           return
     # Forward Root Widget
