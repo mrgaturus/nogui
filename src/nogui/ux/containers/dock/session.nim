@@ -11,23 +11,31 @@ widget UXDockHint:
     # Show As Tooltip
     result.kind = wkTooltip
   
-  proc show(panel: UXDockPanel, x, y: int32, side: DockSide) =
-    let r = groupHint(panel.rect, side)
+  proc locate(r: GUIRect) =
     # Locate Hightlight
     let m = addr self.metrics
     m.x = int16 r.x
     m.y = int16 r.y
     m.w = int16 r.w
     m.h = int16 r.h
-    # Extend Hightlight to Row
-    if panel.grouped and side in {dockLeft, dockRight}:
-      let r0 = addr panel.parent.rect
-      m.y = int16 r0.y
-      m.h = int16 r0.h
     # Show Dock Hint
     if self.test(wVisible):
       self.send(wsLayout)
     else: self.send(wsOpen)
+
+  proc show(rect: GUIRect, x, y: int32, side: DockSide) =
+    let r = groupHint(rect, side)
+    self.locate(r)
+
+  proc show(panel: UXDockPanel, x, y: int32, side: DockSide) =
+    var r = groupHint(panel.rect, side)
+    # Extend Hightlight to Row
+    if panel.grouped and side in {dockLeft, dockRight}:
+      let r0 = addr panel.parent.rect
+      r.y = r0.y
+      r.h = r0.h
+    # Show Dock Hint
+    self.locate(r)
 
   method draw(ctx: ptr CTXRender) =
     const mask = 0xE0FFFFFF'u32
@@ -42,20 +50,16 @@ widget UXDockHint:
 widget UXDockContainer:
   attributes:
     hint: UXDockHint
+    {.cursor.}:
+      [l0, r0]: GUIWidget
+    # Container Sticky
+    {.public, cursor.}:
+      left: GUIWidget
+      right: GUIWidget
 
   new dockcontainer():
     result.kind = wkContainer
     result.hint = dockhint()
-
-  # -- Dock Panel Snapping --
-  proc snap(panel: GUIWidget) =
-    let m = addr panel.metrics
-    # Apply Widget Snapping
-    for dock in reverse(self.last):
-      if dock == panel: continue
-      let s = snap(panel, dock)
-      m.x = s.x
-      m.y = s.y
 
   # -- Dock Panel Grouper --
   proc tabAppend(target, panel: UXDockPanel) =
@@ -109,6 +113,12 @@ widget UXDockContainer:
     m0.x = m1.x; m0.w = m1.w
     m0.y = max(m1.y - m0.h, 0)
     self.groupAppend(target, panel, side)
+    # Change Current Sticky
+    let widget {.cursor.} = cast[GUIWidget](target)
+    if widget == self.left:
+      self.left = group
+    elif widget == self.right:
+      self.right = group
 
   proc groupExit(panel: UXDockPanel) =
     let
@@ -136,6 +146,12 @@ widget UXDockContainer:
         self.groupExit(dangle)
       # Detach Group
       group.detach()
+      if group == self.left:
+        self.left = dangle
+        self.l0 = nil
+      elif group == self.right:
+        self.right = dangle
+        self.r0 = nil
     # Adjust Panel Metrics
     let
       m = addr panel.metrics
@@ -149,74 +165,176 @@ widget UXDockContainer:
     panel.pivot.metrics = m[]
     self.relax(wsLayout)
 
+  # -- Dock Panel Snapping --
+  proc snap(panel: GUIWidget) =
+    let m = addr panel.metrics
+    # Apply Widget Snapping
+    for dock in reverse(self.last):
+      if dock == panel: continue
+      let s = snap(panel, dock)
+      m.x = s.x
+      m.y = s.y
+
+  proc group(target, panel: UXDockPanel, state: ptr GUIState) =
+    let
+      x = state.mx
+      y = state.my
+      hint {.cursor.} = self.hint
+      side = groupSide(target.rect, x, y)
+    # Hightlight Dock Hint
+    if side == dockNothing and not panel.unique: discard
+    elif state.kind != evCursorRelease:
+      hint.show(target, x, y, side)
+      return
+    # Attach Dock to Tab
+    elif side == dockNothing:
+      self.tabAppend(target, panel)
+    # Attach Dock to Group
+    elif target.grouped:
+      self.groupAppend(target, panel, side)
+    else: self.groupCreate(target, panel, side)
+    # Close Watch Hint
+    hint.send(wsClose)
+
+  proc stick(panel: GUIWidget, state: ptr GUIState) =
+    let
+      x = state.mx
+      y = state.my
+      hint {.cursor.} = self.hint
+      side = groupSide(self.rect, x, y)
+    # Check if Side is Inside and not Already Attached
+    if side == dockRight and not isNil(self.right): discard
+    elif side == dockLeft and not isNil(self.right): discard
+    elif side in {dockLeft, dockRight}:
+      if state.kind != evCursorRelease:
+        hint.show(self.rect, x, y, side)
+        return
+      # Stick on Container Side
+      if side == dockRight: self.right = panel
+      elif side == dockLeft: self.left = panel
+      self.relax(wsLayout)
+    # Close Watch Hint
+    hint.send(wsClose)
+
   # -- Dock Panel Watcher --
   callback watchDock(dog: UXDockPanel):
     let
       dock = dog[]
-      hint = self.hint
       state = getApp().state
+      widget {.cursor.} = cast[GUIWidget](dock)
       # Cursor Position
       x = state.mx
       y = state.my
     # Remove From Group
     if dock.grouped:
       self.groupExit(dock)
-      return
-    # Apply Panel Snapping
+    elif widget == self.left:
+      self.left = nil
+      self.relax(wsLayout)
+    elif widget == self.right:
+      self.right = nil
+      self.relax(wsLayout)
+    # Apply Snapping
     self.snap(dock)
     # Find Candidate Dock
     dock.flags.excl(wVisible)
     let found = self.inside(x, y)
     dock.flags.incl(wVisible)
-    # Check Hint Sides
+    # Attach to Any Side
     if found.vtable == dock.vtable:
-      let
-        fo {.cursor.} = cast[UXDockPanel](found)
-        side = groupSide(fo.rect, x, y)
-      # Hightlight Dock Hint
-      if side == dockNothing and not dock.unique: discard
-      elif state.kind != evCursorRelease:
-        hint.show(fo, x, y, side)
-        return
-      # Attach Dock to Tab/Group
-      elif side == dockNothing:
-        self.tabAppend(fo, dock)
-      elif fo.grouped:
-        self.groupAppend(fo, dock, side)
-      else: self.groupCreate(fo, dock, side)
-    # Close Watch Hint
-    hint.send(wsClose)
+      let target {.cursor.} = cast[UXDockPanel](found)
+      self.group(target, dock, state)
+    elif found == self:
+      self.stick(dock, state)
+    # Close Hint Otherwise
+    else: send(self.hint, wsClose)
 
   callback watchGroup(dog: UXDockGroup):
-    let group {.cursor.} = dog[]
+    let
+      group {.cursor.} = dog[]
+      widget {.cursor.} = cast[GUIWidget](group)
+      state = getApp().state
+    # Remove Current Sticky
+    if widget == self.left:
+      self.left = nil
+      self.relax(wsLayout)
+    elif widget == self.right:
+      self.right = nil
+      self.relax(wsLayout)
     # Apply Group Snapping
     self.snap(group)
+    self.stick(group, state)
 
+  # -- Dock Panel Watching --
   proc watch(panel: GUIWidget) =
+    if isNil(panel): return
+    # Access Private Pivot
     privateAccess(UXDockPanel)
     privateAccess(UXDockGroup)
+    # Configure Sticky
+    let stick =
+      if panel == self.left: dockLeft
+      elif panel == self.right: dockRight
+      else: dockNothing
     # Configure Panel
     if panel of UXDockPanel:
       let p {.cursor.} = cast[UXDockPanel](panel)
       p.onwatch = self.watchDock
       p.pivot.clip = addr self.metrics
+      p.pivot.stick = stick
     # Configure Group Watcher
     elif panel of UXDockGroup:
       let g {.cursor.} = cast[UXDockGroup](panel)
       g.onwatch = self.watchGroup
       g.pivot.clip = addr self.metrics
+      g.pivot.stick = stick
 
-  # -- Dock Panel Elevation --
   proc elevate(panel: GUIWidget) =
     assert panel.parent == self
-    # Watch Dock Panel
+    # Watch Elevated Widget
     self.watch(panel)
-    if self.last == panel: return
+    if self.last == panel:
+      return
     # Reattach to Last Widget
     GC_ref(panel)
     panel.detach()
     attachNext(self.last, panel)
     GC_unref(panel)
+
+  method update =
+    let
+      left {.cursor.} = self.left
+      right {.cursor.} = self.right
+      # Previous Sticky
+      l0 {.cursor.} = self.l0
+      r0 {.cursor.} = self.r0
+    # Configure New Left
+    if left != l0:
+      self.l0 = left
+      self.watch(left)
+      self.watch(l0)
+    # Configure New Right
+    if right != r0:
+      self.r0 = right
+      self.watch(right)
+      self.watch(r0)
+
+  method layout =
+    let
+      left {.cursor.} = self.left
+      right {.cursor.} = self.right
+    # Locate Left Sticky
+    if not isNil(left):
+      assert left.parent == self
+      let m = addr left.metrics
+      m.x = 0
+      m.y = 0
+    # Locate Right
+    if not isNil(right):
+      assert right.parent == self
+      let m = addr right.metrics
+      m.x = self.metrics.w - m.w
+      m.y = 0
 
 # ---------------
 # UX Dock Session

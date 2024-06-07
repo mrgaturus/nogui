@@ -17,6 +17,7 @@ type
   DockPivot* = object
     clip*: ptr GUIMetrics
     metrics*: GUIMetrics
+    stick*: DockSide
     # Pivot Capture
     sides*: DockSides
     x*, y*: int32
@@ -91,8 +92,12 @@ proc orient*(m: GUIMetrics, pivot: DockPivot): DockSide =
     # Calculate Distances
     dx0 = x0 - clip.x
     dx1 = clip.x + clip.w - x1
+  # Check Stick to Side
+  case pivot.stick
+  of dockLeft: dockRight
+  of dockRight: dockLeft
   # Check Which is Near to a Side
-  if dx1 < dx0: dockLeft
+  elif dx1 < dx0: dockLeft
   else: dockRight
 
 # -----------------
@@ -142,12 +147,22 @@ proc resize0*(pivot: var DockPivot, panel: GUIWidget, x, y: int32) =
   # Check Vertical Sides
   if y0 > m.h - thr1: sides.incl dockDown
   elif y0 < thr1: sides.incl dockTop
-  # Pivot Cursor
+  # Pivot Point
   pivot.x = x
   pivot.y = y
   # Pivot Resize Capture
   pivot.metrics = m
   pivot.sides = sides
+
+proc restrict0*(pivot: var DockPivot) =
+  let
+    stick = pivot.stick
+    sides = pivot.sides
+    # Restrict Sticky Sides
+    check0 = stick == dockLeft and sides * {dockLeft, dockTop} != {}
+    check1 = stick == dockRight and sides * {dockRight, dockTop} != {}
+  if check0 or check1:
+    pivot.sides = {dockLocked}
 
 proc resize*(pivot: DockPivot, x, y: int32): GUIMetrics =
   result = pivot.metrics

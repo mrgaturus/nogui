@@ -153,6 +153,7 @@ widget UXDockGroupBar:
 widget UXDockGroupResize:
   attributes:
     pivot: ptr DockPivot
+    orient: DockSide
     # Resize Targets
     {.cursor.}:
       group: GUIWidget
@@ -161,13 +162,28 @@ widget UXDockGroupResize:
 
   new dockgroup0resize():
     result.flags = {wMouse, wVisible}
+    result.metrics.x = not 0
+    result.metrics.w = not 0
+    result.metrics.h = not 0
+
+  proc anchor() =
+    let
+      m = addr self.metrics
+      m0 = addr self.group.metrics
+      m1 = self.pivot.clip
+    # Update Pivot Anchor if Changed
+    if m.x != m0.x or m.w != m1.w or m.h != m1.h:
+      m.x = m0.x
+      m.w = m1.w
+      m.h = m1.h
+      # Update Pivot Orient
+      let orient = m0[].orient self.pivot[]
+      self.orient = orient
 
   proc inside(panel: GUIWidget, x, y: int32): bool =
     var
       target {.cursor.} = panel
       row {.cursor.} = target.parent
-      # Resize Pivot Metrics
-      m0 = self.group.metrics
       pivot = self.pivot[]
     # Capture Resize Pivot
     pivot.resize0(panel, x, y)
@@ -182,7 +198,7 @@ widget UXDockGroupResize:
       pivot.metrics = top.metrics
       target = top
     # Manipulate Orient Side
-    let orient = orient(m0, pivot)
+    let orient = self.orient
     if orient == dockRight and dockLeft in sides:
       if not isNil(row.prev):
         sides = sides - {dockLeft, dockDown} + {dockRight}
@@ -199,6 +215,7 @@ widget UXDockGroupResize:
       self.row = row
       self.rect = panel.rect
       # Define Current Pivot
+      pivot.restrict0()
       self.pivot[] = pivot
 
   proc resize(x, y: int32) =
@@ -214,6 +231,10 @@ widget UXDockGroupResize:
     m0.y = m.y
     m1.w = m.w
     m2.h = m.h
+    # Balance Pivot Anchor
+    let mm = addr self.metrics
+    m0.w = mm.minW + (m.w - pivot.metrics.w)
+    mm.x = m0.x
 
   method event(state: ptr GUIState) =
     if {wHover, wGrab} * self.flags == {wHover}:
@@ -224,7 +245,6 @@ widget UXDockGroupResize:
       pivot.y = state.my
     elif self.test(wGrab):
       self.resize(state.mx, state.my)
-      # Relayout Widget Group
       relax(self.group, wsLayout)
 
   method handle(reason: GUIHandle) =
@@ -242,6 +262,8 @@ widget UXDockGroupResize:
       # Store Min Width
       m.minW = m1.minW
       m.maxW = m1.x
+      # Store Group Width
+      self.metrics.minW = m0.w
     # Reset When not Grabbing anymore
     elif {wHover, wGrab} * self.flags == {}:
       getWindow().cursorReset()
@@ -313,10 +335,12 @@ widget UXDockGroup:
     # Clamp Dimensions
     m.w = max(m.w, m.minW)
     m.h = max(m.h, m.minH)
-    # Calculate Shifting Offset when Structure Changed
-    if delta != 0 and delta != m0.w and pivot.sides == {}:
+    # Calculate Shifting Offset
+    if delta != 0 and delta != m0.w:
+      let mm = addr self.resize.metrics
       if orient == dockLeft:
         m.x -= delta
+        mm.x = m.x
       # Clip Shifting
       m[].clip pivot[]
 
@@ -326,6 +350,8 @@ widget UXDockGroup:
       m0 = addr self.columns.metrics
       m1 = addr self.bar.metrics
       m = addr self.metrics
+    # Calculate Resize Orient
+    self.resize.anchor()
     # Locate Group Bar
     m1.x = pad; m1.w = m.w - pad - pad
     m1.y = pad; m1.h = m1.minH

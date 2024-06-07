@@ -174,6 +174,7 @@ widget UXDockPanel:
     # Calculate Resize Pivot when not Grabbed
     if {wHover, wGrab} * self.flags == {wHover}:
       p0[].resize0(self, state.mx, state.my)
+      p0[].restrict0()
     # Calculate Move Pivot
     p1[].capture(state)
     let away0 = getApp().font.asc shr 1
@@ -195,10 +196,10 @@ widget UXDockPanel:
     result = inside and not grab
     if not result: return result
     # Reset Frame Pivot
-    wasMoved(self.pivot)
     wasMoved(self.header.pivot)
-    getWindow().cursorReset()
+    self.pivot.sides = {}
     # Redirect to Widget
+    getWindow().cursorReset()
     widget.send(wsRedirect)
 
   method event(state: ptr GUIState) =
@@ -234,8 +235,9 @@ widget UXDockPanel:
         send(self.onwatch, self)
       # Reset Pivot if not Grab and Hover
       if {wGrab, wHover} * self.flags == {}:
-        wasMoved(self.pivot)
         wasMoved(self.header.pivot)
+        self.pivot.sides = {}
+        # Reset Cursor
         getWindow().cursorReset()
 
   # -- Dock Panel Background --
@@ -276,8 +278,8 @@ proc extract0(self: UXDockPanel, content: ptr UXDockContent) =
   panel.metrics = self.metrics
   panel.rect = self.rect
   # Clear Panel Pivot
-  wasMoved(self.pivot)
   wasMoved(header.pivot)
+  self.pivot.sides = {}
   # Attach to Session Last
   self.parent.add(panel)
   # Continue Grabbing Window
