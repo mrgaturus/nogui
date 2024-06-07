@@ -198,13 +198,13 @@ proc groupSide*(r: GUIRect, x, y: int32): DockSide =
     y0 = y - r.y
     thr = getApp().font.height shl 1
   # Check Inside Rectangle
-  if x0 >= 0 and y0 >= 0 and x0 < r.w and y0 < r.h:
+  if x0 >= 0 and y0 >= 0 and x0 <= r.w and y0 <= r.h:
     # Check Vertical Sides
     if y0 >= 0 and y0 <= thr: dockTop
-    elif y0 >= r.h - thr and y0 < r.h: dockDown
+    elif y0 >= r.h - thr and y0 <= r.h: dockDown
     # Check Horizontal Sides
     elif x0 >= 0 and x0 <= thr: dockLeft
-    elif x0 >= r.w - thr and x0 < r.w: dockRight
+    elif x0 >= r.w - thr and x0 <= r.w: dockRight
     # Otherwise Nothing
     else: dockNothing
   else: dockNothing
