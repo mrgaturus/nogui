@@ -92,15 +92,22 @@ widget UXDockContainer:
       row = dockrow()
       columns = dockcolumns()
       group = dockgroup(columns)
-    # Detach Target
-    target.detach()
+      bar {.cursor.} = group.last
+      # Group Metrics
+      m0 = addr group.metrics
+      m1 = addr target.metrics
+    # Calculate Group Metrics
+    self.add(group)
+    bar.vtable.update(bar)
+    group.vtable.update(group)
+    row.metrics = m1[]
     # Assemble Dock Group
+    target.detach()
     row.add(target)
     columns.add(row)
-    self.add(group)
     # Append Panel to Group
-    group.metrics.x = target.metrics.x
-    group.metrics.y = target.metrics.y
+    m0.x = m1.x; m0.w = m1.w
+    m0.y = max(m1.y - m0.h, 0)
     self.groupAppend(target, panel, side)
 
   proc groupExit(panel: UXDockPanel) =
@@ -119,9 +126,13 @@ widget UXDockContainer:
     let row0 {.cursor.} = columns.first
     if not isNil(row0) and row0.next == row0.prev and row0.first == row0.last:
       let dangle = cast[UXDockPanel](row0.first)
+      columns.vtable.update(columns)
+      group.vtable.update(group)
+      # Detach Dangle Panel
       if not isNil(dangle):
-        dangle.rect.x = columns.rect.x
-        dangle.rect.y = columns.rect.y
+        let rect = addr dangle.rect
+        rect.x = self.rect.x + group.metrics.x
+        rect.y = columns.rect.y
         self.groupExit(dangle)
       # Detach Group
       group.detach()

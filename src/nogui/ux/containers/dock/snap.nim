@@ -61,7 +61,7 @@ proc clamp(m: var GUIMetrics, pivot: DockPivot) =
   m.w = w
   m.h = h
 
-proc clip(m: var GUIMetrics, pivot: DockPivot) =
+proc clip*(m: var GUIMetrics, pivot: DockPivot) =
   if isNil(pivot.clip):
     return
   let
@@ -80,6 +80,20 @@ proc clip(m: var GUIMetrics, pivot: DockPivot) =
     m.x = thr - m.w
   elif m.x > c0.w - thr:
     m.x = c0.w - thr
+
+proc orient*(m: GUIMetrics, pivot: DockPivot): DockSide =
+  let clip = pivot.clip
+  if isNil(clip) or m.w == 0:
+    return dockNothing
+  let
+    x0 = m.x
+    x1 = x0 + m.w
+    # Calculate Distances
+    dx0 = x0 - clip.x
+    dx1 = clip.x + clip.w - x1
+  # Check Which is Near to a Side
+  if dx1 < dx0: dockLeft
+  else: dockRight
 
 # -----------------
 # Dock Panel Moving
@@ -122,7 +136,6 @@ proc resize0*(pivot: var DockPivot, panel: GUIWidget, x, y: int32) =
   if check0 and check1:
     pivot.sides = sides   
     return
-  # Reside Pivot Sides
   # Check Horizontal Sides
   if x0 > m.w - thr1: sides.incl dockRight
   elif x0 < thr1: sides.incl dockLeft
