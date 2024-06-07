@@ -221,10 +221,10 @@ proc maximum*(widget: GUIWidget, w, h: int32) =
 
 proc pointOnArea*(widget: GUIWidget, x, y: int32): bool =
   let rect = addr widget.rect
-  # Check if is visible and point is on area
+  # Check if is Visible and Point is on Area
   wVisible in widget.flags and
-    x >= rect.x and x <= rect.x + rect.w and
-    y >= rect.y and y <= rect.y + rect.h
+    x >= rect.x and x < rect.x + rect.w and
+    y >= rect.y and y < rect.y + rect.h
 
 # -------------------
 # Widget Status Check
