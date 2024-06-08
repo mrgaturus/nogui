@@ -8,7 +8,7 @@ from nogui/ux/layouts/base import dummy
 import nogui/ux/prelude
 import nogui/builder
 # Import Docks Containers
-import nogui/ux/containers/dock/[panel, session, base, group]
+import nogui/ux/containers/dock
 
 # -------------
 # Helper Widget
