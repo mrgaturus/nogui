@@ -127,8 +127,7 @@ widget UXDockContainer:
       group {.cursor.} = columns.parent
     # Detach Dock Panel
     panel.detach()
-    if panel.test(wMouse):
-      self.add(panel)
+    self.add(panel)
     # Detach Dock Row if Empty
     if isNil(row.first) and isNil(row.last):
       row.detach()
@@ -228,15 +227,17 @@ widget UXDockContainer:
     # Remove From Group
     if dock.grouped:
       self.groupExit(dock)
-      return
     elif widget == self.left:
       self.left = nil
       self.relax(wsLayout)
     elif widget == self.right:
       self.right = nil
       self.relax(wsLayout)
-    # Apply Snapping
+    # Check Detached
     self.snap(dock)
+    if not dock.test(wMouse):
+      dock.detach()
+      return
     # Find Candidate Dock
     dock.flags.excl(wVisible)
     let found = self.inside(x, y)

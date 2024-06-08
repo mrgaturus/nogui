@@ -37,12 +37,9 @@ widget UXDockPanel:
       return
     # Dismiss Content
     content.dismiss()
-    # Detach Grouped
-    if self.grouped:
-      self.flags.excl(wMouse)
-      force(self.onwatch, addr self)
-    # Detach when Floating
-    else: self.detach()
+    # Watch Dock Closing
+    self.flags.excl(wMouse)
+    force(self.onwatch, addr self)
 
   callback cbFold:
     let
