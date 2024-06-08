@@ -75,5 +75,5 @@ template react*[T](value: ptr Value[T]): ptr T =
 proc cb*[T](value: Value[T]): GUICallback {.inline.} =
   value.head.cb
 
-proc cb*[T](value: var Value[T], cb: GUICallback) {.inline.} =
+proc `cb=`*[T](value: var Value[T], cb: GUICallback) {.inline.} =
   value.head.cb = cb

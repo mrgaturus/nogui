@@ -27,8 +27,8 @@ widget UXScrollOffset:
     result.widget = widget
     result.add(widget)
     # Define Offset Callbacks
-    result.ox.cb(result.cbOffset)
-    result.oy.cb(result.cbOffset)
+    result.ox.cb = result.cbOffset
+    result.oy.cb = result.cbOffset
 
   method update =
     let
