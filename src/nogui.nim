@@ -1,15 +1,22 @@
 from nogui/pack import folders
 from nogui/data import newFont
-from nogui/gui/widget import GUIWidget
-from nogui/gui/timer import loop
-from nogui/gui/signal import 
-  GUIQueue, newGUIQueue, dispose
+from nogui/core/widget import GUIWidget
+from nogui/core/timer import loop
 
 import nogui/libs/ft2
-import nogui/gui/[window, atlas]
+import nogui/native/ffi
+import nogui/core/[window, atlas]
 import nogui/[logger, format, utf8]
+# OpenGL Pointer Loader
+from nogui/libs/gl import gladLoadGL
 
 type
+  GUISpace = object
+    margin*: int16
+    pad*: int16
+    line*: int16
+    # Layout Separators
+    sepX*, sepY*: int16
   GUIColors = object
     text*: uint32
     # Widget Controls
@@ -26,15 +33,16 @@ type
   # Global Application Handle
   Application = object
     window: GUIWindow
-    queue: GUIQueue
-    state: pointer
-    # Text Layout
+    native: ptr GUINative
+    state*: ptr GUIState
+    # Freetype Font
     ft2*: FT2Library
     atlas*: CTXAtlas
-    # Atlas Font Metrics
+    # Font Metrics
     font*: GUIFont
+    space*: GUISpace
     colors*: GUIColors
-    # TODO: reuse it for event ut8buffer
+    # Format String
     fmt0: CacheString
     fmt*: ShallowString
   GUIApplication = ptr Application
@@ -45,9 +53,9 @@ type
 
 proc `=destroy`(app: Application) =
   log(lvInfo, "closing application...")
-  # Close Window and Queue
-  close(app.window)
-  dispose(app.queue)
+  # Destroy Native Platform
+  destroy(app.window)
+  nogui_native_destroy(app.native)
   # Dealloc Freetype 2
   if ft2_done(app.ft2) != 0:
     log(lvError, "failed closing FreeType2")
@@ -59,8 +67,16 @@ var app: Application
 # Private Common Creation
 # -----------------------
 
+proc createSpace(): GUISpace =
+  result.margin = 4
+  result.pad = 6
+  result.line = 2
+  # Layout Separators
+  result.sepX = 2
+  result.sepY = 2
+
 proc createColors(): GUIColors =
-  # TODO: create a module for colors and allow config file
+  # TODO: create a module for config file
   proc rgba(r, g, b, a: uint32): uint32 {.compileTime.} =
     result = r or (g shl 8) or (b shl 16) or (a shl 24)  
   # Text Colors
@@ -74,7 +90,6 @@ proc createColors(): GUIColors =
   result.tab = rgba(19, 21, 21, 255)
   result.darker = rgba(0, 0, 0, 255)
   result.background = rgba(23, 26, 26, 255)
-  echo result.repr
 
 proc createFont(ft2: FT2Library): GUIFont =
   const hardsize = 9
@@ -98,7 +113,7 @@ proc createFont(ft2: FT2Library): GUIFont =
 # Application Creation
 # --------------------
 
-proc createApp*(w, h: int32, state: pointer) =
+proc createApp*(w, h: int32) =
   var ft2: FT2Library
   let result = addr app
   # Create Freetype
@@ -107,18 +122,38 @@ proc createApp*(w, h: int32, state: pointer) =
   # Create Private Common
   result.ft2 = ft2
   result.colors = createColors()
+  result.space = createSpace()
   result.font = createFont(ft2)
-  # Create Queue, Atlas and then Window
-  let 
-    queue = newGUIQueue(state)
-    atlas = newCTXAtlas(result.font.face)
-  result.window = newGUIWindow(w, h, queue, atlas)
-  result.queue = queue
+  # Create Native Platform
+  let
+    native = nogui_native_init(w, h)
+    info = nogui_native_info(native)
+  # Load OpenGL Functions
+  if not gladLoadGL(info.glProc):
+    log(lvError, "failed load OpenGL")
+  # Create Queue, Atlas, Window
+  let atlas = newCTXAtlas(result.font.face)
+  result.window = newGUIWindow(native, atlas)
+  result.state = nogui_native_state(native)
+  result.native = native
   result.atlas = atlas
   # Create Shallow String
   result.fmt = addr result.fmt0
   # Copy Default Data
   static: folders: "data" >> ""
+
+template executeApp*(root: GUIWidget, body: untyped) =
+  let win {.cursor.} = app.window
+  if win.execute(root):
+    # TODO: allow configure ms
+    loop(16):
+      # Handle Events and Execute Body
+      if not win.poll(): break
+      body; render(win)
+
+# -------------------
+# Application Current
+# -------------------
 
 proc getApp*(): GUIApplication =
   # Check App Initialize
@@ -128,29 +163,20 @@ proc getApp*(): GUIApplication =
   # Return Current App
   result = addr app
 
-template executeApp*(root: GUIWidget, body: untyped) =
-  let win {.cursor.} = app.window
-  if win.open(root):
-    # TODO: allow configure ms
-    loop(16):
-      # TODO: unify all into one queue
-      handleEvents(win)
-      if handleSignals(win): break
-      handleTimers(win)
-      # Execute Body
-      body; render(win)
+proc getWindow*(): GUIClient =
+  let win {.cursor.} = getApp().window
+  result = cast[GUIClient](win)
 
-# ---------------------------------------------
-# TODO: create proper api to lookup window info
-# ---------------------------------------------
+# ----------------------------
+# Application Class Identifier
+# ----------------------------
 
-proc windowSize*(app: GUIApplication): tuple[w, h: int32] =
-  result.w = app.window.w
-  result.h = app.window.h
+proc class*(app: GUIApplication, id, name: cstring) =
+  app.window.class(id, name)
 
-# ------------
-# Font Metrics
-# ------------
+# ------------------------
+# Application Font Metrics
+# ------------------------
 
 proc width*(str: string): int32 =
   let atlas = app.atlas
@@ -185,20 +211,3 @@ proc index*(str: string, w: int32): int32 =
       if w + (advance shr 1) > 0:
         result = i
       break
-
-# -----------------------------------------
-# TODO: expose public apis for window after
-#       rewriting x11 platforms to C
-# -----------------------------------------
-
-proc setCursor*(app: GUIApplication, code: int) =
-  setCursor(app.window, code)
-
-proc setCursor*(app: GUIApplication, name: cstring) =
-  setCursor(app.window, name)
-
-proc setCursorCustom*(app: GUIApplication, custom: Cursor) =
-  setCursorCustom(app.window, custom)
-
-proc clearCursor*(app: GUIApplication) =
-  clearCursor(app.window)

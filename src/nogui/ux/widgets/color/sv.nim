@@ -1,4 +1,3 @@
-# TODO: event propagation will make work again with ptr
 from math import cos, sin, sqrt, PI
 import base
 
@@ -12,7 +11,7 @@ widget UXColor0Square:
     
   new sv0square(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Minimun Width Size
     let w = getApp().font.height
     result.minimum(w, w)
@@ -26,23 +25,21 @@ widget UXColor0Square:
     # Reserve Vertex
     ctx.addVerts(8, 12)
     # White/Color Gradient
-    ctx.vertexCOL(0, rect.x, rect.y, WHITE)
-    ctx.vertexCOL(1, rect.xw, rect.y, color1)
-    ctx.vertexCOL(2, rect.x, rect.yh, WHITE)
-    ctx.vertexCOL(3, rect.xw, rect.yh, color1)
+    ctx.vertexCOL(0, rect.x0, rect.y0, WHITE)
+    ctx.vertexCOL(1, rect.x1, rect.y0, color1)
+    ctx.vertexCOL(2, rect.x0, rect.y1, WHITE)
+    ctx.vertexCOL(3, rect.x1, rect.y1, color1)
     # White/Color Elements
     ctx.triangle(0, 0,1,2)
     ctx.triangle(3, 1,2,3)
     # Black/Color Gradient
-    ctx.vertexCOL(4, rect.x, rect.y, 0)
-    ctx.vertexCOL(5, rect.xw, rect.y, 0)
-    ctx.vertexCOL(6, rect.x, rect.yh, BLACK)
-    ctx.vertexCOL(7, rect.xw, rect.yh, BLACK)
+    ctx.vertexCOL(4, rect.x0, rect.y0, 0)
+    ctx.vertexCOL(5, rect.x1, rect.y0, 0)
+    ctx.vertexCOL(6, rect.x0, rect.y1, BLACK)
+    ctx.vertexCOL(7, rect.x1, rect.y1, BLACK)
     # Black/Color Elements
     ctx.triangle(6, 4,5,6)
     ctx.triangle(9, 5,6,7)
-    # 3 -- Draw Color Bar
-    ctx.addVerts(14, 36)
 
   proc drawCursor(ctx: ptr CTXRender) =
     let
@@ -57,8 +54,8 @@ widget UXColor0Square:
       size = float32 getApp().font.asc shr 1
       # Cursor Location
       rect = rect self.rect
-      x = rect.x + (rect.xw - rect.x) * s
-      y = rect.y + (rect.yh - rect.y) * v
+      x = rect.x0 + (rect.x1 - rect.x0) * s
+      y = rect.y0 + (rect.y1 - rect.y0) * v
       # Create Point
       p = point(x, y)
     # Render Color Circles
@@ -130,7 +127,7 @@ widget UXColor0Triangle:
 
   new sv0triangle(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Minimun Width Size
     let w = getApp().font.height
     result.minimum(w, w)
@@ -145,8 +142,8 @@ widget UXColor0Triangle:
       r = rect rect[]
       radius = 0.5 * float32 min(rect.w, rect.h)
       # Calculate Center
-      cx = (r.x + r.xw) * 0.5
-      cy = (r.y + r.yh) * 0.5
+      cx = (r.x0 + r.x1) * 0.5
+      cy = (r.y0 + r.y1) * 0.5
       # Initial Angle
       angle = peek(self.hsv).h * pi2
     # Calculate Triangles
@@ -183,7 +180,7 @@ widget UXColor0Triangle:
       p = tri.uvmap(hsv.s, hsv.v)
       h = hsv.h
     # Calculate Color Corners
-    var hc: array[3, GUIColor]
+    var hc: array[3, CTXColor]
     block: # Avoid so much objects
       hc[0] = HSVColor(h: h, s: 1.0, v: 1.0).toRGB.toPacked
       hc[1] = HSVColor(h: h, s: 0.0, v: 0.0).toRGB.toPacked

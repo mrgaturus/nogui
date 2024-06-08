@@ -1,18 +1,7 @@
+# TODO: first class IME support
 import ../prelude
-# --------------------
-from x11/keysym import
-  XK_Backspace, XK_Left, XK_Right,
-  XK_Return, XK_Escape,
-  XK_Delete, XK_Home, XK_End
-import x11/cursorfont
-from ../../../nogui import 
-  setCursor, clearCursor
-# -----------------------
+import ../../native/keymap
 import ../../utf8
-from ../../gui/event import 
-  UTF8Nothing, UTF8Keysym
-from ../../gui/signal import 
-  WindowSignal, msgOpenIM, msgCloseIM
 
 widget UXTextBox:
   attributes:
@@ -21,8 +10,7 @@ widget UXTextBox:
     [wc, wo, wl]: int32
 
   new textbox(input: ptr UTF8Input):
-    result.flags = wMouse or wKeyboard
-    # Widget Attributes
+    result.flags = {wMouse, wKeyboard}
     result.input = input
 
   method update =
@@ -68,7 +56,7 @@ widget UXTextBox:
     ctx.color(colors.darker)
     ctx.fill rect(self.rect)
     # Draw Textbox Status
-    if self.any(wHover or wFocus):
+    if self.some({wHover, wFocus}):
       if self.test(wFocus):
         # Focused Outline Color
         ctx.color(colors.text)
@@ -80,7 +68,7 @@ widget UXTextBox:
       else: # Hover Outline Color
         ctx.color(colors.focus)
       # Draw Outline Status
-      ctx.line rect(self.rect), 1
+      ctx.line rect(self.rect), -1
     # Set Color To White
     ctx.color(colors.text)
     # Draw Current Text
@@ -93,18 +81,17 @@ widget UXTextBox:
     let input = self.input
     if state.kind == evKeyDown:
       case state.key
-      of XK_BackSpace: input.backspace()
-      of XK_Delete: input.delete()
-      of XK_Right: input.next()
-      of XK_Left: input.prev()
-      of XK_Home: input.jump(low int32)
-      of XK_End: input.jump(high int32)
-      of XK_Return, XK_Escape: 
-        self.clear(wFocus)
-      else: # Add UTF8 Char
-        case state.utf8state
-        of UTF8Nothing, UTF8Keysym: discard
-        else: input.insert(state.utf8str, state.utf8size)
+      of NK_Backspace: input.backspace()
+      of NK_Delete: input.delete()
+      of NK_Right: input.next()
+      of NK_Left: input.prev()
+      of NK_Home: input.jump(low int32)
+      of NK_End: input.jump(high int32)
+      of NK_Return, NK_Escape:
+        getWindow().send(wsUnfocus)
+      else: # Add UTF8 Character
+        if state.utf8size > 0:
+          input.insert(state.utf8str, state.utf8size)
     elif self.test(wGrab):
       input.focus cast[pointer](self)
       # Jump to Cursor Position
@@ -113,22 +100,17 @@ widget UXTextBox:
         state.mx - self.rect.x - size + self.wo)
       # Focus Textbox
       if state.kind == evCursorClick:
-        self.set(wFocus)
+        # TODO: defer this callback
+        send(self.target, wsFocus)
     # Mark Text Input used By This Widget
     if state.kind in {evKeyDown, evCursorClick, evCursorMove}:
       self.calculateOffsets()
 
-  method handle(kind: GUIHandle) =
+  method handle(reason: GUIHandle) =
+    let win = getWindow()
     # Prepare Input Focus
-    case kind 
-    of inFocus:
-      # Change Current Widget
-      self.input.focus cast[pointer](self)
-      pushSignal(msgOpenIM)
-    of outFocus: 
-      pushSignal(msgCloseIM)
-    of inHover:
-      getApp().setCursor(XC_xterm)
-    of outHover:
-      getApp().clearCursor()
+    case reason
+    of inFocus: self.input.focus cast[pointer](self)
+    of inHover: win.cursor(cursorText)
+    of outHover: win.cursorReset()
     else: discard

@@ -88,7 +88,7 @@ controller TestController:
 # -------------------
 
 proc main() =
-  createApp(1024, 600, nil)
+  createApp(1024, 600)
   let test = testcontroller(10, 20)
   # Open Window
   executeApp(test.widget):

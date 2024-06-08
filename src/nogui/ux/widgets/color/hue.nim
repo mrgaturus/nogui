@@ -1,5 +1,5 @@
-# TODO: event propagation will make work again with ptr
-from math import 
+# TODO: cache hue circle triangles
+from math import
   sin, cos, arctan2, log2, PI
 import base
 
@@ -13,7 +13,7 @@ widget UXHue0Bar:
 
   new hue0bar(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
     # Minimun Width Size
     let w = getApp().font.height
     result.metrics.minW = w + w shr 2
@@ -26,7 +26,7 @@ widget UXHue0Bar:
       hue: uint32
       rect = rect self.rect
     # Locate Initial Position
-    rect.yh = rect.y
+    rect.y1 = rect.y0
     while i < 7:
       if i < 6: # Quad Elements
         ctx.triangle(k, j, j + 1, j + 2)
@@ -35,9 +35,9 @@ widget UXHue0Bar:
         hue = hueSix[i]
       else: hue = hueSix[0]
       # Bar Vertexs Segment
-      ctx.vertexCOL(j, rect.x, rect.yh, hue)
-      ctx.vertexCOL(j + 1, rect.xw, rect.yh, hue)
-      rect.yh += h # Next Y
+      ctx.vertexCOL(j, rect.x0, rect.y1, hue)
+      ctx.vertexCOL(j + 1, rect.x1, rect.y1, hue)
+      rect.y1 += h # Next Y
       # Next Hue Quad
       i += 1; j += 2; k += 6
 
@@ -54,12 +54,12 @@ widget UXHue0Bar:
     # Locate Rectangle
     var 
       rect = rect(self.rect)
-      calc = rect.y + (rect.yh - rect.y) * h
+      calc = rect.y0 + (rect.y1 - rect.y0) * h
     # Calculate Metrics
-    rect.y = calc - offset
-    rect.yh = calc + offset
+    rect.y0 = calc - offset
+    rect.y1 = calc + offset
     # Fill Current Color
-    if self.any(wHoverGrab):
+    if self.some({wHover, wGrab}):
       const mask = uint32 0x3FFFFFFF
       ctx.color(color0.toPacked and mask)
       ctx.fill(rect)
@@ -68,15 +68,15 @@ widget UXHue0Bar:
     ctx.color(color1.toPacked)
     # Prepare Triangle Points
     var
-      p0 = point(rect.x, rect.y)
-      p1 = point(rect.x, rect.yh)
-      p2 = point(rect.x + calc, rect.yh - offset)
+      p0 = point(rect.x0, rect.y0)
+      p1 = point(rect.x0, rect.y1)
+      p2 = point(rect.x0 + calc, rect.y1 - offset)
     # Draw Left Triangle
     ctx.triangle(p0, p1, p2)
     # Draw Right Triangle
-    p0.x = rect.xw
-    p1.x = rect.xw
-    p2.x = rect.xw - calc
+    p0.x = rect.x1
+    p1.x = rect.x1
+    p2.x = rect.x1 - calc
     ctx.triangle(p2, p1, p0)
 
   method draw(ctx: ptr CTXRender) =
@@ -103,7 +103,7 @@ widget UXHue0Circle:
 
   new hue0circle(hsv: & HSVColor):
     result.hsv = hsv
-    result.flags = wMouse
+    result.flags = {wMouse}
 
   proc drawHue(ctx: ptr CTXRender) =
     let
@@ -113,8 +113,8 @@ widget UXHue0Circle:
       ra0 = 0.5 * float32 min(rect.w, rect.h)
       ra1 = ra0 * 0.75
       # Locate Center Point
-      cx = (r.x + r.xw) * 0.5
-      cy = (r.y + r.yh) * 0.5
+      cx = (r.x0 + r.x1) * 0.5
+      cy = (r.y0 + r.y1) * 0.5
       # Find Number or Sides
       n = int32(1 shl ra0.log2.int) shr 1
       rcp = 1.0 / float32(n)
@@ -179,8 +179,8 @@ widget UXHue0Circle:
       color0 = contrast(item, rgb)
       # Cursor Location
       rad = 2 * PI * h
-      x = (r.x + r.xw) * 0.5 + cos(rad) * ra0
-      y = (r.y + r.yh) * 0.5 + sin(rad) * ra0
+      x = (r.x0 + r.x1) * 0.5 + cos(rad) * ra0
+      y = (r.y0 + r.y1) * 0.5 + sin(rad) * ra0
       # Create Point
       p = point(x, y)
     # Render Color Circles
@@ -201,8 +201,8 @@ widget UXHue0Circle:
       # Radius Range
       ra0 = 0.5 * radius
       # Check Distance
-      dx = float32(state.mx) - (r.x + r.xw) * 0.5
-      dy = float32(state.my) - (r.y + r.yh) * 0.5
+      dx = float32(state.mx) - (r.x0 + r.x1) * 0.5
+      dy = float32(state.my) - (r.y0 + r.y1) * 0.5
     # Clicked Test
     var clicked = self.clicked
     # Check if Inside Circle

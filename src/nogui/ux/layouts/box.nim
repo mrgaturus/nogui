@@ -11,7 +11,7 @@ widget UXLayoutVBox:
     [fit, count]: int16
 
   new vertical():
-    discard
+    result.kind = wkLayout
 
   method update =
     var 
@@ -31,8 +31,8 @@ widget UXLayoutVBox:
       inc(count)
     # Calculate Margin Padding
     let 
-      margin = getApp().font.size shr 1
-      pad = max(0, count - 1) * margin
+      sep = getApp().space.sepY
+      pad = max(0, count - 1) * sep
       metrics = addr self.metrics
     # Adjust width with margin
     metrics.minW = w
@@ -46,7 +46,7 @@ widget UXLayoutVBox:
       h = self.metrics.h
       w = self.metrics.w
       # Growable Widgets Size
-      margin = getApp().font.size shr 1
+      sep = getApp().space.sepY
       count = self.count
       # Last Widget Adjust
       last {.cursor.} = self.last
@@ -70,7 +70,7 @@ widget UXLayoutVBox:
       metrics.w = w
       metrics.h = size
       # Next Widget
-      y += size + margin
+      y += size + sep
 
 # -----------------
 # Horizontal Layout
@@ -81,7 +81,7 @@ widget UXLayoutHBox:
     [fit, count]: int16
 
   new horizontal():
-    discard
+    result.kind = wkLayout
 
   method update =
     var 
@@ -101,8 +101,8 @@ widget UXLayoutHBox:
       inc(count)
     # Calculate Margin Padding
     let 
-      margin = getApp().font.size shr 1
-      pad = max(0, count - 1) * margin
+      sep = getApp().space.sepX
+      pad = max(0, count - 1) * sep
       metrics = addr self.metrics
     # Adjust width with margin
     metrics.minW = w + pad
@@ -116,7 +116,7 @@ widget UXLayoutHBox:
       h = self.metrics.h
       w = self.metrics.w
       # Growable Widgets Size
-      margin = getApp().font.size shr 1
+      sep = getApp().space.sepX
       count = self.count
       # Last Widget Adjust
       last {.cursor.} = self.last
@@ -140,4 +140,4 @@ widget UXLayoutHBox:
       metrics.w = size
       metrics.h = h
       # Next Widget
-      x += size + margin
+      x += size + sep

@@ -20,7 +20,7 @@ widget UXMenuItemCB of UXMenuItem:
 
   method event(state: ptr GUIState) =
     if self.event0(state):
-      push(self.cb)
+      send(self.cb)
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)
@@ -52,14 +52,19 @@ widget UXMenuItemOption of UXMenuItem:
     let
       lm = self.lm
       p = label(lm, self.rect)
+      colors = addr getApp().colors
       # Locate Circle Center
       cp = point(
         p.xi + lm.icon shr 1,
         p.yi + lm.icon shr 1)
       # Radius Size
       r = float32(lm.icon) * 0.4
-    # Draw Option Circle
-    ctx.color self.itemColor()
+    # Highlight Color
+    var color = colors.item
+    if self.selected:
+      color = colors.focus
+    # Draw Check Square
+    ctx.color(color)
     ctx.circle(cp, r)
     # If Checked Draw Circle Mark
     if self.option.peek[] == self.value:
@@ -90,17 +95,22 @@ widget UXMenuItemCheck of UXMenuItem:
     let
       lm = self.lm
       p = label(lm, self.rect)
-      # Locate Check Square
+      colors = addr getApp().colors
+    # Locate Check Square
     var r = rect(p.xi, p.yi, lm.icon, lm.icon)
+    # Highlight Color
+    var color = colors.item
+    if self.selected:
+      color = colors.focus
     # Draw Check Square
-    ctx.color self.itemColor()
+    ctx.color(color)
     ctx.fill(r)
     # If Checked Draw Circle Mark
     if self.check.peek[]:
       let pad = float32(lm.icon shr 2)
       # Locate Marked Check
-      r.x += pad; r.y += pad
-      r.xw -= pad; r.yh -= pad
+      r.x0 += pad; r.y0 += pad
+      r.x1 -= pad; r.y1 -= pad
       # Draw Marked Check
       ctx.color getApp().colors.text
       ctx.fill(r)
@@ -109,39 +119,39 @@ widget UXMenuItemCheck of UXMenuItem:
 # GUI Menu Popover
 # ----------------
 
-type UXMenuOpaque* = distinct GUIWidget
 widget UXMenuItemPopup of UXMenuItem:
   attributes: {.public.}:
-    popup: GUIWidget
+    map: UXMenuMapper
 
-  callback popupCB:
-    let 
-      popup = self.popup
-      rect = addr self.rect
-    if self.portal[] == self:
-      popup.open()
-      # Move Nearly to Menu
-      popup.move(rect.x + rect.w, rect.y - 2)
-    else: popup.close()
-
-  new menuitem(label: string, popup: UXMenuOpaque):
+  new menuitem(label: string, map: UXMenuMapper):
     result.init0(label)
-    result.popup = GUIWidget(popup)
-    result.onportal = result.popupCB
+    result.map = map
 
   method draw(ctx: ptr CTXRender) =
-    let 
-      app = getApp()
-      rect = rect self.rect
-      colors = addr app.colors
-      r = extra(self.lm, self.rect)
-    # Fill Selected Background
-    if not self.test(wHover) and self.portal[] == self:
-      ctx.color colors.item
-      ctx.fill rect
-    # Draw Menu Label
+    let r = extra(self.lm, self.rect)
+    # Draw Menu and Arrow
     self.draw0(ctx)
     ctx.arrowRight(r)
 
+  method layout =
+    let
+      border = getApp().space.line
+      pivot = addr self.map.pivot
+    # Locate Mapping Pivot
+    pivot.mode = menuHorizontal
+    self.map.locate(self.rect)
+    # Apply Pivot Border
+    pivot.y -= border
+    pivot.oy -= border
+
   method event(state: ptr GUIState) =
-    discard
+    if state.kind == evCursorClick:
+      getWindow().send(wsUngrab)
+
+  method handle(reason: GUIHandle) =
+    let slot = self.slot
+    # Select Menu Popup
+    if reason == inHover:
+      slot[].select(self, addr self.map)
+    elif reason == outHover:
+      slot[].unselect()

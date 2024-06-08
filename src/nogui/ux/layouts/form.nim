@@ -10,14 +10,17 @@ widget UXLayoutField:
     size0: int16
 
   new field(name: string, w: GUIWidget):
+    result.kind = wkLayout
     result.add label(name, hoLeft, veMiddle)
     result.add w
 
   new field(name, w: GUIWidget):
+    result.kind = wkLayout
     result.add name
     result.add w
 
   new field(w: GUIWidget):
+    result.kind = wkLayout
     result.add dummy()
     result.add w
 
@@ -30,18 +33,18 @@ widget UXLayoutField:
       # Label Widget | Control Widget
       m0 = addr self.first.metrics
       m1 = addr self.last.metrics
-      # TODO: allow custom margin
-      margin = getApp().font.size shr 1
+      # Separator Horizontal
+      sep = getApp().space.sepX
     # Calculate Min Size
-    metrics.minW = m0.minW + margin + m1.minW
+    metrics.minW = m0.minW + sep + m1.minW
     metrics.minH = max(m0.minH, m1.minH)
 
   method layout =
     let
       m = addr self.metrics
-      # TODO: allow custom margin
+      # Separator Horizontal
       size0 = self.size0
-      margin = getApp().font.size shr 1
+      sep = getApp().space.sepX
       # Label Widget | Control Widget
       m0 = addr self.first.metrics
       m1 = addr self.last.metrics
@@ -49,7 +52,7 @@ widget UXLayoutField:
     m0.x = 0
     m0.w = size0
     # Arrange Widget
-    m1.x = size0 + margin
+    m1.x = size0 + sep
     m1.w = m.w - m1.x
     # Arrange Height
     m0.h = m.h
@@ -64,14 +67,14 @@ widget UXLayoutForm:
     size0: int16
 
   new form():
-    discard
+    result.kind = wkLayout
 
   method update =
     var 
       w, h: int16
       size0, count: int16
-    # TODO: allow custom margin
-    let margin = getApp().font.size shr 1
+    # Separator Vertical
+    let sep = getApp().space.sepY
     # Iterate Childrens
     for widget in forward(self.first):
       let metrics = addr widget.metrics
@@ -86,7 +89,7 @@ widget UXLayoutForm:
       inc(count)
     # Form Metrics
     let 
-      pad = max(0, count - 1) * margin
+      pad = max(0, count - 1) * sep
       m = addr self.metrics
     m.minW = w
     m.minH = h + pad
@@ -97,8 +100,8 @@ widget UXLayoutForm:
     let 
       size0 = self.size0
       w = self.metrics.w
-      # TODO: allow custom margin
-      margin = getApp().font.size shr 1
+      # Separator Vertical
+      sep = getApp().space.sepY
     # Arrange Widgets
     var y: int16
     for widget in forward(self.first):
@@ -113,4 +116,4 @@ widget UXLayoutForm:
       m.x = 0; m.y = y
       m.w = w; m.h = h
       # Next Y Position
-      y += h + margin
+      y += h + sep

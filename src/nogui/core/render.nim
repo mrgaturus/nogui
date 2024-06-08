@@ -1,31 +1,28 @@
-# Math and Fast Math Modules
+# Import Trigonometric Operations
 from math import sin, cos, PI
-from ../values import
-  fastSqrt, invSqrt,
-  guiProjection
 # Data Loader
 from ../data import 
   newShader, CTXIconID, CTXIconEmpty, `==`
 from ../utf8 import runes16
 # Texture Atlas
 import atlas
+import metrics
 # OpenGL 3.2+
 import ../libs/gl
 
 const 
   STRIDE_SIZE = # 16bytes
-    sizeof(float32)*2 + # XY
-    sizeof(int16)*2 + # UV
+    sizeof(float32) * 2 + # XY
+    sizeof(int16) * 2 + # UV
     sizeof(uint32) # RGBA
 type
   # RENDER PRIMITIVES
-  GUIColor* = uint32
-  GUIRect* = object
-    x*, y*, w*, h*: int32
+  CTXColor* = uint32
   CTXPoint* = object
     x*, y*: float32
   CTXRect* = object
-    x*, y*, xw*, yh*: float32
+    x0*, y0*: float32
+    x1*, y1*: float32
   # Clip Levels
   CTXCommand = object
     offset, base, size: int32
@@ -53,7 +50,7 @@ type
     vao, ebo, vbo: GLuint
     # Color and Clips
     color, colorAA: uint32
-    levels: seq[GUIRect]
+    clip: GUIClipping
     # Vertex index
     size, cursor: uint16
     # Write Pointers
@@ -69,20 +66,20 @@ type
 # GUI PRIMITIVE CREATION PROCS
 # ----------------------------
 
-proc rgba*(r, g, b, a: uint8): GUIColor {.compileTime.} =
+proc rgba*(r, g, b, a: uint32): CTXColor {.compileTime.} =
   result = r or (g shl 8) or (b shl 16) or (a shl 24)
 
 proc rect*(x, y, w, h: int32): CTXRect {.inline.} =
-  result.x = float32(x) 
-  result.y = float32(y)
-  result.xw = float32(x + w) 
-  result.yh = float32(y + h)
+  result.x0 = float32(x) 
+  result.y0 = float32(y)
+  result.x1 = float32(x + w) 
+  result.y1 = float32(y + h)
 
 proc rect*(r: GUIRect): CTXRect =
-  result.x = float32(r.x)
-  result.y = float32(r.y)
-  result.xw = float32(r.x + r.w)
-  result.yh = float32(r.y + r.h)
+  result.x0 = float32(r.x)
+  result.y0 = float32(r.y)
+  result.x1 = float32(r.x + r.w)
+  result.y1 = float32(r.y + r.h)
 
 proc point*(x, y: float32): CTXPoint {.inline.} =
   result.x = x; result.y = y
@@ -95,8 +92,8 @@ proc normal*(a, b: CTXPoint): CTXPoint =
   result.x = a.y - b.y
   result.y = b.x - a.x
   let norm = invSqrt(
-    result.x*result.x + 
-    result.y*result.y)
+    result.x * result.x + 
+    result.y * result.y)
   # Normalize Point
   result.x *= norm
   result.y *= norm
@@ -191,8 +188,8 @@ proc clear(ctx: var CTXRender) =
   setLen(ctx.elements, 0)
   setLen(ctx.verts, 0)
   # Clear Clipping Levels
-  setLen(ctx.levels, 0)
-  ctx.color = 0 # Nothing Color
+  ctx.clip.clear()
+  ctx.color = 0
 
 proc render*(ctx: var CTXRender) =
   if checkTexture(ctx.atlas): # Check if was Resized
@@ -237,6 +234,24 @@ proc finish*() =
   # Unbind Program
   glUseProgram(0)
 
+# ---------------------------
+# GUI CLIP/COLOR LEVELS PROCS
+# ---------------------------
+
+proc push*(ctx: ptr CTXRender, rect: var GUIRect) =
+  # Reset Current CMD
+  ctx.pCMD = nil
+  ctx.clip.push(rect)
+
+proc pop*(ctx: ptr CTXRender) {.inline.} =
+  # Reset Current CMD
+  ctx.pCMD = nil
+  ctx.clip.pop()
+
+proc color*(ctx: ptr CTXRender, color: uint32) {.inline.} =
+  ctx.color = color # Normal Solid Color
+  ctx.colorAA = color and 0xFFFFFF # Antialiased
+
 # ------------------------
 # GUI PAINTER HELPER PROCS
 # ------------------------
@@ -244,22 +259,19 @@ proc finish*() =
 proc addCommand(ctx: ptr CTXRender) =
   # Reset Cursor
   ctx.size = 0
+  # Create New Command
+  var cmd: CTXCommand
+  cmd.offset = int32 len(ctx.elements)
+  cmd.base = int32 len(ctx.verts)
+  cmd.clip = ctx.clip.peek()
   # Add New Command
-  ctx.cmds.add(
-    CTXCommand(
-      offset: int32(
-        len(ctx.elements)
-      ), base: int32(
-        len(ctx.verts)
-      ), clip: if len(ctx.levels) > 0: ctx.levels[^1]
-      else: GUIRect(w: ctx.vWidth, h: ctx.vHeight)
-    ) # End New CTX Command
-  ) # End Add Command
+  ctx.cmds.add(cmd)
   ctx.pCMD = addr ctx.cmds[^1]
 
 proc addVerts*(ctx: ptr CTXRender, vSize, eSize: int32) =
   # Create new Command if is reseted
-  if isNil(ctx.pCMD): addCommand(ctx)
+  if isNil(ctx.pCMD):
+    addCommand(ctx)
   # Set New Vertex and Elements Lenght
   ctx.verts.setLen(ctx.verts.len + vSize)
   ctx.elements.setLen(ctx.elements.len + eSize)
@@ -304,7 +316,7 @@ proc vertexUV*(ctx: ptr CTXRender; i: int32; x, y: float32; u, v: int16) {.inlin
   vert.color = ctx.color # Color RGBA
 
 # X,Y,COLOR | PUBLIC
-proc vertexCOL*(ctx: ptr CTXRender; i: int32; x, y: float32; color: GUIColor) {.inline.} =
+proc vertexCOL*(ctx: ptr CTXRender; i: int32; x, y: float32; color: CTXColor) {.inline.} =
   let vert = addr ctx.pVert[i]
   vert.x = x # Position X
   vert.y = y # Position Y
@@ -335,51 +347,16 @@ proc quad*(ctx: ptr CTXRender; i: int32; a, b, c, d: int32) =
   element[4] = cursor + cast[uint16](d)
   element[5] = cursor + cast[uint16](a)
 
-# -----------------------
-# GUI CLIP/COLOR LEVELS PROCS
-# -----------------------
-
-proc intersect(ctx: ptr CTXRender, rect: var GUIRect): GUIRect =
-  let prev = addr ctx.levels[^1]
-  result.x = max(prev.x, rect.x)
-  result.y = max(prev.y, rect.y)
-  result.w = min(prev.x + prev.w, rect.x + rect.w) - result.x
-  result.h = min(prev.y + prev.h, rect.y + rect.h) - result.y
-  # Clamp Dimensions to 0
-  if (result.w or result.h) < 0:
-    result.w = 0
-    result.h = 0
-
-proc push*(ctx: ptr CTXRender, rect: var GUIRect) =
-  # Reset Current CMD
-  ctx.pCMD = nil
-  # Calcule Intersect Clip
-  var clip = if len(ctx.levels) > 0:
-    ctx.intersect(rect) # Intersect Level
-  else: rect # First Level
-  # Add new Level to Stack
-  ctx.levels.add(clip)
-
-proc pop*(ctx: ptr CTXRender) {.inline.} =
-  # Reset Current CMD
-  ctx.pCMD = nil
-  # Remove Last CMD from Stack
-  ctx.levels.setLen(max(ctx.levels.len - 1, 0))
-
-proc color*(ctx: ptr CTXRender, color: uint32) {.inline.} =
-  ctx.color = color # Normal Solid Color
-  ctx.colorAA = color and 0xFFFFFF # Antialiased
-
 # ---------------------------
 # GUI BASIC SHAPES DRAW PROCS
 # ---------------------------
 
 proc fill*(ctx: ptr CTXRender, r: CTXRect) =
   ctx.addVerts(4, 6)
-  ctx.vertex(0, r.x, r.y)
-  ctx.vertex(1, r.xw, r.y)
-  ctx.vertex(2, r.x, r.yh)
-  ctx.vertex(3, r.xw, r.yh)
+  ctx.vertex(0, r.x0, r.y0)
+  ctx.vertex(1, r.x1, r.y0)
+  ctx.vertex(2, r.x0, r.y1)
+  ctx.vertex(3, r.x1, r.y1)
   # Elements Definition
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)
@@ -387,21 +364,21 @@ proc fill*(ctx: ptr CTXRender, r: CTXRect) =
 proc line*(ctx: ptr CTXRender, r: CTXRect, s: float32) =
   ctx.addVerts(12, 24)
   # Top Rectangle Vertexs
-  ctx.vertex(0, r.x,  r.y)
-  ctx.vertex(1, r.xw, r.y)
-  ctx.vertex(2, r.x,  r.y + s)
-  ctx.vertex(3, r.xw, r.y + s)
+  ctx.vertex(0, r.x0, r.y0)
+  ctx.vertex(1, r.x1, r.y0)
+  ctx.vertex(2, r.x0, r.y0 + s)
+  ctx.vertex(3, r.x1, r.y0 + s)
   # Bottom Rectangle Vertexs
-  ctx.vertex(4, r.x, r.yh)
-  ctx.vertex(5, r.xw, r.yh)
-  ctx.vertex(6, r.x,  r.yh - s)
-  ctx.vertex(7, r.xw, r.yh - s)
+  ctx.vertex(4, r.x0, r.y1)
+  ctx.vertex(5, r.x1, r.y1)
+  ctx.vertex(6, r.x0, r.y1 - s)
+  ctx.vertex(7, r.x1, r.y1 - s)
   # Left Side Rectangle Vertexs
-  ctx.vertex(8, r.x + s,  r.y + s)
-  ctx.vertex(9, r.xw - s, r.y + s)
+  ctx.vertex(8, r.x0 + s, r.y0 + s)
+  ctx.vertex(9, r.x1 - s, r.y0 + s)
   # Right Side Rectangle Vertexs
-  ctx.vertex(10, r.x + s,  r.yh - s)
-  ctx.vertex(11, r.xw - s, r.yh - s)
+  ctx.vertex(10, r.x0 + s, r.y1 - s)
+  ctx.vertex(11, r.x1 - s, r.y1 - s)
   # Top Rectangle
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)
@@ -427,10 +404,10 @@ proc texture*(ctx: ptr CTXRender, r: CTXRect, texID: GLuint) =
   ctx.pVert = # Set Pointer Cursor
     cast[CTXVertexMap](addr ctx.verts[^4])
   # Define Texture Quad Vertexs
-  ctx.vertexUV(0, r.x, r.y, 0, 0)
-  ctx.vertexUV(1, r.xw, r.y, 1, 0)
-  ctx.vertexUV(2, r.x, r.yh, 0, 1)
-  ctx.vertexUV(3, r.xw, r.yh, 1, 1)
+  ctx.vertexUV(0, r.x0, r.y0, 0, 0)
+  ctx.vertexUV(1, r.x1, r.y0, 1, 0)
+  ctx.vertexUV(2, r.x0, r.y1, 0, 1)
+  ctx.vertexUV(3, r.x1, r.y1, 1, 1)
   # Set Texture ID
   ctx.pCMD.texID = texID
   # Invalidate CMD
@@ -578,22 +555,22 @@ proc text*(ctx: ptr CTXRender, x, y: int32, clip: CTXRect, str: string) =
       vo = glyph.y1 # V Coord
       vh = glyph.y2 # V + H
     # Is Visible on X?
-    if xo > clip.xw: break
-    elif xw > clip.x:
+    if xo > clip.x1: break
+    elif xw > clip.x0:
       # Clip Current Glyph
-      if xo < clip.x:
-        uo += int16(clip.x - xo)
-        xo = clip.x # Left Point
-      if xw > clip.xw:
-        uw -= int16(xw - clip.xw)
-        xw = clip.xw # Right Point
+      if xo < clip.x0:
+        uo += int16(clip.x0 - xo)
+        xo = clip.x0 # Left Point
+      if xw > clip.x1:
+        uw -= int16(xw - clip.x1)
+        xw = clip.x1 # Right Point
       # Is Clipped Vertically?
-      if yo < clip.y:
-        vo += int16(clip.y - yo)
-        yo = clip.y # Upper Point
-      if yh > clip.yh:
-        vh -= int16(yh - clip.yh)
-        yh = clip.yh # Botton Point
+      if yo < clip.y0:
+        vo += int16(clip.y0 - yo)
+        yo = clip.y0 # Upper Point
+      if yh > clip.y1:
+        vh -= int16(yh - clip.y1)
+        yh = clip.y1 # Botton Point
       # Reserve Vertex and Elements
       ctx.addVerts(4, 6)
       # Quad Vertex
@@ -613,17 +590,17 @@ proc icon*(ctx: ptr CTXRender, id: CTXIconID, x, y: int32) =
   let i = icon(ctx.atlas, uint16 id)
   # Calculate Icon Metrics
   let
-    x = float32 x
-    y = float32 y
-    xw = x + float32 i.w
-    yh = y + float32 i.h
+    x0 = float32 x
+    y0 = float32 y
+    x1 = x0 + float32 i.w
+    y1 = y0 + float32 i.h
   # Reserve Vertex
   ctx.addVerts(4, 6)
   # Icon Vertex Definition
-  ctx.vertexUV(0, x, y, i.x1, i.y1)
-  ctx.vertexUV(1, xw, y, i.x2, i.y1)
-  ctx.vertexUV(2, x, yh, i.x1, i.y2)
-  ctx.vertexUV(3, xw, yh, i.x2, i.y2)
+  ctx.vertexUV(0, x0, y0, i.x1, i.y1)
+  ctx.vertexUV(1, x1, y0, i.x2, i.y1)
+  ctx.vertexUV(2, x0, y1, i.x1, i.y2)
+  ctx.vertexUV(3, x1, y1, i.x2, i.y2)
   # Elements Definition
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)
@@ -635,10 +612,10 @@ proc icon*(ctx: ptr CTXRender, id: CTXIconID, r: CTXRect) =
   # Reserve Vertex
   ctx.addVerts(4, 6)
   # Icon Vertex Definition
-  ctx.vertexUV(0, r.x, r.y, i.x1, i.y1)
-  ctx.vertexUV(1, r.xw, r.y, i.x2, i.y1)
-  ctx.vertexUV(2, r.x, r.yh, i.x1, i.y2)
-  ctx.vertexUV(3, r.xw, r.yh, i.x2, i.y2)
+  ctx.vertexUV(0, r.x0, r.y0, i.x1, i.y1)
+  ctx.vertexUV(1, r.x1, r.y0, i.x2, i.y1)
+  ctx.vertexUV(2, r.x0, r.y1, i.x1, i.y2)
+  ctx.vertexUV(3, r.x1, r.y1, i.x2, i.y2)
   # Elements Definition
   ctx.triangle(0, 0,1,2)
   ctx.triangle(3, 1,2,3)

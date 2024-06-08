@@ -77,7 +77,7 @@ proc locate*(m: GUILabelMetrics, r: GUIRect): GUILabelPosition =
     font = addr getApp().font
     xt = m.w - m.label
     # Vertical Positions
-    yt = (m.h - font.height + font.baseline) shr 1
+    yt = (m.h - font.baseline) shr 1
     yi = (m.h - m.icon) shr 1
   # Icon Position
   result.xi = cx
@@ -149,32 +149,32 @@ proc arrowRect(r: GUIRect, sw, sh: float32): CTXRect =
   result = rect(r)
   # Calculate Center
   let 
-    cx = (result.x + result.xw) * 0.5
-    cy = (result.y + result.yh) * 0.5
+    cx = (result.x0 + result.x1) * 0.5
+    cy = (result.y0 + result.y1) * 0.5
   # Scale Center
-  result.x = (result.x - cx) * sw + cx
-  result.y = (result.y - cy) * sh + cy
-  result.xw = (result.xw - cx) * sw + cx
-  result.yh = (result.yh - cy) * sh + cy
+  result.x0 = (result.x0 - cx) * sw + cx
+  result.y0 = (result.y0 - cy) * sh + cy
+  result.x1 = (result.x1 - cx) * sw + cx
+  result.y1 = (result.y1 - cy) * sh + cy
 
 proc arrowRight*(ctx: ptr CTXRender, r: GUIRect) =
   let
     r = arrowRect(r, 0.25, 0.5)
-    c = (r.y + r.yh) * 0.5
+    c = (r.y0 + r.y1) * 0.5
     # Triangle Points
-    p0 = point(r.x, r.y)
-    p1 = point(r.x, r.yh)
-    p2 = point(r.xw, c)
+    p0 = point(r.x0, r.y0)
+    p1 = point(r.x0, r.y1)
+    p2 = point(r.x1, c)
   # Render Triangle
   ctx.triangle(p0, p1, p2)
 
 proc arrowDown*(ctx: ptr CTXRender, r: GUIRect) =
   let
     r = arrowRect(r, 0.5, 0.25)
-    c = (r.x + r.xw) * 0.5
+    c = (r.x0 + r.x1) * 0.5
     # Triangle Points
-    p0 = point(r.xw, r.y)
-    p1 = point(r.x, r.y)
-    p2 = point(c, r.yh)
+    p0 = point(r.x1, r.y0)
+    p1 = point(r.x0, r.y0)
+    p2 = point(c, r.y1)
   # Render Triangle
   ctx.triangle(p0, p1, p2)

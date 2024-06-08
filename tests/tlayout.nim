@@ -6,40 +6,87 @@ from nogui/libs/gl import
 from nogui import createApp, executeApp
 from nogui/builder import controller, child
 import nogui/ux/prelude
+import nogui/ux/pivot
 # Import All Widgets
-import nogui/ux/widgets/button
 import nogui/ux/layouts/[box, misc]
+import nogui/ux/widgets/[button, check, radio]
+import nogui/ux/separator
+from nogui/pack import icons
+
+widget UXFocusTest:
+  attributes:
+    pivot: GUIStatePivot
+
+  new focustest():
+    result.flags = {wMouse, wKeyboard}
+  
+  method event(state: ptr GUIState) =
+    self.pivot.capture(state)
+    if state.kind == evCursorRelease and self.test(wHover):
+      self.send(wsFocus)
+    echo "dist: ", self.pivot.dist
+    echo "away: ", self.pivot.away
+
+  method update =
+    let m = addr self.metrics
+    m.minW = width("DEMO FOCUS").int16
+    m.minH = width("DEMO").int16
+
+  method draw(ctx: ptr CTXRender) =
+    ctx.color self.itemColor()
+    # Draw Focused if not Hovered
+    if self.flags * {wFocus, wHover, wGrab} == {wFocus}:
+      ctx.color getApp().colors.text
+    # Draw Focus Check
+    ctx.fill rect(self.rect)
+
+  method handle(reason: GUIHandle) =
+    case reason
+    of inFocus: echo "focused: ", cast[pointer](self).repr
+    of outFocus: echo "unfocused: ", cast[pointer](self).repr
+    else: discard
+
+icons "tatlas", 16:
+  brush := "reset.svg"
 
 controller CONLayout:
   attributes:
     widget: GUIWidget
+    [check0, check1]: @ bool
+    option: @ int32
 
   callback cbHello:
     echo "hello world"
 
   proc createWidget: GUIWidget =
-    let cbHello = self.cbHello
     # Create Layout
-    margin: horizontal().child:
-      min: button("Minimun Left", cbHello)
+    margin(16): horizontal().child:
+      min: focustest()
       # Sub Layout
       vertical().child:
-        min: button("Minimun Top", cbHello)
-        button("Growable Center", cbHello)
-        min: button("Minimun Bottom", cbHello)
+        min: focustest()
+        focustest()
+        min: focustest()
         # Sub Sub Layout
         horizontal().child:
-          button("Sub Sub Left", cbHello)
-          min: button("Minimun Center", cbHello)
-          button("Sub Sub Right", cbHello)
-      min: button("Minimun Right", cbHello)
+          focustest()
+          min: vertical().child:
+            button("Check 0", iconBrush, self.check0)
+            button("Check 1", iconBrush, self.check1)
+            min: separator()
+            button("Option A", iconBrush, self.option, 0)
+            button("Option B", iconBrush, self.option, 1)
+            min: separator()
+            button("Hello World", iconBrush, self.cbHello).clear()
+          focustest()
+      min: focustest()
 
   new conlayout():
     # Create New Widget
     result.widget = result.createWidget()
 
 proc main() =
-  createApp(1024, 600, nil)
+  createApp(1024, 600)
   let test = conlayout()
   # Clear Color
   # Open Window

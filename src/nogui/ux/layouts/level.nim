@@ -14,11 +14,11 @@ widget UXLevelCell of UXLayoutCell:
 
 widget UXLayoutHLevel:
   new level():
-    discard
+    result.kind = wkLayout
 
   method update =
-    # TODO: allow customize margin
-    let margin = getApp().font.size shr 1
+    # Separator Horizontal
+    let sep = getApp().space.sepX
     var w, h, count: int16
     # Calculate Min Size
     for widget in forward(self.first):
@@ -33,7 +33,7 @@ widget UXLayoutHLevel:
     m.minH = h
     # Check Margin
     if count > 0:
-      m.minW += margin
+      m.minW += sep
 
   method layout =
     var 
@@ -63,11 +63,11 @@ widget UXLayoutHLevel:
 
 widget UXLayoutVLevel:
   new vlevel():
-    discard
+    result.kind = wkLayout
 
   method update =
-    # TODO: allow customize margin
-    let margin = getApp().font.size shr 1
+    # Separator Vertical
+    let sep = getApp().space.sepY
     var w, h, count: int16
     # Calculate Min Size
     for widget in forward(self.first):
@@ -82,7 +82,7 @@ widget UXLayoutVLevel:
     m.minH = h
     # Check Margin
     if count > 0:
-      m.minH += margin
+      m.minH += sep
 
   method layout =
     var 

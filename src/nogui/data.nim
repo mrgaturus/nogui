@@ -3,7 +3,6 @@ from os import `/`, getAppDir, dirExists
 from std/compilesettings import 
   querySetting, SingleValueSetting
 # TODO: Use fontconfig for extra fonts
-# TODO: errors as exceptions with IOError
 import logger
 import libs/gl
 from libs/ft2 import
@@ -28,51 +27,70 @@ proc toDataPath(path: string): string =
       result = unixPath / path
 
 # -----------------------
-# Icon Data Loading Procs
+# Icon Chunk Loading Type
 # -----------------------
 
 type
-  CTXHeaderIcon = object
+  CTXChunkHeader = object
     bytes*: cuint
     w*, h*, fit*: cshort
     channels*: cshort
-    # Allocated Chunk
-    pad0: cuint
-  CTXBufferIcon = ptr UncheckedArray[byte]
+    # Hotspot Position
+    ox*, oy*: cshort
+  CTXChunkBuffer = ptr UncheckedArray[byte]
   CTXChunkIcon* = object
-    info*: ptr CTXHeaderIcon
-    buffer*: CTXBufferIcon
+    info*: ptr CTXChunkHeader
+    buffer*: CTXChunkBuffer
+  # Packed Icons Reader
   CTXPackedIcons* = ref object
     handle: File
     allocated: int
     # Current Icon Buffer
-    header*: CTXHeaderIcon
-    buffer*: CTXBufferIcon
-# Icon ID Type and Empty Checking
+    header*: CTXChunkHeader
+    buffer*: CTXChunkBuffer
+
+# Ordered Icon Identifiers
 type CTXIconID* = distinct uint16
+type CTXCursorID* = distinct uint16
+# Empty Icon Identifier
 const CTXIconEmpty* = CTXIconID(65535)
 proc `==`*(a, b: CTXIconID): bool {.borrow.}
+proc `==`*(a, b: CTXCursorID): bool {.borrow.}
 
-proc newIcons*(filename: string): CTXPackedIcons =
+# --------------------------
+# Icon Chunk Loading Prepare
+# --------------------------
+
+proc newPacked(filename: string, signature: uint64): CTXPackedIcons =
   new result
   # Try Open File
   let path = toDataPath(filename)
   if not open(result.handle, path, fmRead):
     raise newException(IOError, path & " cannot be open")
   # Read File Signature
-  var signature: uint64
-  if readBuffer(result.handle, addr signature, 8) != 8 or 
-    signature != 0x4955474f4e'u64:
+  var sig: uint64
+  if readBuffer(result.handle, addr sig, 8) != 8 or 
+    sig != signature: # Check if is Valid Signature
       raise newException(IOError, path & " is not valid")
 
-proc bytesIcon(pack: CTXPackedIcons, bytes: int): CTXBufferIcon =
+proc newIcons*(filename: string): CTXPackedIcons =
+  newPacked(filename, 0x4955474f4e'u64) # 'NOGUI   '
+
+proc newCursors*(filename: string): CTXPackedIcons =
+  newPacked(filename, 0x5255434955474f4e'u64) # 'NOGUICUR'
+
+# -----------------------
+# Icon Chunk Loading Read
+# -----------------------
+
+proc bytesIcon(pack: CTXPackedIcons, bytes: int): CTXChunkBuffer =
   if bytes > pack.allocated:
     pack.allocated = bytes
     # We dont need prev data
     let prev = pack.buffer
     if not isNil(prev):
       dealloc(prev)
-    pack.buffer = cast[CTXBufferIcon](alloc bytes)
+    pack.buffer = cast[CTXChunkBuffer](alloc bytes)
   # Return Current Buffer
   pack.buffer
 
@@ -80,11 +98,11 @@ iterator icons*(pack: CTXPackedIcons): CTXChunkIcon =
   let
     handle = pack.handle
     info = addr pack.header
-  # Chunk Yiedler
+  # File Chunk Reader
   var result: CTXChunkIcon
   result.info = info
   # Read Chunk and Write a PNG
-  const headSize = sizeof CTXHeaderIcon
+  const headSize = sizeof(CTXChunkHeader)
   while readBuffer(handle, info, headSize) == headSize:
     let 
       bytes = int info.bytes
@@ -92,14 +110,13 @@ iterator icons*(pack: CTXPackedIcons): CTXChunkIcon =
     if readBuffer(handle, addr data[0], bytes) == bytes:
       result.buffer = data
       yield result
-  # We Can Close File
-  close(pack.handle)
-  # Free Temporal Buffer
+  # Dealloc Buffer and File
   dealloc(pack.buffer)
+  close(pack.handle)
 
-# -----------------------------
-# Freetype 2 Face Creation Proc
-# -----------------------------
+# ------------------------
+# Freetype 2 Font Creation
+# ------------------------
 
 proc newFont*(ft2: FT2Library, font: string, size: cint): FT2Face =
   let path = toDataPath(font)

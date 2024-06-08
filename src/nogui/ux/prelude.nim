@@ -1,42 +1,58 @@
-from ../builder import widget
-# Import Widget and Rendering
-import ../gui/[widget, event, render, atlas, signal, value]
-# Import Event and Callback Stuff
-from ../gui/timer import pushTimer, stopTimer
+# Import GUI Builder
+from ../builder import widget, controller
+# Import GUI Native Platform
+from ../native/ffi import
+  GUIEvent, GUITool,
+  GUIKeycode, GUIKeymod, GUIState, mods, name
+from ../native/cursor import GUICursorSys
+# Import GUI Core
+import ../core/[widget, metrics, render, atlas, callback, value, window]
+from ../core/timer import timeout, timestop
 # Import Global App State
-from ../../nogui import getApp, width, index
+from ../../nogui import
+  getApp,
+  getWindow,
+  width, index
 # Import Icon ID Helper
-from ../data import CTXIconID, CTXIconEmpty, `==`
+from ../data import
+  CTXIconID,
+  CTXCursorID,
+  CTXIconEmpty, `==`
 # Import Private Access
 from std/importutils import privateAccess
+
+# -------------------
+# GUI Widget Callback
+# -------------------
+
+proc send*(widget: GUIWidget, msg: WidgetMessage) =
+  getWindow().send(widget, msg)
+
+proc relax*(widget: GUIWidget, msg: WidgetMessage) =
+  getWindow().relax(widget, msg)
 
 # ------------------------
 # GUI Control Color Helper
 # ------------------------
 
-proc colorControl*(self: GUIWidget, idle, hover, click: uint32): uint32 {.inline.} =
-  let flags = self.flags and wHoverGrab
+template colorControl(self: GUIWidget, idle, hover, click: uint32): uint32 =
+  const wHoverGrab = {wHover, wGrab}
+  let flags = self.flags * wHoverGrab
   # Choose Which Color Using State
-  if flags == 0: idle
+  if flags == {}: idle
   elif flags == wHoverGrab: click
   else: hover
 
-# --------------------
-# Toggle Button Colors
-# --------------------
-
-proc opaqueColor*(self: GUIWidget): uint32 =
+# -- Toggle Button Colors
+proc clearColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
-  self.colorControl(0, c.focus, c.clicked)
+  self.colorControl(0'u32, c.focus, c.clicked)
 
 proc activeColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
   self.colorControl(c.clicked, c.focus, c.item)
 
-# ------------------
-# Item Button Colors
-# ------------------
-
+# -- Item Button Colors
 proc optionColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
   self.colorControl(c.darker, c.focus, c.clicked)
@@ -49,13 +65,28 @@ proc itemColor*(self: GUIWidget): uint32 =
 # Exporting Prelude
 # -----------------
 
+export
+  GUIEvent,
+  GUITool,
+  GUIKeycode,
+  GUIKeymod,
+  GUIState,
+  ffi.mods,
+  ffi.name,
+  # Export Cursor
+  GUICursorSys
+
 export builder.widget
+export builder.controller
 export widget
+export metrics except
+  GUIClipping,
+  push, pop, clear, peek
 export render except 
   newCTXRender,
-  begin, 
-  viewport, 
-  clear, 
+  begin,
+  viewport,
+  clear,
   render,
   finish
 export atlas except
@@ -63,17 +94,20 @@ export atlas except
   createTexture,
   checkTexture
 # Export Event and Callback Stuff
-export event except
-  newGUIState,
-  translateX11Event,
-  utf8state
-export signal except newGUIQueue
-export pushTimer, stopTimer
-# Export Relevant Global State
-export getApp, width, index
+export callback except messenger
+export timeout, timestop
+# Export Global App State
+export getApp, getWindow, width, index
+export window except
+  GUIWindow,
+  newGUIWindow,
+  execute, render, poll
 # Export Constant Icon ID
-export CTXIconID, CTXIconEmpty, data.`==`
+export
+  CTXIconID,
+  CTXIconEmpty,
+  CTXCursorID,
+  data.`==`
 # Export Shared Values
 export value
-# Export Private Access
 export privateAccess

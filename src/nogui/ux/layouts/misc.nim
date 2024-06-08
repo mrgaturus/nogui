@@ -1,5 +1,28 @@
 import base
 
+# ------------------
+# GUI Preferred Size
+# ------------------
+
+widget UXLayoutPreferred:
+  attributes:
+    [w, h]: int16
+
+  new preferred(w, h: int32, widget: GUIWidget):
+    result.kind = wkLayout
+    result.add(widget)
+    # Preferred Min Size
+    result.w = int16 w
+    result.h = int16 h
+  
+  method update =
+    self.metrics.minW = self.w
+    self.metrics.minH = self.h
+  
+  method layout =
+    let m1 = addr self.first.metrics
+    m1[].fit(self.metrics)
+
 # ---------------
 # GUI Adjust Cell
 # ---------------
@@ -23,10 +46,9 @@ proc calc(force, min, size: int16, scale: float32): int16 =
   result = int16(scale * float32 result)
 
 proc offset(m: int16): int16 =
-  # TODO: allow customize global margin
   # TODO: scale customized margin
   if m >= 0: m
-  else: getApp().font.size shr 1
+  else: getApp().space.margin
 
 # ----------------------
 # GUI Adjust Cell Layout
@@ -42,6 +64,8 @@ widget UXAdjustLayout:
     [scaleW, scaleH]: float32
 
   proc init(w: GUIWidget) =
+    self.kind = wkLayout
+    # Original Scale
     self.scaleW = 1.0
     self.scaleH = 1.0
     # Store Widget
@@ -111,20 +135,24 @@ widget UXMarginLayout:
     # Use Default Margin
     result.marginW = low int16
     result.marginH = low int16
+    # Widget Layout Kind
+    result.kind = wkLayout
 
   new margin(size: int16, w: GUIWidget):
     result.add w
     # Customized Margin
     result.marginW = size
     result.marginH = size
+    # Widget Layout Kind
+    result.kind = wkLayout
 
   method update =
     let 
       m0 = addr self.metrics
       m = addr self.first.metrics
       # Padding Sizes
-      pw = offset(self.marginW) shl 1
-      ph = offset(self.marginH) shl 1
+      pw = offset(self.marginW)
+      ph = offset(self.marginH)
     # Ensure is one widget
     assert self.first == self.last
     # Mimic Min Size + Margin

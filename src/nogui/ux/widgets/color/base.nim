@@ -1,10 +1,5 @@
 import ../../prelude
-from ../../../values import
-  RGBColor,
-  HSVColor,
-  toRGB,
-  toPacked,
-  toHSV
+import ../../values/chroma
 
 const # Gradient de-Banding
   BLACK* = uint32 0xFF000000
