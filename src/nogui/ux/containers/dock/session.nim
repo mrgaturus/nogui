@@ -204,7 +204,7 @@ widget UXDockContainer:
       side = groupSide(self.rect, x, y)
     # Check if Side is Inside and not Already Attached
     if side == dockRight and not isNil(self.right): discard
-    elif side == dockLeft and not isNil(self.right): discard
+    elif side == dockLeft and not isNil(self.left): discard
     elif side in {dockLeft, dockRight}:
       if state.kind != evCursorRelease:
         hint.show(self.rect, x, y, side)

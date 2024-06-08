@@ -72,8 +72,9 @@ widget UXDockPanel:
     self.header.content = content[]
     self.content = content[]
     # Relayout Dock Panel
+    let stick = self.pivot.stick
     var s {.cursor.}: GUIWidget = self
-    if self.grouped:
+    if self.grouped or stick in {dockLeft, dockRight}:
       s = s.parent
     s.relax(wsLayout)
 
