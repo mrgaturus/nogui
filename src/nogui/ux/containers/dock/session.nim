@@ -228,6 +228,7 @@ widget UXDockContainer:
     # Remove From Group
     if dock.grouped:
       self.groupExit(dock)
+      return
     elif widget == self.left:
       self.left = nil
       self.relax(wsLayout)

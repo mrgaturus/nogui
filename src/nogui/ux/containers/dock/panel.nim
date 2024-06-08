@@ -25,16 +25,20 @@ widget UXDockPanel:
 
   proc unique*: bool {.inline.} =
     let tab {.cursor.} = self.content.tab
-    tab.next == tab.prev
+    isNil(tab) or tab.next == tab.prev
 
   callback cbClose:
+    var content = self.content
+    # Detach Current Tab
     if not self.unique:
-      self.header.detach(self.content)
-      let content = self.header.content
-      # Select Near Tab
+      self.header.detach(content)
+      content = self.header.content
       content.select()
+      return
+    # Dismiss Content
+    content.dismiss()
     # Detach Grouped
-    elif self.grouped:
+    if self.grouped:
       self.flags.excl(wMouse)
       force(self.onwatch, addr self)
     # Detach when Floating
@@ -228,11 +232,11 @@ widget UXDockPanel:
 
   method handle(reason: GUIHandle) =
     if reason in {outGrab, outHover}:
-      # Check if Dock was Moved
       let
+        tab {.cursor.} = self.content.tab
         moved = dockMove in self.pivot.sides
-        tab = wGrab in self.content.tab.flags
-      if reason == outGrab and moved and not tab:
+        check = isNil(tab) or wGrab in tab.flags
+      if reason == outGrab and moved and not check:
         send(self.onwatch, self)
       # Reset Pivot if not Grab and Hover
       if {wGrab, wHover} * self.flags == {}:
@@ -292,6 +296,10 @@ proc detach0(self: UXDockPanel, content: ptr UXDockContent) =
   let
     c0 = content[]
     header = self.header
+  # Close Window if Unique
+  if self.unique:
+    force(self.cbClose)
+    return
   # Remove Selected Content
   header.detach(c0)
   header.content.select()
