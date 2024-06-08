@@ -6,6 +6,7 @@ export
   menuseparator
 # Menu Private Access
 export popup.menu
+export popup.UXMenu
 privateAccess(UXMenu)
 
 # -----------------
