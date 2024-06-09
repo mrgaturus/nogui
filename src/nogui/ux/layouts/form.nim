@@ -24,8 +24,9 @@ widget UXLayoutField:
     result.add dummy()
     result.add w
 
-  proc sizelabel: int16 {.inline.} =
-    self.first.metrics.minW
+  proc sizelabel: int16 =
+    let pad = getApp().space.sepX
+    self.first.metrics.minW + pad
 
   method update =
     let 
@@ -33,10 +34,9 @@ widget UXLayoutField:
       # Label Widget | Control Widget
       m0 = addr self.first.metrics
       m1 = addr self.last.metrics
-      # Separator Horizontal
-      sep = getApp().space.sepX
-    # Calculate Min Size
-    metrics.minW = m0.minW + sep + m1.minW
+      pad = getApp().space.sepX
+    # Calculate Field Min Size
+    metrics.minW = m0.minW + pad + m1.minW
     metrics.minH = max(m0.minH, m1.minH)
 
   method layout =
