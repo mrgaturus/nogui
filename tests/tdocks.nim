@@ -9,6 +9,7 @@ import nogui/ux/prelude
 import nogui/builder
 # Import Docks Containers
 import nogui/ux/containers/dock
+import nogui/ux/widgets/menu
 
 # -------------
 # Helper Widget
@@ -90,6 +91,9 @@ controller CXDockTesting:
     result.metrics.x = x
     result.metrics.y = x
 
+  callback cbHello:
+    echo "Hello World"
+
   proc createWidget: UXDockSession =
     self.root = dockbodytest(0x2FFFFFFF'u32, 210, 120)
     # Create Some Panels
@@ -98,8 +102,23 @@ controller CXDockTesting:
       panel1 = dockpanel0test(170, 150)
       panel2 = dockpanel0test(300, 200)
     # Create Some Tabs
-    panel0.add dockcontent("Tab 1", dockbodytest(0x00FFFFFF'u32, 210, 120))
-    panel0.add dockcontent("Tab 2", dockbodytest(0x7F00FF00'u32, 210, 120))
+    let co0 = dockcontent("Menu 1", dockbodytest(0x00FFFFFF'u32, 210, 120))
+    co0.menu = menu("#tabmenu").child:
+      menuitem("Hello", self.cbHello)
+      menuitem("This", self.cbHello)
+      menuitem("Menu", self.cbHello)
+    # Create Some Tabs
+    let co1 = dockcontent("Menu 2", dockbodytest(0x00FFFFFF'u32, 210, 120))
+    co1.menu = menu("#tabmenu").child:
+      menuitem("Another", self.cbHello)
+      menuitem("Menu", self.cbHello)
+      menuseparator()
+      menuitem("Created", self.cbHello)
+      menu("Sub Menu").child:
+        menuitem("Menu 1", self.cbHello)
+        menuitem("Menu 2", self.cbHello)
+    panel0.add co0
+    panel0.add co1
     panel0.add dockcontent("Tab 3", dockbodytest(0x7FFFFF00'u32, 210, 120))
     # Create Some Tabs 2
     panel1.add dockcontent("Tab 1", dockbodytest(0xFFFFFFFF'u32, 150, 250))

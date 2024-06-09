@@ -138,8 +138,8 @@ widget UXMenu:
     self.view = view
     # Scrollview as Unique
     self.add(view)
+    self.send(wsLayout)
     self.listed = true
-    view.vtable.update(view)
 
   method update =
     let
@@ -148,6 +148,7 @@ widget UXMenu:
     # Configure UXMenu Children
     if not self.listed:
       self.gather()
+      return
     # Fit Minimum Size
     var m1 = addr self.list.metrics
     m0.minW = m1.minW + border
