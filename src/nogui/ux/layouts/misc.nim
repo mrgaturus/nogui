@@ -156,8 +156,8 @@ widget UXMarginLayout:
     # Ensure is one widget
     assert self.first == self.last
     # Mimic Min Size + Margin
-    m0.minW = m.minW + pw
-    m0.minH = m.minH + ph
+    m0.minW = m.minW + pw shl 1
+    m0.minH = m.minH + ph shl 1
 
   method layout =
     let 
