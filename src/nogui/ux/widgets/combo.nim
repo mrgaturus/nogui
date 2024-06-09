@@ -112,6 +112,7 @@ controller ComboModel:
     # Replace Menu Callback
     self.ondone = menu.cbClose
     menu.cbClose = self.cbMenuDone
+    menu.slot.ondone = self.cbMenuDone
     # Configure Menu
     self.flatten = newSeq[pointer](0)
     self.configure(menu)

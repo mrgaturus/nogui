@@ -196,6 +196,8 @@ controller CONPlayground:
           comboitem("Saturation", 22)
           comboitem("Color", 23)
           comboitem("Luminosity", 24)
+    # Hello World Test
+    self.selected.onchange = self.cbHelloWorld
 
     # Arrange Each Widget
     dummy().child:

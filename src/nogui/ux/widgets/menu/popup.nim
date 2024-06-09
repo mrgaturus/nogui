@@ -158,9 +158,10 @@ widget UXMenu:
     let
       h0 = m0.h
       w0 = m0.w
+      p0 = self.pivot.forced
     self.apply(self.pivot)
     # Adjust to Minimum Scrollview Size
-    if h0 != m0.h and w0 == m0.w:
+    if h0 != m0.h and w0 == m0.w and p0 == 0:
       m1 = addr self.view.metrics
       m0.minW = m1.minW + border
       m0.w = m0.minW

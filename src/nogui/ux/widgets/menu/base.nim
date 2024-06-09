@@ -80,7 +80,7 @@ proc apply*(self: GUIWidget, pivot: UXMenuPivot) =
       rect.x = pivot.ox - rect.w
   of menuVerticalSimple, menuVerticalClip:
     let rect0 = rect
-    if clip.h - rect0.y < pivot.oy:
+    if rect0.y + rect0.h > clip.h and clip.h - rect0.y < pivot.oy:
       rect.y = pivot.oy - rect.h
     # Avoid Swep Clipping First
     if pivot.mode == menuVerticalClip:
