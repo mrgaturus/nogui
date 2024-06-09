@@ -11,10 +11,8 @@ widget UXLayoutCell:
     assert self.first == nil
     assert self.last == nil
     # Add Widget to Cell
-    self.add w
-    # Mimic Widget Flags
-    self.flags = w.flags
     self.kind = wkLayout
+    self.add w
 
   method update =
     # Ensure is one widget
@@ -22,7 +20,6 @@ widget UXLayoutCell:
     # Mimic Capsulated Widget
     let first {.cursor.} = self.first
     self.metrics = first.metrics
-    self.flags = first.flags
 
   method layout =
     # Ensure is one widget
@@ -31,7 +28,6 @@ widget UXLayoutCell:
     let 
       first {.cursor.} = self.first
       metrics = addr first.metrics
-    first.flags = self.flags
     # Adjust Relative
     metrics[] = self.metrics
     metrics.x = 0
