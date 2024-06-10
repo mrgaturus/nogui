@@ -17,9 +17,9 @@ type
     key*, button*: GUIKeycode
     mods*: GUIKeymods
 
-# ---------------------------
-# GUI State Capture Auxiliars
-# ---------------------------
+# -------------------------
+# GUI State Capture Helpers
+# -------------------------
 
 proc timeout(pivot: var GUIStatePivot, renew: bool) =
   let
@@ -31,19 +31,6 @@ proc timeout(pivot: var GUIStatePivot, renew: bool) =
   # Capture Timestamp
   if renew:
     pivot.stamp = now
-
-proc click(pivot: var GUIStatePivot, state: ptr GUIState) =
-  # Set Pivot Position
-  pivot.px = state.px
-  pivot.py = state.py
-  pivot.mx = state.mx
-  pivot.my = state.my
-  # Capture Mouse Button and Mods
-  pivot.button = state.key
-  pivot.mods = state.mods
-  # Capture Click Counter
-  pivot.timeout(renew = true)
-  inc(pivot.clicks)
 
 proc distance(pivot: var GUIStatePivot, state: ptr GUIState) =
   let
@@ -57,29 +44,51 @@ proc distance(pivot: var GUIStatePivot, state: ptr GUIState) =
   pivot.dx = dx
   pivot.dy = dy
 
+# ------------------------
+# GUI State Capture Locked
+# ------------------------
+
+proc click(pivot: var GUIStatePivot, state: ptr GUIState) =
+  pivot.px = state.px
+  pivot.py = state.py
+  pivot.mx = state.mx
+  pivot.my = state.my
+  # Capture Mouse Button and Mods
+  pivot.button = state.key
+  pivot.mods = state.mods
+  inc(pivot.clicks)
+  # Enter Locked
+  pivot.locked = true
+
+proc release(pivot: var GUIStatePivot, state: ptr GUIState) =
+  pivot.dx = 0
+  pivot.dy = 0
+  pivot.dist = 0
+  pivot.away = 0
+  # Clear keyboard Keys
+  pivot.key = NK_Unknown
+  pivot.button = NK_Unknown
+  pivot.mods = state.mods
+  # Release Locked
+  pivot.locked = false
+  pivot.hold = false
+
 # -----------------
 # GUI State Capture
 # -----------------
 
 proc capture*(pivot: var GUIStatePivot, state: ptr GUIState) =
+  pivot.timeout(state.kind == evCursorClick)
+  # Capture Event Pivot
   case state.kind
   of evCursorClick:
     pivot.click(state)
-    pivot.locked = true
   of evCursorRelease:
-    pivot.dist = 0
-    pivot.away = 0
-    # Release Locked
-    pivot.locked = false
-    pivot.hold = false
-    # Check Clicks Timeout
-    pivot.timeout(renew = false)
+    pivot.release(state)
   # Capture Distance
   of evCursorMove:
     if pivot.locked:
       pivot.distance(state)
-    # Check Clicks Timeout
-    pivot.timeout(renew = false)
   # Capture Keyboard Key
   of evKeyDown:
     if not pivot.locked:
