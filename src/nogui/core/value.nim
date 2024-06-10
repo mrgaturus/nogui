@@ -47,33 +47,32 @@ proc value*[T](a: ptr T, cb: GUICallback): Value[T] =
 # Shared Values Reactivity
 # ------------------------
 
-proc peek(head: var ValueHeader): pointer =
+proc peek0(head: var ValueHeader): pointer =
   # Decide Value Location
   if isNil(head.loc):
     addr cast[ValueOpaque](addr head).loc
   else: cast[ptr pointer](head.loc)
 
-proc react(head: var ValueHeader): pointer =
-  result = head.peek()
-  # Queue Changed Callback
+proc react0(head: var ValueHeader): pointer =
+  result = head.peek0()
   send(head.cb)
 
-# -------------------------
-# Shared Values Abstraction
-# -------------------------
+# ---------------------
+# Shared Values Reading
+# ---------------------
 
-template peek*[T](value: ptr Value[T]): ptr T =
-  cast[ptr T](peek value.head)
+proc peek*[T](value: ptr Value[T]): ptr T {.inline.} =
+  cast[ptr T](peek0 value.head)
 
-template react*[T](value: ptr Value[T]): ptr T =
-  cast[ptr T](react value.head)
+proc react*[T](value: ptr Value[T]): ptr T {.inline.} =
+  cast[ptr T](react0 value.head)
 
 # ----------------------
 # Shared Values Callback
 # ----------------------
 
-proc cb*[T](value: Value[T]): GUICallback {.inline.} =
+proc cb*[T](value: ptr Value[T]): GUICallback {.inline.} =
   value.head.cb
 
-proc `cb=`*[T](value: var Value[T], cb: GUICallback) {.inline.} =
+proc `cb=`*[T](value: ptr Value[T], cb: GUICallback) {.inline.} =
   value.head.cb = cb
