@@ -4,6 +4,7 @@ pack/nopack
 tests/*
 !tests/*.*
 !tests/**/
+*.exe
 # Ignore Test Data
 tests/data
 # Ignore Generated List

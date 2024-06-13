@@ -1,7 +1,4 @@
-# Import Location Management
 from os import `/`, getAppDir, dirExists
-from std/compilesettings import 
-  querySetting, SingleValueSetting
 # TODO: Use fontconfig for extra fonts
 import logger
 import libs/gl
@@ -15,6 +12,10 @@ from libs/ft2 import
 # ------------------
 # Data Path Location
 # ------------------
+
+when defined(posix):
+  from std/compilesettings import 
+    querySetting, SingleValueSetting
 
 proc toDataPath(path: string): string =
   let relativePath = getAppDir() / "data"
