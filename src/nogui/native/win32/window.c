@@ -94,7 +94,7 @@ static BOOL win32_opengl_stage1(HWND hwnd, HDC* hdc, HGLRC* hglrc) {
 // Win32 Window Initialization
 // ---------------------------
 
-static HWND win32_create_window(int w, int h, LPVOID lpParam) {
+static HWND win32_create_window(nogui_native_t* native) {
     const char CLASS_NAME[] = "nogui#app";
     const char TITLE_NAME[] = "";
     // Lookup Current Instance Module
@@ -104,11 +104,13 @@ static HWND win32_create_window(int w, int h, LPVOID lpParam) {
         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
         (LPCSTR) &win32_create_window, &hInstance
     );
+
     // Define Window Class
     WNDCLASS wc = { };
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = CLASS_NAME;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = NULL;
     // Register the Window class
     RegisterClass(&wc);
@@ -119,13 +121,16 @@ static HWND win32_create_window(int w, int h, LPVOID lpParam) {
         CLASS_NAME,          // Window class
         TITLE_NAME,          // Window title
         WS_OVERLAPPEDWINDOW, // Window style
-        // Size and position
-        CW_USEDEFAULT, CW_USEDEFAULT, w, h,
 
-        NULL,      // Parent window
-        NULL,      // Menu
-        hInstance, // Instance handle
-        lpParam    // Window Parameter
+        // Size and position
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        native->info.width,
+        native->info.height,
+
+        NULL,           // Parent window
+        NULL,           // Menu
+        hInstance,      // Instance handle
+        (LPVOID) native // Window Parameter
     );
 
     return hwnd;
@@ -133,7 +138,7 @@ static HWND win32_create_window(int w, int h, LPVOID lpParam) {
 
 DWORD WINAPI ThreadProc(LPVOID lpParam) {
     nogui_native_t* native = (nogui_native_t*) lpParam;
-    HWND hwnd = win32_create_window(1024, 600, lpParam);
+    HWND hwnd = win32_create_window(native);
 
     BOOL staged_gl =
         win32_opengl_stage0(hwnd) &&
@@ -153,6 +158,12 @@ DWORD WINAPI ThreadProc(LPVOID lpParam) {
     // Watch HWND Messages
     MSG msg = { 0 };
     while (GetMessage(&msg, NULL, 0, 0)) {
+        if (msg.message == NOGUI_DESTROY) {
+            PostQuitMessage(0);
+            continue;
+        }
+
+        // Dispatch HWND Message
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
@@ -173,6 +184,10 @@ DWORD WINAPI ThreadProc(LPVOID lpParam) {
 
 nogui_native_t* nogui_native_init(int w, int h) {
     nogui_native_t* native = malloc(sizeof(nogui_native_t));
+    // Initialize Native Info
+    native->info.width = w;
+    native->info.height = h;
+    native->info.glProc = modernGetProcAddress;
     // Create Thread Critical Sections
     InitializeCriticalSection(&native->csWait);
     native->evWait = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -192,10 +207,6 @@ nogui_native_t* nogui_native_init(int w, int h) {
     wglMakeCurrent(native->hdc, native->hglrc);
     native->thrd = thrd;
 
-    // Initialize Native Info
-    native->info.width = w;
-    native->info.height = h;
-    native->info.glProc = modernGetProcAddress;
     // Initialize Native Title
     native->info.title = calloc(1, 1);
     native->info.id = calloc(1, 1);
@@ -205,6 +216,8 @@ nogui_native_t* nogui_native_init(int w, int h) {
     native->state.utf8str = malloc(16);
     native->state.utf8cap = 16;
     // Initialize Native Queue
+    native->csState = (nogui_state_t) {};
+    native->csQueue = (nogui_queue_t) {};
     native->queue = (nogui_queue_t) {};
 
     return native;
@@ -225,7 +238,7 @@ void nogui_native_frame(nogui_native_t* native) {
 }
 
 void nogui_native_destroy(nogui_native_t* native) {
-    PostThreadMessage(native->id, WM_DESTROY, 0, 0);
+    PostThreadMessage(native->id, NOGUI_DESTROY, 0, 0);
     WaitForSingleObject(native->thrd, INFINITE);
 
     // Deallocate Threading

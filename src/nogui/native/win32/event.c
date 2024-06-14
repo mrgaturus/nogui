@@ -43,22 +43,30 @@ static void win32_pump_events(nogui_native_t* native) {
 // GUI Native Event Translate
 // --------------------------
 
-void win32_event_mouse(nogui_state_t* state, WPARAM wParam, LPARAM lParam) {
+void win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     state->mx = GET_X_LPARAM(lParam);
     state->my = GET_Y_LPARAM(lParam);
-    // Calculate Delta Parameter
-    static WPARAM mask;
-    WPARAM delta = (mask ^ wParam) & 0x73;
-    mask = wParam;
+    // TODO: wintab api
+    state->px = (float) state->mx;
+    state->py = (float) state->my;
 
     // Lookup Which Button Pressed
     nogui_keycode_t key = state->key;
-    switch (delta) {
-        case MK_LBUTTON: key = Button_Left; break;
-        case MK_RBUTTON: key = Button_Right; break;
-        case MK_MBUTTON: key = Button_Middle; break;
-        case MK_XBUTTON1: key = Button_X1; break;
-        case MK_XBUTTON2: key = Button_X2; break;
+    switch (uMsg) {
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+            key = Button_Left; break;
+        case WM_RBUTTONDOWN: 
+        case WM_RBUTTONUP:
+            key = Button_Right; break;
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONUP:
+            key = Button_Middle; break;
+        case WM_XBUTTONDOWN:
+        case WM_XBUTTONUP:
+            key = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ?
+                Button_X1 : Button_X2;
+            break;
     }
 
     // Change Current Key
@@ -85,30 +93,30 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     LRESULT result = 0;
     switch (uMsg) {
         case WM_CREATE:
-            native = (nogui_native_t*) lParam;
+            native = *(nogui_native_t**) lParam;
             state = &native->csState;
             goto SEND_DEFAULT;
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            break;
 
         // Mouse Window Events
         case WM_MOUSEMOVE:
-            win32_event_mouse(state, uMsg, lParam);
+            state->kind = evCursorMove;
+            win32_event_mouse(state, uMsg, wParam, lParam);
             break;
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
         case WM_MBUTTONDOWN:
         case WM_XBUTTONDOWN:
             state->kind = evCursorClick;
-            win32_event_mouse(state, uMsg, lParam);
+            win32_event_mouse(state, uMsg, wParam, lParam);
+            SetCapture(hwnd);
             break;
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
         case WM_MBUTTONUP:
         case WM_XBUTTONUP:
             state->kind = evCursorRelease;
-            win32_event_mouse(state, uMsg, lParam);
+            win32_event_mouse(state, uMsg, wParam, lParam);
+            ReleaseCapture();
             break;
 
         // Keyboard Window Events
@@ -117,9 +125,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             win32_event_keyboard(state, wParam);
             break;
 
-        case WM_CLOSE:
+        // Frame Window Events
+        case WM_SIZE:
+            state->kind = evWindowResize;
+            native->info.width = LOWORD(lParam);
+            native->info.height = HIWORD(lParam);
             break;
+        case WM_CLOSE:
+            state->kind = evWindowClose;
+            break;
+
         // Process Event Default
+        case WM_PAINT:
+            state->kind = evWindowExpose;
         default: goto SEND_DEFAULT;
     }
 
@@ -128,7 +146,7 @@ SEND_EVENT:
     win32_send_event(native, state);
     LeaveCriticalSection(&native->csWait);
     // Return Nothing
-    return result;
+    return 0;
 
     // Process Default Window Events
 SEND_DEFAULT:
@@ -146,5 +164,13 @@ void nogui_native_pump(nogui_native_t* native) {
 }
 
 int nogui_native_poll(nogui_native_t* native) {
-    return nogui_queue_poll(&native->queue);
+    nogui_queue_t* queue = &native->queue;
+    nogui_cb_t* cb = queue->first;
+    // Copy Callback State to Current State
+    if (cb && cb->fn == queue->cb_event.fn) {
+        void* data = nogui_cb_data(cb);
+        memcpy(&native->state, data, sizeof(nogui_state_t));
+    }
+
+    return nogui_queue_poll(queue);
 }

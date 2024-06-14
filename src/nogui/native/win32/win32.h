@@ -7,6 +7,7 @@
 // -----------------------------
 // GUI Win32 Forward Declaration
 // -----------------------------
+#define NOGUI_DESTROY (WM_APP + 1)
 
 struct nogui_native_t {
     DWORD id;
