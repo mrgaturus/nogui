@@ -11,9 +11,9 @@ nogui_cb_t* nogui_cb_create(int bytes) {
   // Allocate new Callback with Custom Data
   const long size = sizeof(nogui_cb_t) + bytes;
   nogui_cb_t* cb = malloc(size);
-  // Define Callback Bytes
+  // Zero Fill Callback
+  memset(cb, 0, size);
   cb->bytes = size;
-  cb->next = NULL;
 
   // Return New Callback
   return cb;
@@ -33,11 +33,11 @@ void* nogui_cb_data(nogui_cb_t* cb) {
 
 int nogui_cb_equal(nogui_cb_t* a, nogui_cb_t* b) {
   // Skip Next Pointer
-  void** a0 = (void**) a + 1;
-  void** b0 = (void**) b + 1;
+  void* a0 = &a->self;
+  void* b0 = &b->self;
   // Adjust Callback Bytes
-  long bytes0 = a->bytes - sizeof(void**);
-  long bytes1 = b->bytes - sizeof(void**);
+  long bytes0 = a->bytes - sizeof(nogui_cb_t*);
+  long bytes1 = b->bytes - sizeof(nogui_cb_t*);
 
   // Compare if is the same Callback
   return (bytes0 != bytes1) || memcmp(a0, b0, bytes0);
