@@ -1,4 +1,5 @@
 {
+  "mode": "hashmap",
   "name_type": "x11_keymap_t",
   "name_const": "x11_keymap_table",
   

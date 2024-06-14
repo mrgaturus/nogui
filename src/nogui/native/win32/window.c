@@ -211,14 +211,13 @@ nogui_native_t* nogui_native_init(int w, int h) {
     native->info.title = calloc(1, 1);
     native->info.id = calloc(1, 1);
     native->info.name = calloc(1, 1);
-    // Initialize Native State
-    native->state.native = native;
-    native->state.utf8str = malloc(16);
-    native->state.utf8cap = 16;
     // Initialize Native Queue
     native->csState = (nogui_state_t) {};
     native->csQueue = (nogui_queue_t) {};
     native->queue = (nogui_queue_t) {};
+    // Initialize Native State
+    native->state.native = native;
+    native->csState.native = native;
 
     return native;
 }

@@ -9,6 +9,11 @@
 // -----------------------------
 #define NOGUI_DESTROY (WM_APP + 1)
 
+nogui_keycode_t win32_keymap_lookup(WPARAM wParam);
+nogui_keymask_t win32_keymask_lookup();
+// UTF18 Wide Character to UTF8 Multibyte
+int win32_keycode_utf8(WCHAR wide, CHAR* buffer, int size);
+
 struct nogui_native_t {
     DWORD id;
     HANDLE thrd;

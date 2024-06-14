@@ -71,15 +71,32 @@ void win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lP
 
     // Change Current Key
     state->key = key;
+    state->mask = win32_keymask_lookup();
 }
 
-void win32_event_keyboard(nogui_state_t* state, WPARAM wParam) {
-    state->key = wParam; // TODO: keymappings
+BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPARAM wParam) {
+    state->key = win32_keymap_lookup(wParam);
+    state->mask = win32_keymask_lookup();
+    // Clear UTF8 Character
+    state->utf8size = 0;
+    state->utf8char[0] = '\0';
+
     // Check if was Pressed or not
-    if (wParam == WM_KEYDOWN)
-        state->kind = evKeyDown;
-    else if (wParam == WM_KEYUP)
-        state->kind = evKeyUp;
+    switch (uMsg) {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+            state->kind = evKeyDown;
+            break;
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            state->kind = evKeyUp;
+            break;
+    }
+
+    MSG msg = { 0 };
+    // Forward Message to WM_CHAR
+    PeekMessage(&msg, hwnd, 0, 0, PM_NOREMOVE);
+    return msg.message == WM_CHAR;
 }
 
 // -------------------------
@@ -122,7 +139,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         // Keyboard Window Events
         case WM_KEYDOWN:
         case WM_KEYUP:
-            win32_event_keyboard(state, wParam);
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+            if (win32_event_keyboard(state, hwnd, uMsg, wParam))
+                goto SEND_DEFAULT;
+            else break;
+        // Keyboard UTF8 Char
+        case WM_CHAR:
+            state->utf8size = win32_keycode_utf8(
+                wParam, state->utf8char, 8);
             break;
 
         // Frame Window Events
@@ -134,6 +159,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_CLOSE:
             state->kind = evWindowClose;
             break;
+
+        // Disable Alt Menu
+        case WM_SYSCOMMAND:
+            if ((wParam & 0xFFF0) == SC_KEYMENU)
+                return 0;
+            goto SEND_DEFAULT;
 
         // Process Event Default
         case WM_PAINT:
@@ -170,6 +201,7 @@ int nogui_native_poll(nogui_native_t* native) {
     if (cb && cb->fn == queue->cb_event.fn) {
         void* data = nogui_cb_data(cb);
         memcpy(&native->state, data, sizeof(nogui_state_t));
+        native->state.utf8str = native->state.utf8char;
     }
 
     return nogui_queue_poll(queue);
