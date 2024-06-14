@@ -8,6 +8,8 @@
 // GUI Win32 Forward Declaration
 // -----------------------------
 #define NOGUI_DESTROY (WM_APP + 1)
+#define NOGUI_CURSOR (WM_APP + 2)
+#define NOGUI_TITLE (WM_APP + 3)
 
 nogui_keycode_t win32_keymap_lookup(WPARAM wParam);
 nogui_keymask_t win32_keymask_lookup();

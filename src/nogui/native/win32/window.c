@@ -136,6 +136,33 @@ static HWND win32_create_window(nogui_native_t* native) {
     return hwnd;
 }
 
+// -------------------
+// Win32 Window Thread
+// -------------------
+
+static int win32_app_message(HWND hwnd, MSG* msg) {
+    LPARAM lParam = msg->lParam;
+
+    switch (msg->message) {
+        case NOGUI_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+        case NOGUI_CURSOR:
+            SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR) lParam);
+            SetCursor((HCURSOR) lParam);
+            return 0;
+        case NOGUI_TITLE: {
+            LPCSTR str = (LPCSTR) lParam;
+            SetWindowText(hwnd, str);
+            free((void*) str);
+            return 0;
+        }
+    }
+
+    // Continue HWND
+    return 1;
+}
+
 DWORD WINAPI ThreadProc(LPVOID lpParam) {
     nogui_native_t* native = (nogui_native_t*) lpParam;
     HWND hwnd = win32_create_window(native);
@@ -158,10 +185,8 @@ DWORD WINAPI ThreadProc(LPVOID lpParam) {
     // Watch HWND Messages
     MSG msg = { 0 };
     while (GetMessage(&msg, NULL, 0, 0)) {
-        if (msg.message == NOGUI_DESTROY) {
-            PostQuitMessage(0);
+        if (win32_app_message(hwnd, &msg) == 0)
             continue;
-        }
 
         // Dispatch HWND Message
         TranslateMessage(&msg);
