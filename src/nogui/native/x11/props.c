@@ -47,13 +47,7 @@ nogui_cursor_t* nogui_cursor_sys(nogui_native_t* native, nogui_cursorsys_t id) {
     "crossed_circle",
     "xterm",
     "vertical-text",
-    // Hand Cursors
     "pointing_hand",
-    "openhand",
-    "closedhand",
-    // Zoom Cursors
-    "zoom-in",
-    "zoom-out",
     // Resize Cursors
     "size_ver",
     "size_hor",
