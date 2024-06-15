@@ -46,9 +46,11 @@ static void win32_pump_events(nogui_native_t* native) {
 void win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     state->mx = GET_X_LPARAM(lParam);
     state->my = GET_Y_LPARAM(lParam);
-    // TODO: wintab api
+    // Mouse Device Fallback
+    state->tool = devMouse;
     state->px = (float) state->mx;
     state->py = (float) state->my;
+    state->pressure = 1.0;
 
     // Lookup Which Button Pressed
     nogui_keycode_t key = state->key;
@@ -69,9 +71,9 @@ void win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lP
             break;
     }
 
-    // Change Current Key
+    // Change Current Key Pressed
+    state->mask = win32_keymask_lookup() & 0xF;
     state->key = key;
-    state->mask = win32_keymask_lookup();
 }
 
 BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPARAM wParam) {
