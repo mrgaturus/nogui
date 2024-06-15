@@ -33,7 +33,7 @@ type
 # ------------------
 
 proc hash(key: GUIKeycode, mods: GUIKeymods): uint64 {.inline.} =
-  result = cast[uint64](mods)
+  result = cast[uint64](mods) and 0xF
   result = cast[uint64](key) or (result shl 32)
 
 proc hash(short: GUIShortcut): uint64 =
