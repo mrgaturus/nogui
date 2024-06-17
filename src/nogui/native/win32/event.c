@@ -1,5 +1,6 @@
 #include "win32.h" // IWYU pragma: keep
 #include <windowsx.h>
+#include <wintab.h>
 #include <string.h>
 
 // ----------------------
@@ -43,14 +44,17 @@ static void win32_pump_events(nogui_native_t* native) {
 // GUI Native Event Translate
 // --------------------------
 
-void win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    state->mx = GET_X_LPARAM(lParam);
-    state->my = GET_Y_LPARAM(lParam);
-    // Mouse Device Fallback
-    state->tool = devMouse;
-    state->px = (float) state->mx;
-    state->py = (float) state->my;
-    state->pressure = 1.0;
+static BOOL win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    // Mouse Coordinates if not WinTab found
+    if (win32_wintab_active(wParam, lParam) == FALSE) {
+        state->tool = devMouse;
+        state->mx = GET_X_LPARAM(lParam);
+        state->my = GET_Y_LPARAM(lParam);
+        state->px = (float) state->mx;
+        state->py = (float) state->my;
+        state->pressure = 1.0;
+    } else if (state->kind == evCursorMove)
+        return TRUE;
 
     // Lookup Which Button Pressed
     nogui_keycode_t key = state->key;
@@ -74,9 +78,11 @@ void win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lP
     // Change Current Key Pressed
     state->mask = win32_keymask_lookup() & 0xF;
     state->key = key;
+    // Continue Event
+    return 0;
 }
 
-BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPARAM wParam) {
+static BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPARAM wParam) {
     state->key = win32_keymap_lookup(wParam);
     state->mask = win32_keymask_lookup();
     // Clear UTF8 Character
@@ -108,23 +114,42 @@ BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPARAM wPa
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static nogui_native_t* native;
     static nogui_state_t* state;
+    static BOOL anticlick;
+    // Handle WinTab Status Changes
+    win32_wintab_status(hwnd, uMsg, wParam, lParam);
 
-    LRESULT result = 0;
     switch (uMsg) {
         case WM_CREATE:
             native = *(nogui_native_t**) lParam;
             state = &native->csState;
             goto SEND_DEFAULT;
+        case WM_ACTIVATE:
+            anticlick = (wParam == WA_CLICKACTIVE);
+            goto SEND_DEFAULT;
+
+        // Tablet Window Events
+        case WT_PACKET:
+            if (win32_wintab_packet(state, wParam, lParam) == 0)
+                goto SEND_DEFAULT;
+            // Send Packet
+            else break;
 
         // Mouse Window Events
         case WM_MOUSEMOVE:
             state->kind = evCursorMove;
-            win32_event_mouse(state, uMsg, wParam, lParam);
-            break;
+            if (win32_event_mouse(state, uMsg, wParam, lParam))
+                goto SEND_DEFAULT;
+            else break;
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
         case WM_MBUTTONDOWN:
         case WM_XBUTTONDOWN:
+            // Avoid Accidental Clicks
+            if (anticlick) {
+                anticlick = FALSE;
+                goto SEND_DEFAULT;
+            }
+
             state->kind = evCursorClick;
             win32_event_mouse(state, uMsg, wParam, lParam);
             SetCapture(hwnd);
@@ -167,6 +192,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             if ((wParam & 0xFFF0) == SC_KEYMENU)
                 return 0;
             goto SEND_DEFAULT;
+        case WM_DISPLAYCHANGE:
+            return 0;
 
         // Process Event Default
         case WM_PAINT:

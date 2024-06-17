@@ -11,11 +11,6 @@
 #define NOGUI_CURSOR (WM_APP + 2)
 #define NOGUI_TITLE (WM_APP + 3)
 
-nogui_keycode_t win32_keymap_lookup(WPARAM wParam);
-nogui_keymask_t win32_keymask_lookup();
-// UTF18 Wide Character to UTF8 Multibyte
-int win32_keycode_utf8(WCHAR wide, CHAR* buffer, int size);
-
 struct nogui_native_t {
     DWORD id;
     HANDLE thrd;
@@ -34,6 +29,17 @@ struct nogui_native_t {
     nogui_queue_t queue;
     nogui_state_t state;
 };
+
+void win32_wintab_init(HWND hwnd);
+void win32_wintab_destroy(HWND hwnd);
+BOOL win32_wintab_active(WPARAM wParam, LPARAM lParam);
+BOOL win32_wintab_packet(nogui_state_t* state, WPARAM wParam, LPARAM lParam);
+void win32_wintab_status(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+nogui_keycode_t win32_keymap_lookup(WPARAM wParam);
+nogui_keymask_t win32_keymask_lookup();
+// UTF18 Wide Character to UTF8 Multibyte
+int win32_keycode_utf8(WCHAR wide, CHAR* buffer, int size);
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 #endif // NOGUI_WIN32_H

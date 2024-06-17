@@ -166,6 +166,7 @@ static int win32_app_message(HWND hwnd, MSG* msg) {
 DWORD WINAPI ThreadProc(LPVOID lpParam) {
     nogui_native_t* native = (nogui_native_t*) lpParam;
     HWND hwnd = win32_create_window(native);
+    win32_wintab_init(hwnd);
 
     BOOL staged_gl =
         win32_opengl_stage0(hwnd) &&
@@ -193,10 +194,12 @@ DWORD WINAPI ThreadProc(LPVOID lpParam) {
         DispatchMessage(&msg);
     }
 
-    // Destroy Win32 Window
+    // Destroy Win32 WGL
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(native->hglrc);
     ReleaseDC(hwnd, native->hdc);
+    // Destroy Win32 Window
+    win32_wintab_destroy(hwnd);
     DestroyWindow(hwnd);
 
     // Destroy Thread
