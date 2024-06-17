@@ -174,6 +174,8 @@ BOOL win32_wintab_packet(nogui_state_t* state, WPARAM wParam, LPARAM lParam) {
     state->mx = (int) state->px;
     state->my = (int) state->py;
     state->pressure = pressure;
+    // Lookup Current Keymods
+    state->mask = win32_keymask_lookup() & 0xF;
   }
 
   // Avoid Flooding Same Exact Packet - X11 Behaviour
