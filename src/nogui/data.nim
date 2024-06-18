@@ -1,4 +1,6 @@
 from os import `/`, getAppDir, dirExists
+from std/compilesettings import 
+  querySetting, SingleValueSetting
 # TODO: Use fontconfig for extra fonts
 import logger
 import libs/gl
@@ -13,19 +15,23 @@ from libs/ft2 import
 # Data Path Location
 # ------------------
 
-when defined(posix):
-  from std/compilesettings import 
-    querySetting, SingleValueSetting
-
 proc toDataPath(path: string): string =
+  const project = querySetting(projectName)
+  # try find on relative data folder
   let relativePath = getAppDir() / "data"
-  # Check if relative path exists
   result = relativePath / path
+  # Check Posix Path if not Exists
   when defined(posix):
-    const unixPath = "/usr/share" / querySetting(projectName)
+    const unixPath = "/usr/share" / project
     # try find on /usr/share/<projectname>
     if not dirExists(relativePath):
       result = unixPath / path
+  # Check Windows Path if not Exists
+  elif defined(windows):
+    const sxsPath = (project & ".data")
+    # try find on <projectname>.data
+    if not dirExists(relativePath):
+      result = getAppDir() / sxsPath / path
 
 # -----------------------
 # Icon Chunk Loading Type
