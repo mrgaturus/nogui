@@ -101,6 +101,11 @@ static BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPA
             break;
     }
 
+    // Check Alt + F4 Key Combination
+    if (state->key == NK_F4 && (state->mask & 0xF) == Mod_Alt)
+        if (state->kind == evKeyDown)
+            state->kind = evWindowClose;
+
     MSG msg = { 0 };
     // Forward Message to WM_CHAR
     PeekMessage(&msg, hwnd, 0, 0, PM_NOREMOVE);
