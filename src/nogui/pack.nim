@@ -6,11 +6,10 @@ from os import parentDir, `/`
 # Used for Execute a Command
 when not defined(skiplist):
   from strutils import join
-# Packed Counters File
 const
-  mcPathsCount = CacheCounter"nogui:path"
-  mcIconsCount = CacheCounter"nogui:icon"
-  mcCursorsCount = CacheCounter"nogui:cursor"
+  mcPackCount = CacheCounter"nogui:pack"
+  mcIconCount = CacheCounter"nogui:icon"
+  mcCursorCount = CacheCounter"nogui:cursor"
 # Import Icon Identifiers Type
 from data import CTXIconID, CTXCursorID
 
@@ -27,33 +26,22 @@ func eorge(line: NimNode, args: openArray[string]) =
   # Avoid Error
   discard
 
-# ----------------------
-# Folder Preparing Procs
-# ----------------------
-
-func listPrepare(line: NimNode, name: string, clear: bool): string =
-  const path = querySetting(outDir) / "pack"
-  # Create Pack Folder if not exists
-  eorge line, ["test -d", path, "||", "mkdir", path]
-  # Pack List Location
-  result = path / name
-  if clear: # Remove File
-    eorge line, ["rm -f", result]
-
-func listEntry(line: NimNode, name, key, value: string) =
-  # Write Line File Entry
-  eorge line, ["echo", key, ":", value, ">>", name]
+func listWrite(line: NimNode, cmd, key, value: string) =
+  const path = querySetting(outDir)
+  # Reset Pack Directory
+  if mcPackCount.value == 0:
+    eorge line, ["nopack reset", path]
+  # Write Pack File Line to List
+  let entry = ["\"", key, " : ", value, "\""].join()
+  eorge line, ["nopack", cmd, path, entry]
+  inc(mcPackCount)
 
 # -----------------------
 # Folder Definition Macro
 # -----------------------
 
 macro folders*(paths: untyped) =
-  # Create data folder if not exists
-  let 
-    pathClear = mcPathsCount.value == 0
-    pathList = listPrepare(paths, "paths.list", pathClear)
-    pathModule = lineInfoObj(paths).filename.parentDir()
+  let pathModule = lineInfoObj(paths).filename.parentDir()
   # Copy Each Defined Folder
   for path in paths:
     expectKind(path, nnkInfix)
@@ -67,10 +55,7 @@ macro folders*(paths: untyped) =
     if mode: src = pathModule / src
     else: expectIdent(op, "->")
     # Write Path List Entry
-    let pathName = src & "-:-" & dst
-    listEntry(path, pathList, pathName, $ int mode)
-    # Step Current Folder
-    inc mcPathsCount
+    listWrite(path, "path", src, dst)
 
 # --------------------
 # Constant Symbol Node
@@ -99,24 +84,22 @@ func symbol(item, ty: NimNode, class: string, value: int): NimNode =
 # ---------------------
 
 macro icons*(dir: string, size: int, list: untyped) =
-  result = nnkConstSection.newTree()
-  let ty = bindSym"CTXIconID"
-  # Create data folder if not exists
   let
-    clear = mcIconsCount.value == 0
-    entries = listPrepare(list, "icons.list", clear)
+    ty = bindSym"CTXIconID"
     # Icon Subdir / Icon Pixel Size
     subdir = dir.strVal
     fit = $size.intVal
+  # Create Icon ID Constant Section
+  result = nnkConstSection.newTree()
   # Define Each Icon
   for item in list:
     expectKind(item, nnkInfix)
     let name = subdir / item[2].strVal
-    listEntry(item, entries, name, fit)
+    listWrite(item, "icon", name, fit)
     # Add New Fresh Constant Symbol
-    let count = mcIconsCount.value
+    let count = mcIconCount.value
     result.add symbol(item, ty, "icon", count)
-    inc(mcIconsCount)
+    inc(mcIconCount)
 
 template icons*(size: int, list: untyped) =
   icons("", size, list)
@@ -126,15 +109,14 @@ template icons*(size: int, list: untyped) =
 # -----------------------
 
 macro cursors*(dir: string, size: int, list: untyped) =
-  result = nnkConstSection.newTree()
-  let ty = bindSym"CTXCursorID"
   # Create data folder if not exists
   let
-    clear = mcCursorsCount.value == 0
-    entries = listPrepare(list, "cursors.list", clear)
+    ty = bindSym"CTXCursorID"
     # Cursor Subdir / Pixel Size
     subdir = dir.strVal
     fit = $size.intVal
+  # Create Cursor ID Constant Section
+  result = nnkConstSection.newTree()
   # Define Each Icon
   for item in list:
     expectKind(item, nnkInfix)
@@ -150,11 +132,11 @@ macro cursors*(dir: string, size: int, list: untyped) =
       hotspot = $hot[0].intVal & "," & $hot[1].intVal
       value = fit & " - " & hotspot
     # Add New Entry to File List
-    listEntry(item, entries, key, value)
+    listWrite(item, "cursor", key, value)
     # Add New Fresh Constant Symbol
-    let count = mcCursorsCount.value
+    let count = mcCursorCount.value
     result.add symbol(item, ty, "cursor", count)
-    inc(mcCursorsCount)
+    inc(mcCursorCount)
 
 template cursors*(size: int, list: untyped) =
   cursors("", size, list)

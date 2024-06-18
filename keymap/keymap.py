@@ -79,11 +79,7 @@ class KeymapDefine:
 # ----------------------
 
 class KeymapOverride:
-  def __init__(self, defines, filename):
-    # Load JSON File
-    f = open(filename)
-    data = json.load(f)
-
+  def __init__(self, defines, data):
     # Sort Override List
     keys = data['overrides'].items()
     keys = sorted(keys, key=lambda item: int(item[0]))
@@ -117,6 +113,29 @@ class KeymapOverride:
     # Return Generated Code
     return code
 
+class KeymapLookup:
+  def __init__(self, defines, data):   
+    self.defines = defines
+    self.size = data['size']
+    # Store Override Type
+    self.name_const = data['name_const']
+    self.name_init = data['name_init']
+    self.overrides = data['overrides']
+
+  # -- C Code Generation --
+  def generate_lookup(self):
+    name_keys_c = self.defines.name_keys_c
+    code = "const %s %s[%d] = {\n"
+    code = code % (name_keys_c, self.name_const, self.size)
+    # Generate Direct Mapping
+    for key, value in self.overrides.items():
+      code += "  [%s] = %s,\n" % (key, value)
+    # Generate End
+    code = code.rstrip(",\n")
+    code += "\n};"
+    # Return Generated Code
+    return code
+
 # ---------------------------
 # nogui Keymap Defines Output
 # ---------------------------
@@ -143,21 +162,34 @@ def generate_defines(json, output_folder):
 # nogui Keymap Overrides Output
 # -----------------------------
 
-def generate_override(keys, json, output_file):
+def generate_override_hashmap(keys, json, output_file):
   override = KeymapOverride(keys, json)
   # Generate C Code
   with open(output_file, 'w') as file:
     file.write( override.generate_type() + "\n" )
     file.write( override.generate_table() + "\n" )
 
+def generate_override_direct(keys, json, output_file):
+  override = KeymapLookup(keys, json)
+  # Generate C Code
+  with open(output_file, 'w') as file:
+    file.write( override.generate_lookup() + "\n" )
+
 def generate_overrides(keys, folder, output_folder):
   # Generate Overrides
   for file in os.listdir(folder):
-    json = os.path.join(folder, file)
+    name = os.path.join(folder, file)
     # Check if is actually a file
-    if os.path.isfile(json):
-      output = output_folder + "/" + json.rstrip(".json") + ".c"
-      generate_override(keys, json, output)
+    if os.path.isfile(name) and name.endswith(".json"):
+      output = output_folder + "/" + name.rstrip(".json") + ".c"
+      # Load JSON File
+      f = open(name)
+      json0 = json.load(f)
+      # Decide Override Type
+      if json0['mode'] == "direct":
+        generate_override_direct(keys, json0, output)
+      elif json0['mode'] == "hashmap":
+        generate_override_hashmap(keys, json0, output)
 
 # -----------------
 # nogui Keymap Main

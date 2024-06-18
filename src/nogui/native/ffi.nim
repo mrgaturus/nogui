@@ -59,10 +59,8 @@ type
     key*: GUIKeycode
     mask: GUIKeymask
     scan*: uint32
-    # Input Method Dummy
-    # TODO: first class IME support
-    utf8state*: int32
-    utf8cap, utf8size*: int32
+    # UTF8 Character
+    utf8size*: int32
     utf8str*: cstring
 
 type
@@ -158,3 +156,14 @@ when defined(linux):
   {.compile: "x11/keymap.c".}
   {.compile: "x11/props.c".}
   {.compile: "x11/window.c".}
+
+# Windows Win32
+# MSYS2 + Mingw64 Platform
+when defined(windows):
+  {.passL: "-lopengl32 -lgdi32".}
+  # Compile Win32 Native Platform
+  {.compile: "win32/device.c".}
+  {.compile: "win32/event.c".}
+  {.compile: "win32/keymap.c".}
+  {.compile: "win32/props.c".}
+  {.compile: "win32/window.c".}

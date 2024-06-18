@@ -18,13 +18,7 @@ type
     cursorForbidden
     cursorText
     cursorTextUp
-    # Hand Cursors
-    cursorHandPoint
-    cursorHandHover
-    cursorHandGrab
-    # Zoom Cursors
-    cursorZoomIn
-    cursorZoomOut
+    cursorPoint
     # Resize Cursors
     cursorSizeVertical
     cursorSizeHorizontal

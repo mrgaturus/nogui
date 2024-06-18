@@ -36,13 +36,7 @@ typedef enum {
   cursorForbidden,
   cursorText,
   cursorTextUp,
-  // Hand Cursors
-  cursorHandPoint,
-  cursorHandHover,
-  cursorHandGrab,
-  // Zoom Cursors
-  cursorZoomIn,
-  cursorZoomOut,
+  cursorPoint,
   // Resize Cursors
   cursorSizeVertical,
   cursorSizeHorizontal,
@@ -131,11 +125,10 @@ typedef struct {
   nogui_keycode_t key;
   nogui_keymask_t mask;
   unsigned int scan;
-  // Input Method Dummy
-  // TODO: first class IME support
-  int utf8state;
-  int utf8cap, utf8size;
+  // UTF8 Buffer
+  int utf8size;
   char* utf8str;
+  char utf8char[8];
 } nogui_state_t;
 
 // -------------------------
