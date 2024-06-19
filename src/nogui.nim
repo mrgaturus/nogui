@@ -147,8 +147,10 @@ template executeApp*(root: GUIWidget, body: untyped) =
   if win.execute(root):
     # TODO: allow configure ms
     loop(16):
-      # Handle Events and Execute Body
+      # Handle Events
       if not win.poll(): break
+      if not win.exposed(): continue
+      # Render Frame
       body; render(win)
 
 # -------------------

@@ -113,8 +113,8 @@ proc cursorReset*(win: GUIClient) =
 # Window Client Rendering
 # -----------------------
 
-proc exposed*(win: GUIClient): bool {.inline.} =
-  win.lazy != 0
+proc exposed*(win: GUIWindow): bool {.inline.} =
+  result = win.lazy != 0; win.lazy = 0
 
 proc fuse*(win: GUIClient) {.inline.} =
   inc(win.lazy)
@@ -264,9 +264,6 @@ proc render*(win: GUIWindow) =
   let
     ctx = addr win.ctx
     man {.cursor.} = win.man
-  # Reset Lazy Rendering
-  if win.lazy == 0: return
-  win.lazy = 0
   # Begin Rendering
   begin(win.ctx)
   # Render Root
