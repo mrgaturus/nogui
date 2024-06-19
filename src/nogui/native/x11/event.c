@@ -13,40 +13,26 @@ extern	KeySym XkbKeycodeToKeysym(
 		int		/* level */
 );
 
-static void x11_keypress_utf8buffer(nogui_state_t* state, int cap) {
-  if (state->utf8str)
-    free(state->utf8str);
-  // Allocate New Buffer With New Capacity
-  state->utf8str = malloc(cap + 1);
-  state->utf8cap = cap + 1;
-}
-
 // -------------------
 // X11 Keyboard Events
 // -------------------
 
 static void x11_keypress_event(nogui_state_t* state, XEvent* event) {
   nogui_native_t* native = state->native;
-  KeySym key;
-
+  
+  Status utf8state; KeySym key;
   // Lookup UTF8 String or Keysym
   state->utf8size = Xutf8LookupString(
     native->xic, &event->xkey,
-    state->utf8str, state->utf8cap - 1,
-    &key, &state->utf8state);
+    state->utf8char, sizeof(char) * 8,
+    &key, &utf8state);
 
-  // Expand Buffer if is Not Enough
-  if (state->utf8state == XBufferOverflow) {
-    x11_keypress_utf8buffer(state, state->utf8size);
-    // Try Lookup UTF8 String Again
-    state->utf8size = Xutf8LookupString(
-      native->xic, &event->xkey,
-      state->utf8str, state->utf8cap - 1,
-      &key, &state->utf8state);
-  }
-
+  // Invalid UTF8 Character Found
+  if (utf8state == XBufferOverflow)
+    state->utf8size = 0;
   // Add null-terminated to UTF8 Buffer
-  state->utf8str[state->utf8size] = '\0';
+  state->utf8char[state->utf8size] = '\0';
+  state->utf8str = state->utf8char;
 
   state->kind = evKeyDown;
   // Override Focus Cycle
@@ -104,9 +90,6 @@ static void x11_keypress_release(nogui_state_t* state, XEvent* event) {
 static void x11_event_translate(nogui_state_t* state, XEvent* event) {
   nogui_native_t* native = state->native;
   state->kind = evUnknown;
-  // Skip Taken Events
-  if (XFilterEvent(event, 0) != 0)
-    return;
 
   switch (event->type) {
     case Expose:
@@ -167,6 +150,9 @@ void nogui_native_pump(nogui_native_t* native) {
   // Pump X11 Events
   while (XPending(display)) {
     XNextEvent(display, &event);
+    // Filter Dead Keys Events
+    if (XFilterEvent(&event, 0) != 0)
+      continue;
 
     // Prepare XInput2 Generic Event
     if (event.type == GenericEvent) {

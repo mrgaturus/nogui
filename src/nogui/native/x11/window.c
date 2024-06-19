@@ -96,31 +96,25 @@ static void x11_create_egl(nogui_native_t* native, Window XID) {
 }
 
 static void x11_create_xim(nogui_native_t* native, Window XID) {
-  if (!setlocale(LC_ALL, "") || !XSetLocaleModifiers(""))
+  if (!setlocale(LC_ALL, "") || !XSetLocaleModifiers("@im=none"))
     log_warning("proper C locale not found");
 
   Display* display = native->display;
-  XIM xim; XIC xic;
-
   // Try Create Input Method
-  xim = XOpenIM(display, NULL, NULL, NULL);
-  if (!xim) {
-    XSetLocaleModifiers("@im=none");
-    xim = XOpenIM(display, NULL, NULL, NULL);
-    // Warns About Fallback Context Created
-    log_warning("fallback XIM context used");
-  }
+  XIM xim = XOpenIM(display, NULL, NULL, NULL);
+  if (!xim)
+    log_warning("failed creating XIM context");
 
   // Create Input Context
   const long mask = XIMPreeditNothing | XIMStatusNothing;
-  xic = XCreateIC(xim, 
+  XIC xic = XCreateIC(xim, 
     XNInputStyle, mask,
     XNClientWindow, XID, 
     NULL
   );
 
   if (!xic)
-    log_warning("failed creating XIM context");
+    log_warning("failed creating XIC context");
 
   // Store X11 Input Method
   native->xim = xim;
@@ -179,11 +173,8 @@ nogui_native_t* nogui_native_init(int w, int h) {
   native->info.title = calloc(1, 1);
   native->info.id = calloc(1, 1);
   native->info.name = calloc(1, 1);
-  // Initialize Native State
-  native->state.native = native;
-  native->state.utf8str = malloc(16);
-  native->state.utf8cap = 16;
   // Initialize Native Queue
+  native->state.native = native;
   native->queue = (nogui_queue_t) {};
 
   return native;
@@ -226,12 +217,8 @@ void nogui_native_destroy(nogui_native_t* native) {
   XDestroyWindow(native->display, native->XID);
   XCloseDisplay(native->display);
 
-  // Destroy X11 Residuals
+  // Destroy X11 XInput2
   x11_xinput2_destroy(native);
-  // TODO: first class IME support
-  if (native->state.utf8str)
-    free(native->state.utf8str);
-
   // Dealloc Native Title
   free(native->info.title);
   free(native->info.id);

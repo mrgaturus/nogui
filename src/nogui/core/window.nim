@@ -184,7 +184,6 @@ proc procEvent(win: GUIWindow, msg: pointer) =
   of evCursorMove, evCursorClick, evCursorRelease:
     man.cursorEvent(state)
   of evKeyDown, evKeyUp, evFocusNext, evFocusPrev:
-    if state.key == NK_Unknown: return
     if not man.keyEvent(state):
       dispatch(win.shorts, state)
   # Window Property Events
