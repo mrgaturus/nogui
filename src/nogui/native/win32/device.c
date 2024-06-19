@@ -126,8 +126,14 @@ void win32_wintab_init(HWND hwnd) {
 }
 
 void win32_wintab_destroy(HWND hwnd) {
-  WTClose(wintab.ctx);
-  FreeLibrary(wintab.module);
+  if (wintab.module && wintab.ctx) {
+    WTClose(wintab.ctx);
+    FreeLibrary(wintab.module);
+
+    // Clear pointers in case reload fails
+    wintab.ctx = NULL;
+    wintab.module = NULL;
+  }
 }
 
 // --------------------------------------------
@@ -214,10 +220,11 @@ void win32_wintab_status(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
       tme.hwndTrack = hwnd;
       TrackMouseEvent(&tme);
       break;
-    // Remap WinTab Region
+    // HACK: some drivers can't remap coordinates
+    //       reinitializing module seems be effective
     case WM_DISPLAYCHANGE:
-      win32_wintab_lc(hwnd, &wintab.lc);
-      WTSet(wintab.ctx, &wintab.lc);
+      win32_wintab_destroy(hwnd);
+      win32_wintab_init(hwnd);
       break;
   }
 
