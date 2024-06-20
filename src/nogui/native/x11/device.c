@@ -208,6 +208,7 @@ void x11_xinput2_event(nogui_state_t* state, XEvent* event) {
   state->py = ev->event_y;
   state->mx = (int) state->px;
   state->my = (int) state->py;
+  state->pressure = 1.0;
   // Process Keyboard Event Modifiers
   state->mask = x11_keymask_lookup(ev->mods.base);
 
