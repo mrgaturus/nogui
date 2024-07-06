@@ -34,14 +34,19 @@ widget UXScrollOffset:
     let
       m0 = addr self.metrics
       m1 = addr self.widget.metrics
-    # Reset Min Size
+      # Widget Min Size
+      w = m1.minW
+      h = m1.minH
+    # Reset Dimensions
     m0.minW = 0
     m0.minH = 0
-    # Copy Min Size
+    m0.maxW = w
+    m0.maxH = h
+    # Change Min Size
     if not self.horizontal:
-      m0.minW = m1.minW
+      m0.minW = w
     if not self.vertical:
-      m0.minH = m1.minH
+      m0.minH = h
 
   method layout =
     let
