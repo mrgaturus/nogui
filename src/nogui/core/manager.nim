@@ -25,7 +25,7 @@ type
     hold: GUIWidget
     # Window Hover State
     stack: seq[GUIForward]
-    depth, stops: int
+    depth, offset, stops: int
     grab, locked: bool
 
 # --------------------
@@ -150,6 +150,7 @@ proc unhover*(man: GUIManager) =
   # Clear Hover Stack
   setLen(man.stack, 0)
   man.depth = 0
+  man.offset = 0
 
 proc hover*(man: GUIManager, widget: GUIWidget) =
   let i = man.depth
@@ -177,6 +178,7 @@ proc cursorOuter(man: GUIManager, x, y: int32): GUIWidget =
     return man.stack[0].hover
   # Find Current Hold
   if not isNil(man.hold):
+    man.depth = man.offset
     result = man.hold
   # Find Last Popup
   elif not isNil(man.popup.last):
@@ -368,18 +370,23 @@ proc stop*(man: GUIManager, widget: GUIWidget) =
 
 proc hold*(man: GUIManager, widget: GUIWidget) =
   if not isNil(man.hold): return
-  # Preserve Hover and Grab
-  var flags = widget.flags + {wHold}
-  widget.flags = flags - {wHover, wGrab}
-  # Remove Focus & Hover
+  # Remove Focus
   man.unfocus()
-  man.unhover()
+  # Check Offset at Stack
+  var idx = high(man.stack)
+  while idx >= 0:
+    if widget == man.stack[idx].hover:
+      break
+    # Next Offset
+    dec(idx)
+  if idx < 0:
+    idx = 0
   # Handle Hold Change
-  widget.flags = flags
+  widget.flags.incl(wHold)
   widget.vtable.handle(widget, inHold)
   # Define Window Hold
-  man.hover(widget)
   man.hold = widget
+  man.offset = idx
 
 proc unhold*(man: GUIManager) =
   if isNil(man.hold): return
@@ -391,6 +398,7 @@ proc unhold*(man: GUIManager) =
   hold.vtable.handle(hold, outHold)
   # Remove Window Hold
   man.hold = nil
+  man.offset = 0
 
 proc ungrab*(man: GUIManager) =
   var i = high(man.stack)
