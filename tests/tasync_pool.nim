@@ -1,4 +1,5 @@
 import nogui/async/pool
+from os import sleep
 
 type
   XORShift = object
@@ -17,6 +18,10 @@ proc xor0task(data: ptr XORShift) =
   for i in 0 ..< 10:
     data.next()
 
+proc fuse0task(data: ptr XORShift) =
+  data.n = 0
+  sleep(16)
+
 # ------------------
 # Main Parallel Test
 # ------------------
@@ -33,6 +38,7 @@ proc main() =
   for i in 0 ..< size:
     rngs0single[i].n = magic + i
     rngs0multi[i].n = magic + i
+
   # Dispatch Single Threading
   for i in 0 ..< 1000:
     for rngs in mitems(rngs0single):
@@ -52,8 +58,35 @@ proc main() =
     if rngs0single[i].n != rngs0multi[i].n:
       echo "failed data check at: ", i
       failed = true
+
+  # Dispatch Multi Threading Cancel
+  block cancel0:
+    pool.start()
+    for rngs in mitems(rngs0multi):
+      pool.spawn(fuse0task, addr rngs)
+    # Cancel Pool Operation
+    sleep(1000)
+    pool.cancel()
+  echo "done multi-threading cancel 0"
+  # Backup Cancelation Data
+  rngs0single = rngs0multi
+  # Try Again
+  block cancel1:
+    pool.start()
+    sleep(1000)
+    pool.sync()
+    pool.stop()
+  echo "done multi-threading cancel 1"
+  # Compare Values Equality
+  var fuse: bool
+  for i in 0 ..< size:
+    if rngs0single[i].n != rngs0multi[i].n:
+      echo "failed data check at: ", i
+      fuse = true
+
   # Finalize Thread Pool
   assert failed == false
+  assert fuse == false
   pool.destroy()
 
 when isMainModule:

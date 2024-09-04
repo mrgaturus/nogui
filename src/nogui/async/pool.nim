@@ -49,12 +49,14 @@ type
 {.push importc.}
 
 proc pool_lane_init(lane: var NThreadLane, opaque: pointer)
+proc pool_lane_reset(lane: var NThreadLane)
 proc pool_lane_destroy(lane: var NThreadLane)
 proc pool_lane_push(lane: var NThreadLane, task: NThreadTask)
 proc pool_lane_steal(lane: ptr NThreadLane): NThreadTask
 
 proc pool_status_inc(counter: var NThreadCounter)
 proc pool_status_dec(counter: var NThreadCounter)
+proc pool_status_reset(counter: var NThreadCounter)
 proc pool_status_get(counter: var NThreadCounter): int64
 proc pool_status_set(status: var NThreadStatus, mode: NThreadMode)
 proc pool_status_get(status: var NThreadStatus): NThreadMode
@@ -165,6 +167,15 @@ proc spawn*[T: object](pool: NThreadPool, fn: NThreadGenericProc[T], data: ptr T
 proc sync*(pool: NThreadPool) =
   while pool_status_get(pool.works) > 0:
     cpuRelax() # Wait all Works Finalized
+
+proc cancel*(pool: NThreadPool) =
+  pool_status_set(pool.status, thrSleep)
+  while pool_status_get(pool.awake) > 0:
+    cpuRelax()
+  # Reset Pool Lanes and Counter
+  for lane in mitems(pool.lanes):
+    pool_lane_reset(lane)
+  pool_status_reset(pool.works)
 
 proc stop*(pool: NThreadPool) =
   pool_status_set(pool.status, thrSleep)

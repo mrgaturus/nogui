@@ -18,8 +18,21 @@ void pool_lane_init(pool_lane_t* lane, void* opaque) {
   atomic_init(&lane->bottom, 0);
   atomic_init(&lane->top, 0);
   // Initialize Common State
-  lane->rng = (unsigned long) lane;
+  lane->rng = (unsigned long) ring;
   lane->opaque = opaque;
+}
+
+void pool_lane_reset(pool_lane_t* lane) {
+  pool_ring_t* ring = atomic_load_explicit(&lane->ring, memory_order_relaxed);
+  long long len = ring->len;
+
+  // Clear Ring Data
+  for (int i = 0; i < len; i++)
+    ring->tasks[i] = (pool_task_t) {};
+
+  // Reset Ring Endpoints
+  atomic_init(&lane->bottom, 0);
+  atomic_init(&lane->top, 0);
 }
 
 void pool_lane_destroy(pool_lane_t* lane) {
@@ -114,6 +127,10 @@ extern inline void pool_status_inc(pool_status_t* s) {
 
 extern inline void pool_status_dec(pool_status_t* s) {
   atomic_fetch_sub_explicit(s, 1, memory_order_seq_cst);
+}
+
+extern inline void pool_status_reset(pool_status_t* s) {
+  atomic_store_explicit(s, 0, memory_order_seq_cst);
 }
 
 extern inline void pool_status_set(pool_status_t* s, long long value) {

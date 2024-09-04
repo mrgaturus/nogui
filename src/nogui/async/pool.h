@@ -31,11 +31,13 @@ typedef struct {
 // ---------------------
 
 void pool_lane_init(pool_lane_t* lane, void* opaque);
+void pool_lane_reset(pool_lane_t* lane);
 void pool_lane_destroy(pool_lane_t* lane);
 void pool_lane_push(pool_lane_t* lane, pool_task_t task);
 pool_task_t pool_lane_steal(pool_lane_t* lane);
 
 inline void pool_status_inc(pool_status_t* s);
 inline void pool_status_dec(pool_status_t* s);
+inline void pool_status_reset(pool_status_t* s);
 inline void pool_status_set(pool_status_t* s, long long value);
 inline long long pool_status_get(pool_status_t* s);
