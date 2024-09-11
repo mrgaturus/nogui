@@ -4,6 +4,8 @@ type
   Walker = object
     name: cstring
     i, len, sleep: int
+    # Finalized Callback
+    cb: CoroCallback
 
 proc sleep0task(coro: Coroutine[Walker]) =
   let data = coro.data
@@ -13,10 +15,16 @@ proc sleep0task(coro: Coroutine[Walker]) =
     # Pass Continuation
     echo "coroutine ", data.name, ": ", data.i
     coro.pass(sleep0task)
+    return
+  # Send Finalized Callback
+  coro.send(data.cb)
 
 # ----------------------
 # Coroutine Main Testing
 # ----------------------
+
+proc finalize0cb(data: ptr Walker) =
+  echo "finalized ", data.name, ": ", data.i
 
 proc walker(name: cstring, len, sleep: int): Coroutine[Walker] =
   result = coroutine(sleep0task)
@@ -25,6 +33,9 @@ proc walker(name: cstring, len, sleep: int): Coroutine[Walker] =
   data.len = len
   data.sleep = sleep
   data.name = name
+  # Define Callback
+  data.cb.fn = cast[CoroCallbackProc](finalize0cb)
+  data.cb.data = data
 
 proc main() =
   let
@@ -41,6 +52,8 @@ proc main() =
   coro2.wait()
   #echo "coroutine finalized: ", coro0.data.i
   # Destroy Coroutine Manager
+  for cb in man.pump():
+    cb.fn(cb.data)
   man.destroy()
 
 when isMainModule:

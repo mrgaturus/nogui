@@ -1,7 +1,10 @@
-from typetraits import supportsCopyMem
-import locks
+import ffi, locks
+from typetraits import
+  supportsCopyMem
 
 type
+  CoroCallbackProc* = NThreadProc
+  CoroCallback* = NThreadTask
   CoroStage = proc(coro: ptr CoroBase)
     {.nimcall, gcsafe.}
   CoroBase = object
@@ -16,6 +19,7 @@ type
   CoroManager = object
     first, cursor: ptr CoroBase
     thr: Thread[ptr CoroManager]
+    lane: NThreadLane
     # Main Loop Sleep
     mtx: Lock
     cond: Cond
@@ -121,6 +125,7 @@ proc worker(man: ptr CoroManager) =
 
 proc createCoroutineManager*(): CoroutineManager =
   result = create(CoroManager)
+  pool_lane_init(result.lane, result)
   # Create Syncronize Objects
   initLock(result.mtx)
   initCond(result.cond)
@@ -131,10 +136,9 @@ proc destroyCoroutines(man: CoroutineManager) =
   var coro = man.first
   # Dealloc Coroutines
   while not isNil(coro):
-    deinitLock(coro.mtx)
-    deallocShared(coro)
-    # Next Coroutine
+    let coro0 = coro
     coro = coro.next
+    coro0.destroy()
   # Stop Coroutine Main Loop
   let brake = cast[ptr CoroBase](man)
   man.cursor = brake
@@ -148,7 +152,8 @@ proc destroy*(man: CoroutineManager) =
   man.thr.joinThread()
   deinitLock(man.mtx)
   deinitCond(man.cond)
-  # Dealloc Manager
+  # Dealloc Coroutine Manager
+  pool_lane_destroy(man.lane)
   dealloc(man)
 
 # ---------------------------
@@ -216,11 +221,14 @@ proc spawn*[T](man: CoroutineManager, coro: Coroutine[T]) =
 # Coroutine Control Flow
 # ----------------------
 
-proc keep(coro: ptr CoroBase, stage: CoroStage) =
-  coro.man.cursor = coro
-  coro.stage = stage
+proc send(coro: ptr CoroBase, cb: CoroCallback) =
+  pool_lane_push(coro.man.lane, cb)
 
 proc pass(coro: ptr CoroBase, stage: CoroStage) =
+  coro.stage = stage
+
+proc keep(coro: ptr CoroBase, stage: CoroStage) =
+  coro.man.cursor = coro
   coro.stage = stage
 
 proc cancel(coro: ptr CoroBase) =
@@ -245,6 +253,9 @@ template data*[T](coro: Coroutine[T]): ptr T =
   let base = cast[ptr CoroBase](coro)
   cast[ptr T](base.data)
 
+template send*[T](coro: Coroutine[T], cb: CoroCallback) =
+  send cast[ptr CoroBase](coro), cb
+
 template keep*[T](coro: Coroutine[T], fn: CoroutineProc[T]) =
   keep cast[ptr CoroBase](coro), stage(fn)
 
@@ -268,3 +279,15 @@ template lock*[T](coro: Coroutine[T], body: untyped) =
     let base = cast[ptr CoroBase](coro)
     acquire(base.mtx); body
     release(base.mtx)
+
+# ----------------------------------
+# Coroutine Manager Callback Pumping
+# ----------------------------------
+
+iterator pump*(man: CoroutineManager): CoroCallback =
+  let lane = addr man.lane
+  while true:
+    let task = pool_lane_steal(lane)
+    if isNil(task.fn): break
+    # Return Current Task
+    yield task
