@@ -45,6 +45,8 @@ proc createCoroutine(stage0: CoroStage, size: int): ptr CoroBase =
   # Initialize Mutex
   initLock(result.mtx)
   initCond(result.cond)
+  # Initialize Ref-Count
+  inc(result.rc)
 
 proc remove(coro: ptr CoroBase) =
   let
@@ -162,6 +164,7 @@ proc destroy*(man: CoroutineManager) =
 
 proc `=destroy`(coro: CoroutineOpaque) =
   let c = cast[ptr CoroBase](coro)
+  if isNil(c): return
   # Decrement Reference
   acquire(c.mtx)
   dec(c.rc)
@@ -173,16 +176,29 @@ proc `=destroy`(coro: CoroutineOpaque) =
 
 proc `=copy`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
   let
-    c0 = cast[ptr CoroBase](coro)
-    c1 = cast[ptr CoroBase](src)
+    c0 = cast[ptr CoroBase](src)
+    c1 = cast[ptr CoroBase](coro)
   if c0 == c1:
     return
-  # Decrement Destination
+  # Manipulate References
   `=destroy`(coro)
-  # Increment Source
-  acquire(c1.mtx)
-  inc(c1.rc)
-  release(c1.mtx)
+  acquire(c0.mtx)
+  inc(c0.rc)
+  release(c0.mtx)
+  # Copy Coroutine Reference
+  copyMem(addr coro, addr src,
+    sizeof pointer)
+
+proc `=sink`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
+  let
+    c0 = cast[ptr CoroBase](src)
+    c1 = cast[ptr CoroBase](coro)
+  if c0 == c1:
+    return
+  # Copy Coroutine Reference
+  `=destroy`(coro)
+  copyMem(addr coro, addr src,
+    sizeof pointer)
 
 # -------------------------
 # Coroutine Control Spawner
@@ -194,9 +210,10 @@ template stage[T](fn: CoroutineProc[T]): CoroStage =
   else: {.error: "attempted use proc with a gc'd type".}
 
 proc coroutine*[T](fn: CoroutineProc[T]): Coroutine[T] =
-  let fn = stage[T](fn)
-  cast[Coroutine[T]](
-    createCoroutine(fn, sizeof T))
+  let
+    fn = stage[T](fn)
+    coro = createCoroutine(fn, sizeof T)
+  copyMem(addr result, addr coro, sizeof pointer)
 
 proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
   acquire(man.mtx)
