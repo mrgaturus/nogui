@@ -1,4 +1,5 @@
 import widget, callback, render, timer, manager, shortcut
+from async import nogui_coroutine_pump
 from tree import render
 from atlas import CTXAtlas
 # GUI Native Platform
@@ -34,7 +35,6 @@ type
 type
   Window = object
     native: ptr GUINative
-    timers: ptr GUITimers
     cursors: GUICursors
     # Window Renderer
     ctx: CTXRender
@@ -222,19 +222,15 @@ proc messenger(win: GUIWindow, native: ptr GUINative) =
 
 proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   result = create(Window)
-  # Define Window Native
   result.native = native
-  result.timers = useTimers()
-  result.cursors = createCursors(native)
   # Define Window Manager
   result.man = createManager()
+  result.cursors = createCursors(native)
   # Define Window Queue
   result.messenger(native)
   result.ctx = newCTXRender(atlas)
 
 proc destroy*(win: GUIWindow) =
-  destroyMessenger(win.native)
-  # Dealloc Window
   `=destroy` win[]
   dealloc(win)
 
@@ -288,7 +284,7 @@ proc poll*(win: GUIWindow): bool =
     return result
   # Pump Native Events
   nogui_coroutine_pump(native)
-  nogui_timers_pump(win.timers)
+  nogui_timers_pump(native)
   nogui_native_pump(native)
   # Poll Native Pumped Events
   while nogui_native_poll(native) != 0:

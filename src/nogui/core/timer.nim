@@ -30,18 +30,16 @@ type
   # Timer Queues
   GUITimers* = object
     list: TimerCallback
-
 # Global Timer Queue
-var queue: GUITimers
-proc useTimers*(): ptr GUITimers =
-  addr queue
+var timers0: GUITimers
 
 # -------------------
 # Callback Timer Poll
 # -------------------
 
-proc nogui_timers_pump*(timers: ptr GUITimers) =
+proc nogui_timers_pump*(native: ptr GUINative) =
   var
+    timers = addr timers0
     prev, next: TimerCallback
     timer = timers.list
   # Check Dispatched Timers
@@ -78,7 +76,7 @@ proc `=destroy`(timers: GUITimers) =
 
 proc timeout*(cb: GUICallback, ms: int32) =
   let
-    timers = addr queue
+    timers = addr timers0
     stamp = nogui_time_now() + nogui_time_ms(ms)
   # Find if Callback was not Queued
   var
@@ -101,7 +99,7 @@ proc timeout*(cb: GUICallback, ms: int32) =
   else: last.next = timer
 
 proc timestop*(cb: GUICallback) =
-  let timers = addr queue
+  let timers = addr timers0
   # Find if Callback was Queued
   var
     timer = timers.list

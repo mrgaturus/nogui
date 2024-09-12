@@ -9,7 +9,7 @@ import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/widgets/button
 import nogui/ux/layouts/[box, misc]
-import nogui/async/coro
+import nogui/core/async
 from os import sleep
 
 type
