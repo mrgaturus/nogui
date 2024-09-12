@@ -94,7 +94,10 @@ export atlas except
   createTexture,
   checkTexture
 # Export Event and Callback Stuff
-export callback except messenger
+export callback except
+  createMessenger,
+  destroyMessenger,
+  nogui_coroutine_pump
 export timeout, timestop
 # Export Global App State
 export getApp, getWindow, width, index

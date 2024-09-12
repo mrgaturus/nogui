@@ -218,7 +218,7 @@ proc messenger(win: GUIWindow, native: ptr GUINative) =
   win.cbWindow = unsafeCallbackEX[WindowMessage](self, procWindow)
   # Prepare Native Queue
   queue.cb_event = cbEvent
-  callback.messenger(native)
+  createMessenger(native)
 
 proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   result = create(Window)
@@ -233,6 +233,8 @@ proc newGUIWindow*(native: ptr GUINative, atlas: CTXAtlas): GUIWindow =
   result.ctx = newCTXRender(atlas)
 
 proc destroy*(win: GUIWindow) =
+  destroyMessenger(win.native)
+  # Dealloc Window
   `=destroy` win[]
   dealloc(win)
 
@@ -285,8 +287,9 @@ proc poll*(win: GUIWindow): bool =
   if not result:
     return result
   # Pump Native Events
-  nogui_native_pump(native)
+  nogui_coroutine_pump(native)
   nogui_timers_pump(win.timers)
+  nogui_native_pump(native)
   # Poll Native Pumped Events
   while nogui_native_poll(native) != 0:
     result = win.running
