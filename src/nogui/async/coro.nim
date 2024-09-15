@@ -49,17 +49,20 @@ proc createCoroutine(stage0: CoroStage, size: int): ptr CoroBase =
   inc(result.rc)
 
 proc remove(coro: ptr CoroBase) =
-  let
-    man = coro.man
-    prev = coro.prev
-    next = coro.next
+  let man = coro.man
+  if isNil(man):
+    return
   # Detach From List
+  acquire(man.mtx)
+  let prev = coro.prev
+  let next = coro.next
   if not isNil(prev):
     prev.next = coro.next
   if not isNil(next):
     next.prev = coro.prev
   if man.first == coro:
     man.first = coro.next
+  release(man.mtx)
   # Remove Values
   coro.prev = nil
   coro.next = nil
@@ -114,12 +117,12 @@ proc worker(man: ptr CoroManager) =
       # Skip Current
       release(man.mtx)
       continue
-    # Dispatch Coroutine
+    # Step Current Cursor
     man.cursor = cursor.next
+    release(man.mtx)
+    # Dispatch Coroutine
     if cursor.dispatch():
       inc(passed)
-    # Release Mutex
-    release(man.mtx)
 
 # --------------------------------------
 # Coroutine Manager Creation/Destruction
@@ -217,6 +220,10 @@ proc coroutine*[T](fn: CoroutineProc[T]): Coroutine[T] =
 
 proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
   acquire(man.mtx)
+  # Avoid Spawn Again
+  if not isNil(coro.man):
+    release(man.mtx)
+    return
   # Attach to Manager
   let first = man.first
   if not isNil(first):
@@ -245,21 +252,36 @@ proc pass(coro: ptr CoroBase, stage: CoroStage) =
   coro.stage = stage
 
 proc keep(coro: ptr CoroBase, stage: CoroStage) =
-  coro.man.cursor = coro
   coro.stage = stage
-
-proc cancel(coro: ptr CoroBase) =
-  coro.stage = default(CoroStage)
+  # Change Current Cursor
+  let man = coro.man
+  if not isNil(man):
+    man.cursor = coro
 
 proc pause(coro: ptr CoroBase) =
   coro.skip = high(uint64)
+  signal(coro.cond)
 
 proc resume(coro: ptr CoroBase) =
   coro.skip = low(uint64)
+  # Wake Coroutine Manager
+  let man = coro.man
+  if not isNil(man):
+    acquire(man.mtx)
+    signal(man.cond)
+    release(man.mtx)
+
+proc cancel(coro: ptr CoroBase) =
+  wasMoved(coro.stage)
+  # Detach From Manager
+  coro.remove()
+  if coro.rc <= 0:
+    coro.destroy()
 
 proc wait(coro: ptr CoroBase) =
   acquire(coro.mtx)
-  wait(coro.cond, coro.mtx)
+  if not isNil(coro.man) and coro.skip <= 0:
+    wait(coro.cond, coro.mtx)
   release(coro.mtx)
 
 # ------------------------------
