@@ -11,7 +11,7 @@ type
     man: ptr CoroManager
     prev, next: ptr CoroBase
     stage: CoroStage
-    rc, skip: uint64
+    rc, stop: uint64
     # Coroutine Data
     mtx: Lock
     cond: Cond
@@ -48,7 +48,21 @@ proc createCoroutine(stage0: CoroStage, size: int): ptr CoroBase =
   # Initialize Ref-Count
   inc(result.rc)
 
-proc remove(coro: ptr CoroBase) =
+proc destroy(coro: ptr CoroBase) =
+  deinitLock(coro.mtx)
+  deinitCond(coro.cond)
+  # Dealloc Coroutine
+  deallocShared(coro)
+
+proc rc0ref(coro: ptr CoroBase) =
+  discard atomicAddFetch(
+    addr coro.rc, 1, ATOMIC_ACQUIRE)
+
+proc rc0unref(coro: ptr CoroBase) =
+  if atomicSubFetch(addr coro.rc, 1, ATOMIC_RELEASE) <= 0:
+    coro.destroy()
+
+proc detach(coro: ptr CoroBase) =
   let man = coro.man
   if isNil(man):
     return
@@ -57,46 +71,41 @@ proc remove(coro: ptr CoroBase) =
   let prev = coro.prev
   let next = coro.next
   if not isNil(prev):
-    prev.next = coro.next
+    prev.next = next
   if not isNil(next):
-    next.prev = coro.prev
+    next.prev = prev
   if man.first == coro:
-    man.first = coro.next
-  release(man.mtx)
+    man.first = next
   # Remove Values
   coro.prev = nil
   coro.next = nil
   coro.man = nil
-  # Remove Reference
-  dec(coro.rc)
-
-proc destroy(coro: ptr CoroBase) =
-  deinitLock(coro.mtx)
-  deinitCond(coro.cond)
-  # Dealloc Coroutine
-  deallocShared(coro)
+  # Release Manager
+  man.cursor = next
+  release(man.mtx)
 
 # --------------------
 # Coroutines Main Loop
 # --------------------
 
 proc dispatch(coro: ptr CoroBase): bool =
-  acquire(coro.mtx)
-  # Dispatch Coroutine
   let stage = coro.stage
-  if coro.skip <= 0 and not isNil(stage):
-    coro.stage = nil
+  if not isNil(stage):
+    discard atomicCompareExchangeN(
+      cast[ptr pointer](addr coro.stage),
+      cast[ptr pointer](addr stage), nil,
+      false, ATOMIC_RELAXED, ATOMIC_RELAXED)
+    # Dispatch Stage
     result = true
     stage(coro)
-  # Check Coroutine Finalize
-  if isNil(coro.stage):
-    coro.remove()
+  # Detach Coroutine
+  if not result or coro.stop > 0:
+    acquire(coro.mtx)
+    coro.detach()
+    # Signal Waiters
     signal(coro.cond)
-  # Release Coroutine
-  let rc = coro.rc
-  release(coro.mtx)
-  if rc <= 0:
-    coro.destroy()
+    release(coro.mtx)
+    coro.rc0unref()
 
 proc worker(man: ptr CoroManager) =
   let brake = cast[ptr CoroBase](man)
@@ -167,15 +176,9 @@ proc destroy*(man: CoroutineManager) =
 
 proc `=destroy`(coro: CoroutineOpaque) =
   let c = cast[ptr CoroBase](coro)
-  if isNil(c): return
   # Decrement Reference
-  acquire(c.mtx)
-  dec(c.rc)
-  let rc = c.rc
-  release(c.mtx)
-  # Destroy if not References
-  if rc <= 0:
-    c.destroy()
+  if not isNil(c):
+    c.rc0unref()
 
 proc `=copy`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
   let
@@ -185,9 +188,7 @@ proc `=copy`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
     return
   # Manipulate References
   `=destroy`(coro)
-  acquire(c0.mtx)
-  inc(c0.rc)
-  release(c0.mtx)
+  c0.rc0ref()
   # Copy Coroutine Reference
   copyMem(addr coro, addr src,
     sizeof pointer)
@@ -230,6 +231,7 @@ proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
     first.prev = coro
   coro.next = first
   coro.man = man
+  coro.stop = 0
   # Reset Cursors
   man.first = coro
   man.cursor = coro
@@ -246,7 +248,9 @@ proc spawn*[T](man: CoroutineManager, coro: Coroutine[T]) =
 # ----------------------
 
 proc send(coro: ptr CoroBase, cb: CoroCallback) =
-  pool_lane_push(coro.man.lane, cb)
+  let man = coro.man
+  if not isNil(man):
+    pool_lane_push(man.lane, cb)
 
 proc pass(coro: ptr CoroBase, stage: CoroStage) =
   coro.stage = stage
@@ -256,31 +260,17 @@ proc keep(coro: ptr CoroBase, stage: CoroStage) =
   # Change Current Cursor
   let man = coro.man
   if not isNil(man):
-    man.cursor = coro
-
-proc pause(coro: ptr CoroBase) =
-  coro.skip = high(uint64)
-  signal(coro.cond)
-
-proc resume(coro: ptr CoroBase) =
-  coro.skip = low(uint64)
-  # Wake Coroutine Manager
-  let man = coro.man
-  if not isNil(man):
     acquire(man.mtx)
-    signal(man.cond)
+    if man == coro.man:
+      man.cursor = coro
     release(man.mtx)
 
 proc cancel(coro: ptr CoroBase) =
-  wasMoved(coro.stage)
-  # Detach From Manager
-  coro.remove()
-  if coro.rc <= 0:
-    coro.destroy()
+  coro.stop = cast[uint64](coro)
 
 proc wait(coro: ptr CoroBase) =
   acquire(coro.mtx)
-  if not isNil(coro.man) and coro.skip <= 0:
+  if not isNil(coro.man):
     wait(coro.cond, coro.mtx)
   release(coro.mtx)
 
@@ -303,12 +293,6 @@ template pass*[T](coro: Coroutine[T], fn: CoroutineProc[T]) =
 
 template cancel*[T](coro: Coroutine[T]) =
   cancel cast[ptr CoroBase](coro)
-
-template pause*[T](coro: Coroutine[T]) =
-  pause cast[ptr CoroBase](coro)
-
-template resume*[T](coro: Coroutine[T]) =
-  resume cast[ptr CoroBase](coro)
 
 template wait*[T](coro: Coroutine[T]) =
   wait cast[ptr CoroBase](coro)
