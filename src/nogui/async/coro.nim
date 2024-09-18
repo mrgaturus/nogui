@@ -80,6 +80,7 @@ proc detach(coro: ptr CoroBase) =
   coro.prev = nil
   coro.next = nil
   coro.man = nil
+  coro.stop = 0
   # Release Manager
   man.cursor = next
   release(man.mtx)
@@ -221,6 +222,7 @@ proc coroutine*[T](fn: CoroutineProc[T]): Coroutine[T] =
 
 proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
   acquire(man.mtx)
+  coro.stop = 0
   # Avoid Spawn Again
   if not isNil(coro.man):
     release(man.mtx)
@@ -231,7 +233,6 @@ proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
     first.prev = coro
   coro.next = first
   coro.man = man
-  coro.stop = 0
   # Reset Cursors
   man.first = coro
   man.cursor = coro
