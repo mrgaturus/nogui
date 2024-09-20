@@ -64,10 +64,7 @@ proc rc0unref(coro: ptr CoroBase) =
 
 proc detach(coro: ptr CoroBase) =
   let man = coro.man
-  if isNil(man):
-    return
   # Detach From List
-  acquire(man.mtx)
   let prev = coro.prev
   let next = coro.next
   if not isNil(prev):
@@ -83,7 +80,6 @@ proc detach(coro: ptr CoroBase) =
   coro.stop = 0
   # Release Manager
   man.cursor = next
-  release(man.mtx)
 
 # --------------------
 # Coroutines Main Loop
@@ -99,7 +95,9 @@ proc dispatch(coro: ptr CoroBase): bool =
     # Dispatch Stage
     result = true
     stage(coro)
-  # Detach Coroutine
+  # Detach When Terminated
+  let man = coro.man
+  acquire(man.mtx)
   if not result or coro.stop > 0:
     acquire(coro.mtx)
     coro.detach()
@@ -107,6 +105,7 @@ proc dispatch(coro: ptr CoroBase): bool =
     signal(coro.cond)
     release(coro.mtx)
     coro.rc0unref()
+  release(man.mtx)
 
 proc worker(man: ptr CoroManager) =
   let brake = cast[ptr CoroBase](man)
