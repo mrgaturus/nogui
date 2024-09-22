@@ -174,12 +174,11 @@ proc hover*(man: GUIManager, widget: GUIWidget) =
 # ----------------------
 
 proc cursorOuter(man: GUIManager, x, y: int32): GUIWidget =
-  if man.locked:  
-    return man.stack[0].hover
-  # Find Current Hold
   if not isNil(man.hold):
     man.depth = man.offset
-    result = man.hold
+    return man.hold
+  elif man.locked:
+    return man.stack[0].hover
   # Find Last Popup
   elif not isNil(man.popup.last):
     result = man.popup.last
@@ -373,14 +372,16 @@ proc hold*(man: GUIManager, widget: GUIWidget) =
   # Remove Focus
   man.unfocus()
   # Check Offset at Stack
-  var idx = high(man.stack)
+  let depth = man.depth - 1
+  var idx = depth
   while idx >= 0:
     if widget == man.stack[idx].hover:
       break
     # Next Offset
     dec(idx)
   if idx < 0:
-    idx = 0
+    man.hover(widget)
+    idx = depth
   # Handle Hold Change
   widget.flags.incl(wHold)
   widget.vtable.handle(widget, inHold)
