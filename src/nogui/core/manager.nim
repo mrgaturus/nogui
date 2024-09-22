@@ -381,7 +381,7 @@ proc hold*(man: GUIManager, widget: GUIWidget) =
     dec(idx)
   if idx < 0:
     man.hover(widget)
-    idx = depth
+    idx = depth + 1
   # Handle Hold Change
   widget.flags.incl(wHold)
   widget.vtable.handle(widget, inHold)
