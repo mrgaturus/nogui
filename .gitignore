@@ -5,8 +5,9 @@ tests/*
 !tests/*.*
 !tests/**/
 *.exe
-# Ignore Test Data
+# Ignore Test Output
 tests/data
+tests/out*
 # Ignore Generated List
 cursors.list
 icons.list
