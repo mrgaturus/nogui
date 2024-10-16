@@ -156,7 +156,7 @@ type
     data*: pointer
   # PNG Nim RGBA Handle
   PNGhandle = object
-    seek, bytes: int
+    seek, size: int
     raw: pointer
     file: File
     # PNG Structures
@@ -164,7 +164,7 @@ type
     info: ptr PNGinfo
     report*: PNGreport
     # Image Header
-    w*, h*: PNGint32
+    w*, h*, bytes*: PNGint32
     level*: PNGint32
     adam7*, useless: bool
     # Image RGBA Buffer
@@ -232,7 +232,7 @@ proc cbReadBuffer(png: ptr PNGstruct, data: pointer, size: csize_t) =
     raw = cast[int](p.raw) + p.seek
   # Read Buffer to libpng
   p.seek += int(size)
-  if p.seek <= p.bytes:
+  if p.seek <= p.size:
     copyMem(data, cast[pointer](raw), size)
     return
   # Abort when Buffer Overflow
@@ -341,6 +341,7 @@ proc prepareRowsPNG(p: PNGnimRead) =
   # Allocate Buffer Pointers
   p.buffer = cast[typeof p.buffer](alloc0(stride * rows))
   p.rows = cast[typeof p.rows](alloc0(rows * sizeof(pointer)))
+  p.bytes = stride * rows
   # Locate Buffer Rows
   for row in 0 ..< rows:
     p.rows[row] = addr p.buffer[stride * row]
@@ -371,7 +372,7 @@ proc createReadPNG*(raw: pointer, bytes: int): PNGnimRead =
   result.png = png
   result.info = info
   result.raw = raw
-  result.bytes = bytes
+  result.size = bytes
 
 proc readRGBA*(p: PNGnimRead): bool =
   png_error_setjmp(p.png):
