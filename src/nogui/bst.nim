@@ -10,7 +10,7 @@ type
   # Balanced Binary Tree
   NBinaryKey* = object
     id*, level: uint32
-    tree: ptr NBinaryTree
+    tree*: ptr NBinaryTree
     # Balanced Tree Nodes
     left: NBinaryNode
     right: NBinaryNode
@@ -138,7 +138,7 @@ proc configure*(tree: var NBinaryTree) =
   tree.ticket = 1
 
 proc insert*(tree: var NBinaryTree, key: ptr NBinaryKey): bool =
-  assert key.tree == nil
+  assert isNil(key.tree)
   # Insert Node to Tree
   key.tree = addr tree
   tree.result = tree.dummy
@@ -164,9 +164,6 @@ proc register*(tree: var NBinaryTree, key: ptr NBinaryKey): bool =
   # Next Tree Ticket
   assert tree.ticket > 0
   inc(tree.ticket)
-
-proc owns*(tree: var NBinaryTree, key: ptr NBinaryKey): bool =
-  key.tree == addr tree
 
 # ------------------
 # Binary Tree Search
