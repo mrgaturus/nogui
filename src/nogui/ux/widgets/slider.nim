@@ -52,7 +52,7 @@ template event0(self: typed, state: ptr GUIState) =
     # Store Flag
     self.s0 = slow
   # Manipulate if Grabbed
-  if self.test(wGrab):
+  if self.test(wGrab) or state.kind == evCursorRelease:
     var t = (x - rect.x) / rect.w
     # Check Slow Flag
     if self.s0:
@@ -232,9 +232,11 @@ widget UXDualSlider:
     ctx.text(ox, rect.y - font.desc, text)
 
   method event(state: ptr GUIState) =
+    let flags = self.flags
     self.event0(state)
     # Snap 0.5 When Dragging
-    if self.test(wGrab) and not self.s0:
+    let release = state.kind == evCursorRelease
+    if (wGrab in flags or release) and not self.s0:
       let
         rect = addr self.rect
         value = self.value.peek

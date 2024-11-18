@@ -64,7 +64,7 @@ controller CONLayout:
     a: @ int32
 
   callback cbHello:
-    echo "hello world"
+    echo "hello world ", getApp().state.kind
 
   proc createWidget: GUIWidget =
     let cbHello = self.cbHello
@@ -127,6 +127,7 @@ controller CONLayout:
     result.dual0 = dual(-5, 5)
     result.widget = result.createWidget()
     result.dual0.peek[].lorp(-4)
+    result.dual0.cb = result.cbHello
 
 proc main() =
   createApp(1024, 600)
