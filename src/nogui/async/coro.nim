@@ -34,14 +34,12 @@ type
 # Coroutine Creation/Destruction
 # ------------------------------
 
-proc createCoroutine(stage0: CoroStage, size: int): ptr CoroBase =
-  let
-    chunk = allocShared0(CoroBase.sizeof + size)
-    user = cast[uint64](chunk) + uint64(CoroBase.sizeof)
+proc createCoroutine(size: int): ptr CoroBase =
+  let chunk = allocShared0(CoroBase.sizeof + size)
+  let user = cast[uint64](chunk) + uint64(CoroBase.sizeof)
   # Define Coroutine Pointers
   result = cast[ptr CoroBase](chunk)
   result.data = cast[pointer](user)
-  result.stage = stage0
   # Initialize Mutex
   initLock(result.mtx)
   initCond(result.cond)
@@ -208,16 +206,12 @@ proc `=sink`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
 # Coroutine Control Spawner
 # -------------------------
 
-template stage[T](fn: CoroutineProc[T]): CoroStage =
+proc coroutine*(T: typedesc): Coroutine[T] =
   when supportsCopyMem(T):
-    {.gcsafe.}: cast[CoroStage](fn)
-  else: {.error: "attempted use proc with a gc'd type".}
-
-proc coroutine*[T](fn: CoroutineProc[T]): Coroutine[T] =
-  let
-    fn = stage[T](fn)
-    coro = createCoroutine(fn, sizeof T)
-  copyMem(addr result, addr coro, sizeof pointer)
+    {.gcsafe.}:
+      let coro = createCoroutine(sizeof T)
+      copyMem(addr result, addr coro, sizeof pointer)
+  else: {.error: "attempted use a gc'd type".}
 
 proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
   acquire(man.mtx)
@@ -286,10 +280,10 @@ template send*[T](coro: Coroutine[T], cb: CoroCallback) =
   send cast[ptr CoroBase](coro), cb
 
 template keep*[T](coro: Coroutine[T], fn: CoroutineProc[T]) =
-  keep cast[ptr CoroBase](coro), stage(fn)
+  {.gcsafe.}: keep cast[ptr CoroBase](coro), cast[CoroStage](fn)
 
 template pass*[T](coro: Coroutine[T], fn: CoroutineProc[T]) =
-  pass cast[ptr CoroBase](coro), stage(fn)
+  {.gcsafe.}: pass cast[ptr CoroBase](coro), cast[CoroStage](fn)
 
 template cancel*[T](coro: Coroutine[T]) =
   cancel cast[ptr CoroBase](coro)

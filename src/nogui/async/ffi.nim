@@ -32,8 +32,8 @@ type
   NThreadProc* {.importc: "pool_fn_t".} =
     proc (data: pointer) {.nimcall, gcsafe.}
   NThreadTask* {.importc: "pool_task_t".} = object
-    fn*: NThreadProc
     data*: pointer
+    fn*: NThreadProc
   NThreadLane* {.importc: "pool_lane_t".} = object
     opaque*: pointer
     rng*: uint64

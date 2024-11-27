@@ -9,7 +9,7 @@ import nogui/ux/prelude
 # Import All Widgets
 import nogui/ux/widgets/button
 import nogui/ux/layouts/[box, misc]
-import nogui/core/async
+import nogui/async/core
 from os import sleep
 
 type
@@ -45,12 +45,12 @@ widget UXCoroutineButton:
   method event(state: ptr GUIState) =
     if state.kind == evCursorClick:
       let target = self.target
-      target[] = coroutine(stage0test)
+      target[] = coroutine(TestObject)
       let data = target[].data
       data.time = 1000
       data.cb = self.cb
       # Spawn Coroutine
-      #coro.spawn()
+      target[].pass(stage0test)
       target[].spawn()
 
 # --------------------

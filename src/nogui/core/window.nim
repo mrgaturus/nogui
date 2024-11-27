@@ -1,9 +1,9 @@
 import widget, callback, render, timer, manager, shortcut
-from async import nogui_coroutine_pump
+from ../async/core import nogui_coroutine_pump
+import ../native/[ffi, cursor]
+# Import Rendering
 from tree import render
 from atlas import CTXAtlas
-# GUI Native Platform
-import ../native/[ffi, cursor]
 
 type
   WindowMessage* = enum
