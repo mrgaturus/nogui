@@ -27,7 +27,8 @@ proc finalize0cb(data: ptr Walker) =
   echo "finalized ", data.name, ": ", data.i
 
 proc walker(name: cstring, len, sleep: int): Coroutine[Walker] =
-  result = coroutine(sleep0task)
+  result = coroutine(Walker)
+  result.pass(sleep0task)
   # Walker Step Size
   let data = result.data
   data.len = len
