@@ -6,8 +6,8 @@ typedef void (*pool_fn_t)(void*);
 
 __attribute__ ((aligned (16)))
 typedef struct {
-  pool_fn_t fn;
   void* data;
+  pool_fn_t fn;
 } pool_task_t;
 
 typedef struct pool_ring_t {
