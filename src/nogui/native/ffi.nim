@@ -164,6 +164,7 @@ when defined(windows):
   # Compile Win32 Native Platform
   {.compile: "win32/device.c".}
   {.compile: "win32/event.c".}
+  {.compile: "win32/green.s".}
   {.compile: "win32/keymap.c".}
   {.compile: "win32/props.c".}
   {.compile: "win32/window.c".}

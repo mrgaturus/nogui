@@ -160,6 +160,8 @@ static void win32_create_window(nogui_native_t* native) {
 
 nogui_native_t* nogui_native_init(int w, int h) {
     nogui_native_t* native = malloc(sizeof(nogui_native_t));
+    native->green = malloc(sizeof(win32_green_t));
+    native->green->code = VM_NOTHING;
     // Initialize Native Info
     native->info.width = w;
     native->info.height = h;

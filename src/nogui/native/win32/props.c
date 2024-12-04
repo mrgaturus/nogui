@@ -75,8 +75,6 @@ nogui_cursor_t* nogui_cursor_sys(nogui_native_t* native, nogui_cursorsys_t id) {
     case cursorSizeHorizontal: cursor = LoadCursor(NULL, IDC_SIZEWE); break;
     case cursorSizeDiagLeft: cursor = LoadCursor(NULL, IDC_SIZENWSE); break;
     case cursorSizeDiagRight: cursor = LoadCursor(NULL, IDC_SIZENESW); break;
-
-    // Resize Dock Cursors
     case cursorSplitVertical: cursor = LoadCursor(NULL, IDC_SIZENS); break;
     case cursorSplitHorizontal: cursor = LoadCursor(NULL, IDC_SIZEWE); break;
   }

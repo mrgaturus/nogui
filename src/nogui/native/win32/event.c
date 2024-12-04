@@ -3,6 +3,50 @@
 #include <wintab.h>
 #include <string.h>
 
+// ------------------------------
+// GUI Native Event: Green Thread
+// ------------------------------
+
+static void win32_green_payload(win32_green_t* green) {
+    green->proc(green, green->data);
+    win32_green_jumpctx(&green->host, VM_FINALIZED);
+}
+
+static void win32_green_call(win32_green_t* green, win32_vmfunc_t proc, void* p) {
+    if (green->code == VM_NOTHING)
+        green->code = win32_green_setctx(&green->host);
+    // Manage Green Thread Status
+    switch (green->code) {
+        case VM_NOTHING: {
+            green->proc = proc;
+            green->data = p;
+            green->code = VM_RUNNING;
+            
+            void* stack = &green->stack.buffer[VM_STACK_SIZE];
+            win32_vmproc_t proc = (win32_vmproc_t) win32_green_payload;
+            win32_green_callctx(proc, stack, green);
+        } break;
+        case VM_RUNNING: break;
+        case VM_FINALIZED:
+            green->code = VM_NOTHING;
+            break;
+        case VM_ESCAPE:
+            green->code = VM_PAUSE;
+            break;
+        case VM_PAUSE:
+            green->code = VM_RUNNING;
+            win32_green_jumpctx(&green->vm, VM_RUNNING);
+            break;
+    }
+}
+
+static void win32_green_escape(win32_green_t* green) {
+    if (green->code == VM_RUNNING) {
+        if (win32_green_setctx(&green->vm) != VM_RUNNING)
+            win32_green_jumpctx(&green->host, VM_ESCAPE);
+    }
+}
+
 // -----------------------
 // GUI Native Event: Queue
 // -----------------------
@@ -102,6 +146,7 @@ static BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPA
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static nogui_native_t* native;
     static nogui_state_t* state;
+    static win32_green_t* green;
     static BOOL anticlick;
     // Handle WinTab Status Changes
     win32_wintab_status(hwnd, uMsg, wParam, lParam);
@@ -110,6 +155,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_CREATE:
             native = *(nogui_native_t**) lParam;
             state = &native->state0;
+            green = native->green;
             goto SEND_DEFAULT;
         case WM_ACTIVATE:
             anticlick = (wParam == WA_CLICKACTIVE);
@@ -165,12 +211,30 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 wParam, state->utf8char, 8);
             break;
 
-        // Frame Window Events
+        // Frame Window Blocking
+        case WM_ENTERSIZEMOVE:
+        case WM_ENTERMENULOOP:
+            SetTimer(hwnd, (UINT_PTR) native, 
+                USER_TIMER_MINIMUM, NULL);
+            break;
+
         case WM_SIZE:
             state->kind = evWindowResize;
             native->info.width = LOWORD(lParam);
             native->info.height = HIWORD(lParam);
+            win32_green_escape(native->green);
             break;
+        case WM_TIMER:
+            if (wParam == (UINT_PTR) native)
+                win32_green_escape(native->green);
+            break;
+
+        case WM_EXITSIZEMOVE:
+        case WM_EXITMENULOOP:
+            KillTimer(hwnd, (UINT_PTR) native);
+            break;
+
+        // Frame Window Events
         case WM_CLOSE:
             state->kind = evWindowClose;
             break;
@@ -186,6 +250,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         // Process Event Default
         case WM_PAINT:
             state->kind = evWindowExpose;
+            win32_send_event(native, state);
+            win32_green_escape(native->green);
         default: goto SEND_DEFAULT;
     }
 
@@ -197,11 +263,11 @@ SEND_DEFAULT:
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-// ------------------------
-// GUI Native Event Pooling
-// ------------------------
+// -------------------------
+// GUI Native Event: Pooling
+// -------------------------
 
-void nogui_native_pump(nogui_native_t* native) {
+void win32_green_pump(win32_green_t* green, nogui_native_t* native) {
     MSG msg = { 0 };
     HWND hwnd = native->hwnd;
     // Peek Current Accumulated Messages
@@ -209,6 +275,11 @@ void nogui_native_pump(nogui_native_t* native) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+}
+
+void nogui_native_pump(nogui_native_t* native) {
+    win32_green_call(native->green,
+        (win32_vmfunc_t) win32_green_pump, native);
 }
 
 int nogui_native_poll(nogui_native_t* native) {
