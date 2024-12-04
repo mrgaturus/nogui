@@ -209,6 +209,7 @@ void nogui_native_destroy(nogui_native_t* native) {
 
     // Dealloc Native Platform
     nogui_queue_destroy(&native->queue);
+    free(native->green);
     free(native);
 }
 
