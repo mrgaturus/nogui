@@ -94,7 +94,7 @@ static BOOL win32_opengl_stage1(HWND hwnd, HDC* hdc, HGLRC* hglrc) {
 // Win32 Window Initialization
 // ---------------------------
 
-static HWND win32_create_window(nogui_native_t* native) {
+static HWND win32_create_hwnd(nogui_native_t* native) {
     const char CLASS_NAME[] = "nogui#app";
     const char TITLE_NAME[] = "";
     // Lookup Current Instance Module
@@ -102,7 +102,7 @@ static HWND win32_create_window(nogui_native_t* native) {
     GetModuleHandleEx(
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        (LPCSTR) &win32_create_window, &hInstance
+        (LPCSTR) &win32_create_hwnd, &hInstance
     );
 
     // Define Window Class
@@ -136,74 +136,22 @@ static HWND win32_create_window(nogui_native_t* native) {
     return hwnd;
 }
 
-// -------------------
-// Win32 Window Thread
-// -------------------
-
-static int win32_app_message(HWND hwnd, MSG* msg) {
-    LPARAM lParam = msg->lParam;
-
-    switch (msg->message) {
-        case NOGUI_DESTROY:
-            PostQuitMessage(0);
-            return 0;
-        case NOGUI_CURSOR:
-            SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR) lParam);
-            SetCursor((HCURSOR) lParam);
-            return 0;
-        case NOGUI_TITLE: {
-            LPCSTR str = (LPCSTR) lParam;
-            SetWindowText(hwnd, str);
-            free((void*) str);
-            return 0;
-        }
-    }
-
-    // Continue HWND
-    return 1;
-}
-
-DWORD WINAPI ThreadProc(LPVOID lpParam) {
-    nogui_native_t* native = (nogui_native_t*) lpParam;
-    HWND hwnd = win32_create_window(native);
+static void win32_create_window(nogui_native_t* native) {
+    HWND hwnd = win32_create_hwnd(native);
     win32_wintab_init(hwnd);
+    native->hwnd = hwnd;
 
+    // Initialize OpenGL 3.3
     BOOL staged_gl =
         win32_opengl_stage0(hwnd) &&
         win32_opengl_stage1(hwnd, &native->hdc, &native->hglrc);
     if (!staged_gl) {
-        MessageBox(hwnd, "OpenGL 3.3 not found on this system", "Failed Initialize", MB_OK | MB_ICONERROR);
+        MessageBox(hwnd,
+            "OpenGL 3.3 not found on this system",
+            "Failed Initialize", MB_OK | MB_ICONERROR);
         exit(1);
-    }
-
-    // HWND Ready for Execute
-    wglMakeCurrent(NULL, NULL);
-    SetEvent(native->evWait);
-
-    // Wait for HWND Execution
-    WaitForSingleObject(native->evWait, INFINITE);
-    ShowWindow(hwnd, SW_SHOWDEFAULT);
-    // Watch HWND Messages
-    MSG msg = { 0 };
-    while (GetMessage(&msg, NULL, 0, 0)) {
-        if (win32_app_message(hwnd, &msg) == 0)
-            continue;
-
-        // Dispatch HWND Message
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
-    // Destroy Win32 WGL
-    wglMakeCurrent(NULL, NULL);
-    wglDeleteContext(native->hglrc);
-    ReleaseDC(hwnd, native->hdc);
-    // Destroy Win32 Window
-    win32_wintab_destroy(hwnd);
-    DestroyWindow(hwnd);
-
-    // Destroy Thread
-    return 0;
+    } else wglMakeCurrent(
+        native->hdc, native->hglrc);
 }
 
 // ---------------------------
@@ -216,48 +164,26 @@ nogui_native_t* nogui_native_init(int w, int h) {
     native->info.width = w;
     native->info.height = h;
     native->info.glProc = modernGetProcAddress;
-    // Create Thread Critical Sections
-    InitializeCriticalSection(&native->csWait);
-    native->evWait = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-    // Create Win32 Thread
-    HANDLE thrd = CreateThread(            
-        NULL,        // default security attributes
-        0,           // default stack size
-        ThreadProc,  // thread function
-        native,      // native function arguments
-        0,           // default creation flags
-        &native->id  // receive thread identifier
-    );
-
-    // Wait HWND Thread Initialized
-    WaitForSingleObject(native->evWait, INFINITE);
-    wglMakeCurrent(native->hdc, native->hglrc);
-    native->thrd = thrd;
+    win32_create_window(native);
 
     // Initialize Native Title
     native->info.title = calloc(1, 1);
     native->info.id = calloc(1, 1);
     native->info.name = calloc(1, 1);
-    // Initialize Native Queue
-    native->csState = (nogui_state_t) {};
-    native->csQueue = (nogui_queue_t) {};
+    // Initialize Native Objects
+    native->state = (nogui_state_t) {};
+    native->state0 = (nogui_state_t) {};
     native->queue = (nogui_queue_t) {};
     // Initialize Native State
     native->state.native = native;
-    native->csState.native = native;
+    native->state0.native = native;
 
     return native;
 }
 
 int nogui_native_open(nogui_native_t* native) {
-    nogui_queue_t* queue = &native->queue;
-    nogui_queue_t* queue0 = &native->csQueue;
-    queue0->cb_event = queue->cb_event;
-
-    // Continue HWND Thread
-    SetEvent(native->evWait);
-    return TRUE;
+    return wglMakeCurrent(native->hdc, native->hglrc) &&
+        ShowWindow(native->hwnd, SW_SHOWDEFAULT) == 0;
 }
 
 void nogui_native_frame(nogui_native_t* native) {
@@ -265,13 +191,14 @@ void nogui_native_frame(nogui_native_t* native) {
 }
 
 void nogui_native_destroy(nogui_native_t* native) {
-    PostThreadMessage(native->id, NOGUI_DESTROY, 0, 0);
-    WaitForSingleObject(native->thrd, INFINITE);
-
-    // Deallocate Threading
-    CloseHandle(native->thrd);
-    CloseHandle(native->evWait);
-    DeleteCriticalSection(&native->csWait);
+    HWND hwnd = native->hwnd;
+    // Destroy Win32 WGL
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(native->hglrc);
+    ReleaseDC(hwnd, native->hdc);
+    // Destroy Win32 Window
+    win32_wintab_destroy(hwnd);
+    DestroyWindow(hwnd);
 
     // Dealloc Native Title
     free(native->info.title);

@@ -7,27 +7,17 @@
 // -----------------------------
 // GUI Win32 Forward Declaration
 // -----------------------------
-#define NOGUI_DESTROY (WM_APP + 1)
-#define NOGUI_CURSOR (WM_APP + 2)
-#define NOGUI_TITLE (WM_APP + 3)
 
 struct nogui_native_t {
-    DWORD id;
-    HANDLE thrd;
-    // WGL Context
+    HWND hwnd;
     HDC hdc;
     HGLRC hglrc;
-
-    // Threaded HWND
-    nogui_queue_t csQueue;
-    nogui_state_t csState;
-    CRITICAL_SECTION csWait;
-    HANDLE evWait;
 
     // nogui export
     nogui_info_t info;
     nogui_queue_t queue;
     nogui_state_t state;
+    nogui_state_t state0;
 };
 
 void win32_wintab_init(HWND hwnd);

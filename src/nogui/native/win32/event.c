@@ -3,12 +3,12 @@
 #include <wintab.h>
 #include <string.h>
 
-// ----------------------
-// GUI Native Event Queue
-// ----------------------
+// -----------------------
+// GUI Native Event: Queue
+// -----------------------
 
 static void win32_send_event(nogui_native_t* native, nogui_state_t* state) {
-    nogui_queue_t* queue = &native->csQueue;
+    nogui_queue_t* queue = &native->queue;
 
     // Create a Native Callback
     const long size = sizeof(nogui_state_t);
@@ -23,26 +23,9 @@ static void win32_send_event(nogui_native_t* native, nogui_state_t* state) {
     nogui_queue_push(queue, cb);
 }
 
-static void win32_pump_events(nogui_native_t* native) {
-    nogui_queue_t* queue = &native->queue;
-    nogui_queue_t* queue0 = &native->csQueue;
-
-    nogui_cb_t* endpoint = queue0->first;
-    // Add Endpoint to Main Queue
-    if (endpoint) {
-        nogui_cb_t* next = endpoint->next;
-        nogui_queue_push(queue, endpoint);
-        endpoint->next = next;
-    }
-
-    // Clear Thread Queue
-    queue0->first = NULL;
-    queue0->stack = NULL;
-}
-
-// --------------------------
-// GUI Native Event Translate
-// --------------------------
+// ---------------------------
+// GUI Native Event: Translate
+// ---------------------------
 
 static BOOL win32_event_mouse(nogui_state_t* state, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // Mouse Coordinates if not WinTab found
@@ -112,9 +95,9 @@ static BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPA
     return msg.message == WM_CHAR;
 }
 
-// -------------------------
-// GUI Native Event Dispatch
-// -------------------------
+// --------------------------
+// GUI Native Event: Dispatch
+// --------------------------
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static nogui_native_t* native;
@@ -126,7 +109,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     switch (uMsg) {
         case WM_CREATE:
             native = *(nogui_native_t**) lParam;
-            state = &native->csState;
+            state = &native->state0;
             goto SEND_DEFAULT;
         case WM_ACTIVATE:
             anticlick = (wParam == WA_CLICKACTIVE);
@@ -207,13 +190,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
 
 SEND_EVENT:
-    EnterCriticalSection(&native->csWait);
     win32_send_event(native, state);
-    LeaveCriticalSection(&native->csWait);
-    // Return Nothing
     return 0;
 
-    // Process Default Window Events
 SEND_DEFAULT:
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -223,9 +202,13 @@ SEND_DEFAULT:
 // ------------------------
 
 void nogui_native_pump(nogui_native_t* native) {
-    EnterCriticalSection(&native->csWait);
-    win32_pump_events(native);
-    LeaveCriticalSection(&native->csWait);
+    MSG msg = { 0 };
+    HWND hwnd = native->hwnd;
+    // Peek Current Accumulated Messages
+    while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
 }
 
 int nogui_native_poll(nogui_native_t* native) {

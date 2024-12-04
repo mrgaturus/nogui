@@ -71,16 +71,6 @@ static void win32_wintab_lc(HWND hwnd, LOGCONTEXTA* lc) {
   lc->lcOutOrgY = lc->lcInOrgY;
   lc->lcOutExtX = lc->lcInExtX;
   lc->lcOutExtY = lc->lcInExtY;
-
-  //log_info("Input Origin %lo %lo", lc->lcInOrgX, lc->lcInOrgY);
-  //log_info("Input Extremum %lo %lo", lc->lcInExtX, lc->lcInExtY);
-  //log_info("Output Origin %lo %lo", lc->lcOutOrgX, lc->lcOutOrgY);
-  //log_info("Output Extremum %lo %lo\n", lc->lcOutExtX, lc->lcOutExtY);
-  // Configure for Raw Coordinates
-  //log_info("Sys Input Origin %lo %lo", lc->lcSysOrgX, lc->lcSysOrgY);
-  //log_info("Sys Input Extremum %lo %lo", lc->lcSysExtX, lc->lcSysExtY);
-  //log_info("Sys Output Origin %lo %lo", lc->lcSysOrgX, lc->lcSysOrgY);
-  //log_info("Sys Output Extremum %lo %lo", lc->lcSysExtX, lc->lcSysExtY);
 }
 
 // --------------------

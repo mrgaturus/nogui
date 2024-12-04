@@ -93,7 +93,8 @@ void nogui_cursor_destroy(nogui_native_t* native, nogui_cursor_t* cursor) {
 // --------------------------
 
 void nogui_native_cursor(nogui_native_t* native, nogui_cursor_t* cursor) {
-  PostThreadMessage(native->id, NOGUI_CURSOR, (WPARAM) cursor, (LPARAM) cursor);
+  SetClassLongPtr(native->hwnd, GCLP_HCURSOR, (LONG_PTR) cursor);
+  SetCursor((HCURSOR) cursor);
 }
 
 void nogui_native_cursor_reset(nogui_native_t* native) {
@@ -118,17 +119,12 @@ void nogui_native_id(nogui_native_t* native, char* id, char* name) {
 
 void nogui_native_title(nogui_native_t* native, char* title) {
   int len = strlen(title);
-  // Allocate String Buffers
-  char* send = malloc(len);
+  SetWindowText(native->hwnd, title);
+  // Allocate Cache String
   char* cache = malloc(len);
-  // Copy String to Buffers
-  strcpy(send, title);
   strcpy(cache, title);
   // Replace Current Cache
   if (native->info.title)
     free(native->info.title);
   native->info.title = cache;
-
-  // Send Copied Title String to HWND
-  PostThreadMessage(native->id, NOGUI_TITLE, (WPARAM) send, (LPARAM) send);
 }
