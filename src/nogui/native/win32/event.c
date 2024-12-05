@@ -129,9 +129,15 @@ static BOOL win32_event_keyboard(nogui_state_t* state, HWND hwnd, UINT uMsg, WPA
     }
 
     // Check Alt + F4 Key Combination
-    if (state->key == NK_F4 && (state->mask & 0xF) == Mod_Alt)
+    if (state->key == NK_F4 && (state->mask & 0xF) == Mod_Alt) {
         if (state->kind == evKeyDown)
             state->kind = evWindowClose;
+    // Check Focus Cycle Key Combinations
+    } else if (state->key == NK_Tab && state->kind == evKeyDown) {
+        if ((state->mask & 0xF) == Mod_Shift)
+            state->kind = evFocusPrev;
+        else state->kind = evFocusNext;
+    }
 
     MSG msg = { 0 };
     // Forward Message to WM_CHAR
