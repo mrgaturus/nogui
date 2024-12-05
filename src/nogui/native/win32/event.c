@@ -165,15 +165,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WT_PACKET:
             if (win32_wintab_packet(state, wParam, lParam) == 0)
                 goto SEND_DEFAULT;
-            // Send Packet
-            else break;
+            else goto SEND_EVENT;
 
         // Mouse Window Events
         case WM_MOUSEMOVE:
             state->kind = evCursorMove;
             if (win32_event_mouse(state, uMsg, wParam, lParam))
                 goto SEND_DEFAULT;
-            else break;
+            else goto SEND_EVENT;
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN:
         case WM_MBUTTONDOWN:
@@ -187,7 +186,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             state->kind = evCursorClick;
             win32_event_mouse(state, uMsg, wParam, lParam);
             SetCapture(hwnd);
-            break;
+            goto SEND_EVENT;
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
         case WM_MBUTTONUP:
@@ -195,7 +194,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             state->kind = evCursorRelease;
             win32_event_mouse(state, uMsg, wParam, lParam);
             ReleaseCapture();
-            break;
+            goto SEND_EVENT;
 
         // Keyboard Window Events
         case WM_KEYDOWN:
@@ -204,40 +203,42 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_SYSKEYUP:
             if (win32_event_keyboard(state, hwnd, uMsg, wParam))
                 goto SEND_DEFAULT;
-            else break;
+            else goto SEND_EVENT;
         // Keyboard UTF8 Char
         case WM_CHAR:
             state->utf8size = win32_keycode_utf8(
                 wParam, state->utf8char, 8);
-            break;
+            goto SEND_EVENT;
 
         // Frame Window Blocking
         case WM_ENTERSIZEMOVE:
         case WM_ENTERMENULOOP:
             SetTimer(hwnd, (UINT_PTR) native, 
                 USER_TIMER_MINIMUM, NULL);
-            break;
+            goto SEND_DEFAULT;
 
         case WM_SIZE:
             state->kind = evWindowResize;
             native->info.width = LOWORD(lParam);
             native->info.height = HIWORD(lParam);
-            win32_green_escape(native->green);
-            break;
+            win32_send_event(native, state);
+        case WM_MOVE:
+            win32_green_escape(green);
+            goto SEND_DEFAULT;
         case WM_TIMER:
             if (wParam == (UINT_PTR) native)
-                win32_green_escape(native->green);
-            break;
+                win32_green_escape(green);
+            goto SEND_DEFAULT;
 
         case WM_EXITSIZEMOVE:
         case WM_EXITMENULOOP:
             KillTimer(hwnd, (UINT_PTR) native);
-            break;
+            goto SEND_DEFAULT;
 
         // Frame Window Events
         case WM_CLOSE:
             state->kind = evWindowClose;
-            break;
+            goto SEND_EVENT;
 
         // Disable Alt Menu
         case WM_SYSCOMMAND:
@@ -245,13 +246,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 return 0;
             goto SEND_DEFAULT;
         case WM_DISPLAYCHANGE:
-            return 0;
+            goto SEND_DEFAULT;
 
         // Process Event Default
         case WM_PAINT:
             state->kind = evWindowExpose;
             win32_send_event(native, state);
-            win32_green_escape(native->green);
+            win32_green_escape(green);
         default: goto SEND_DEFAULT;
     }
 
