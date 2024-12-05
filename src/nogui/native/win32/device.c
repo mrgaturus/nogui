@@ -37,6 +37,7 @@ typedef BOOL (API * WTPACKET)(HCTX, UINT, LPVOID);
 typedef int (API * WTQUEUESIZEGET)(HCTX);
 typedef BOOL (API * WTQUEUESIZESET)(HCTX, int);
 typedef BOOL (API * WTENABLE)(HCTX, BOOL);
+typedef BOOL (API * WTOVERLAP)(HCTX, BOOL);
 typedef BOOL (API * WTSET)(HCTX, LPLOGCONTEXTA);
 
 // WinTab API Functions
@@ -47,6 +48,7 @@ static WTPACKET WTPacket;
 static WTQUEUESIZEGET WTQueueSizeGet;
 static WTQUEUESIZESET WTQueueSizeSet;
 static WTENABLE WTEnable;
+static WTOVERLAP WTOverlap;
 static WTSET WTSet;
 // WinTab API Structure
 static win32_wintab_t wintab;
@@ -89,6 +91,7 @@ void win32_wintab_init(HWND hwnd) {
   WTQueueSizeGet = (WTQUEUESIZEGET) GetProcAddress(module, "WTQueueSizeGet");
   WTQueueSizeSet = (WTQUEUESIZESET) GetProcAddress(module, "WTQueueSizeSet");
   WTEnable = (WTENABLE) GetProcAddress(module, "WTEnable");
+  WTOverlap = (WTOVERLAP) GetProcAddress(module, "WTOverlap");
   WTSet = (WTSET) GetProcAddress(module, "WTSetA");
 
   // Initialize Wintab Driver
@@ -193,7 +196,7 @@ void win32_wintab_status(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_ACTIVATE:
       wintab.active = wParam != WA_INACTIVE;
       break;
-    // Tablet Device Proximityc
+    // Tablet Device Proximity
     case WT_PROXIMITY:
       wintab.proximity = !! LOWORD(lParam);
       break;
@@ -221,6 +224,8 @@ void win32_wintab_status(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   // React to Enabled Changes
   if (enabled != wintab.enabled) {
     if (WTEnable(wintab.ctx, wintab.enabled) == FALSE)
-      log_warning("wintab driver: failed change status");
+      log_warning("wintab driver: failed enabling");
+    else if (WTOverlap(wintab.ctx, wintab.enabled) == FALSE)
+      log_warning("wintab driver: failed overlapping");
   }
 }

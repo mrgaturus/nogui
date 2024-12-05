@@ -183,23 +183,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_RBUTTONDOWN:
         case WM_MBUTTONDOWN:
         case WM_XBUTTONDOWN:
-            // Avoid Accidental Clicks
-            if (anticlick) {
-                anticlick = FALSE;
+            SetCapture(hwnd);
+            if (anticlick)
                 goto SEND_DEFAULT;
-            }
 
             state->kind = evCursorClick;
             win32_event_mouse(state, uMsg, wParam, lParam);
-            SetCapture(hwnd);
             goto SEND_EVENT;
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
         case WM_MBUTTONUP:
         case WM_XBUTTONUP:
+            ReleaseCapture();
+            if (anticlick) {
+                anticlick = FALSE;
+                goto SEND_DEFAULT;
+            }
+
             state->kind = evCursorRelease;
             win32_event_mouse(state, uMsg, wParam, lParam);
-            ReleaseCapture();
             goto SEND_EVENT;
 
         // Keyboard Window Events
