@@ -132,7 +132,7 @@ controller ComboModel:
 widget UXComboBox:
   attributes:
     map: UXMenuMapper
-    model: ComboModel
+    cm: ComboModel
     # Combobox Style
     clear: bool
 
@@ -145,12 +145,17 @@ widget UXComboBox:
       map[].open()
     else: map[].close()
 
-  new combobox(model: ComboModel):
-    result.flags = {wMouse}
-    result.model = model
+  proc model*(model: ComboModel) =
+    assert not isNil(model)
+    if self.cm == model: return
+    self.cm = model
     # Configure Menu to ComboBox
     let menu {.cursor.} = model.menu
-    result.map = menu.map()
+    self.map = menu.map()
+
+  new combobox(model: ComboModel):
+    result.flags = {wMouse}
+    result.model(model)
 
   proc clear*: UXComboBox {.inline.} =
     self.clear = true; self
@@ -183,14 +188,14 @@ widget UXComboBox:
 
   method draw(ctx: ptr CTXRender) =
     let 
-      s = addr self.model.selected
+      s = addr self.cm.selected
       ex = extra(s.lm, self.rect)
-    # Labeling Position
-    var p = label(s.lm, self.rect)
+      p = label(s.lm, self.rect)
     # Decide Current Color
-    let bgColor = if not self.clear:
-      self.itemColor()
-    else: self.clearColor()
+    let bgColor =
+      if not self.clear:
+        self.itemColor()
+      else: self.clearColor()
     # Fill Background Color
     ctx.color bgColor
     ctx.fill rect(self.rect)
