@@ -348,9 +348,9 @@ widget UXDockButtons of UXLayoutHLevel:
       btnFold = button(iconFold, cbFold)
       btnMenu = button(iconContext, result.cbMenu)
     # Create Buttons Layout
-    result.add btnClose.clear()
-    result.add btnFold.clear()
-    result.add btnMenu.clear()
+    result.add glass(btnClose)
+    result.add glass(btnFold)
+    result.add glass(btnMenu)
     # Define Widget Buttons
     result.btnMenu = btnMenu
     result.btnFold = btnFold

@@ -3,7 +3,7 @@ import ../[prelude, labeling]
 type
   UXButtonStyle* = enum
     btnSimple
-    btnClear
+    btnGlass
     btnActive
 
 # ------------------
@@ -22,7 +22,7 @@ widget UXButtonBase:
   proc style: CTXColor =
     case self.mode
     of btnSimple: self.itemColor()
-    of btnClear: self.clearColor()
+    of btnGlass: self.glassColor()
     of btnActive: self.activeColor()
 
   proc init0*(label: string, icon: CTXIconID) =
@@ -82,8 +82,8 @@ widget UXButtonCB of UXButtonBase:
     result.init0(label, icon)
     result.cb = cb
 
-  proc clear*: UXButtonCB =
-    self.mode = btnClear; self
+  proc glass*: UXButtonCB =
+    self.mode = btnGlass; self
 
   method draw(ctx: ptr CTXRender) =
     self.draw0(ctx)

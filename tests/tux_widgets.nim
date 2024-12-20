@@ -201,7 +201,7 @@ controller CONPlayground:
 
     # Arrange Each Widget
     dummy().child:
-      combobox(self.selected).clear().locateW(20, 400, 200)
+      combobox(self.selected).glass().locateW(20, 400, 200)
       button("Hello World 2", self.cbtest.cbInit).locate(20, 55)
       # Locate Nested Buttons
       panel().locate(20, 80, 128, 128).child:

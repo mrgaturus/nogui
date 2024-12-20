@@ -44,7 +44,7 @@ template colorControl(self: GUIWidget, idle, hover, click: uint32): uint32 =
   else: hover
 
 # -- Toggle Button Colors
-proc clearColor*(self: GUIWidget): uint32 =
+proc glassColor*(self: GUIWidget): uint32 =
   let c = addr getApp().colors
   self.colorControl(0'u32, c.focus, c.clicked)
 

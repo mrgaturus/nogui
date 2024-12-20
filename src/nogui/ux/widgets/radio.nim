@@ -80,7 +80,7 @@ widget UXButtonOption of UXButtonBase:
     result.check = check
 
   method draw(ctx: ptr CTXRender) =
-    const colors = [btnClear, btnActive]
+    const colors = [btnGlass, btnActive]
     let check = self.check.peek[] == self.value
     # Draw Button Selected
     self.mode = colors[int32 check]

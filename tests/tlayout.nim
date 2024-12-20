@@ -77,7 +77,7 @@ controller CONLayout:
             button("Option A", iconBrush, self.option, 0)
             button("Option B", iconBrush, self.option, 1)
             min: separator()
-            button("Hello World", iconBrush, self.cbHello).clear()
+            button("Hello World", iconBrush, self.cbHello).glass()
           focustest()
       min: focustest()
 

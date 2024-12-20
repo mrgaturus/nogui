@@ -134,7 +134,7 @@ widget UXComboBox:
     map: UXMenuMapper
     cm: ComboModel
     # Combobox Style
-    clear: bool
+    glass: bool
 
   callback cbPopup:
     let
@@ -157,8 +157,8 @@ widget UXComboBox:
     result.flags = {wMouse}
     result.model(model)
 
-  proc clear*: UXComboBox {.inline.} =
-    self.clear = true; self
+  proc glass*: UXComboBox {.inline.} =
+    self.glass = true; self
 
   method update =
     let
@@ -193,9 +193,9 @@ widget UXComboBox:
       p = label(s.lm, self.rect)
     # Decide Current Color
     let bgColor =
-      if not self.clear:
+      if not self.glass:
         self.itemColor()
-      else: self.clearColor()
+      else: self.glassColor()
     # Fill Background Color
     ctx.color bgColor
     ctx.fill rect(self.rect)
