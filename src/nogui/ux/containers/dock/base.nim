@@ -17,12 +17,16 @@ proc inside(rect: GUIRect, x: int32): bool =
   # Check if Inside Line
   x >= x0 and x <= x1
 
-proc inplace(rect: GUIRect, y: int32): bool =
+proc inplace(rect: GUIRect, x, y: int32): bool =
   let
+    x0 = rect.x
     y0 = rect.y
+    # Offset OK
     h0 = rect.h
-  # Check if Inside Height Place
-  y >= y0 - h0 and y <= y0 + (h0 * 2)
+    o0 = h0 * 2
+  # Check if Inside Place Region
+  x >= x0 - o0 and x <= x0 + rect.w + o0 and
+  y >= y0 - h0 and y <= y0 + o0
 
 # ---------------
 # UX Dock Content
@@ -160,7 +164,7 @@ widget UXDockTab:
       pivot.clicks = 0
     # Manipulate Tab if Selected
     elif selected and self.test(wGrab):
-      if inplace(self.rect, state.my):
+      if inplace(self.rect, state.mx, state.my):
         GC_ref(self)
         self.reorder(state)
         GC_unref(self)
