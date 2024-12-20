@@ -541,25 +541,21 @@ macro controller*(declare, body: untyped) =
     mcObjects[name.strVal] = info
 
 macro child(self: GUIWidget, body: untyped) =
-  let hook = bindSym"add"
-  # Declare Statement List
+  const exprs = {nnkIdent, nnkCall, nnkAsgn,
+    nnkCommand, nnkDotExpr, nnkBlockStmt}
+  let hook = nnkDotExpr.newTree(self, bindSym"add")
+  # Create Expression List
   result = nnkStmtList.newTree()
-  # Warp Each Widget
   for node in body:
-    # Only Expect Any Valuable or Asign Item
-    expectKind(node, {nnkIdent, nnkCall, nnkAsgn})
-    let warp = nnkCommand.newTree(
-      nnkDotExpr.newTree(self, hook), node)
-    # Assing and Then Add
+    expectKind(node, exprs)
+    # self.add <expression>
+    let warp = nnkCommand.newTree(hook, node)
     if node.kind == nnkAsgn:
       warp[1] = node[0]
       result.add node
-    # Add Warping
+    # Add Expression
     result.add warp
 
 template child*[T: GUIWidget](self: T, body: untyped): T =
-  # Warp Childrens
-  let tmp = self
-  block: child(tmp, body)
-  # Return Widget
-  tmp
+  let tmp {.cursor.} = self; block:
+    child(tmp, body); tmp

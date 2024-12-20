@@ -68,25 +68,26 @@ widget UXCallstack:
 controller CONLayout:
   attributes:
     widget: GUIWidget
+    stack: UXCallstack
 
   callback cbHello:
     echo "hello world"
 
   proc createWidget: GUIWidget =
     let cbHello = self.cbHello
+    self.stack = callstack()
     # Create Layout
     margin: horizontal().child:
       min: button("Minimun Left", cbHello)
       # Sub Layout
       vertical().child:
-        min: button("Minimun Top", cbHello)
-        callstack()
-        min: button("Minimun Bottom", cbHello)
+        button("Minimun Top", cbHello); self.stack
+        button("Minimun Bottom", cbHello)
         # Sub Sub Layout
         horizontal().child:
-          button("Sub Sub Left", cbHello)
+          block: button("Sub Sub Left", cbHello)
           min: button("Minimun Center", cbHello)
-          button("Sub Sub Right", cbHello)
+          button "Sub Sub Right", cbHello
       min: button("Minimun Right", cbHello)
 
   new conlayout():
