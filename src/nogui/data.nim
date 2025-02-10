@@ -15,23 +15,31 @@ from libs/ft2 import
 # Data Path Location
 # ------------------
 
-proc toDataPath(path: string): string =
+var dataPath = default(string)
+proc checkDataPath() =
   const project = querySetting(projectName)
-  # try find on relative data folder
-  let relativePath = getAppDir() / "data"
-  result = relativePath / path
-  # Check Posix Path if not Exists
+  if len(dataPath) > 0: return
+  let app = getAppDir()
+  # Check Relative Path
+  var path = app / "data"
+  if not dirExists(path):
+    const projectData = project & ".data"
+    path = app / projectData
+  # try find on /usr/share/<projectname>
   when defined(posix):
     const unixPath = "/usr/share" / project
-    # try find on /usr/share/<projectname>
-    if not dirExists(relativePath):
-      result = unixPath / path
-  # Check Windows Path if not Exists
-  elif defined(windows):
-    const sxsPath = (project & ".data")
-    # try find on <projectname>.data
-    if not dirExists(relativePath):
-      result = getAppDir() / sxsPath / path
+    if not dirExists(path):
+      path = unixPath
+  # Check Actually Found
+  if dirExists(path):
+    dataPath = move path
+    return
+  # Crash at Data Folder not Found
+  log(lvError, "failed locate application data")
+  quit(65535)
+
+proc toDataPath*(path: string): string =
+  checkDataPath(); dataPath / path
 
 # -----------------------
 # Icon Chunk Loading Type
@@ -134,43 +142,40 @@ proc newFont*(ft2: FT2Library, font: string, size: cint): FT2Face =
   if ft2_setCharSize(result, 0, size shl 6, 96, 96) != 0:
     log(lvWarning, "font size was setted not properly")
 
-# --------------------
-# Shader Creation Proc
-# --------------------
+# ----------------------
+# OpenGL Shader Creation
+# ----------------------
+
+proc compileShader*(shader: string, kind: GLenum): GLuint =
+  let path = toDataPath("glsl")
+  result = glCreateShader(kind)
+  try: # Load Vertex Shader from File
+    let buffer = readFile(path / shader)
+    let source = cast[cstring](addr buffer[0])
+    glShaderSource(result, 1, cast[cstringArray](addr source), nil)
+  except IOError: log(lvError, "failed loading shader: ", shader)
+  glCompileShader(result)
+  # Check Shader Error
+  var status {.noinit.}: GLint 
+  glGetShaderiv(result, GL_COMPILE_STATUS, addr status)
+  if status == 0:
+    var logsize {.noinit.}: GLint
+    glGetShaderiv(result, GL_INFO_LOG_LENGTH, addr logsize)
+    # Output Shader Compiler Error
+    let buffer = newString(logsize)
+    let error = cstring(buffer)
+    glGetShaderInfoLog(result, logsize, addr logsize, error)
+    log(lvError, "failed compiling: ", shader)
+    log(lvError, error)
 
 proc newShader*(vert, frag: string): GLuint =
-  let path = toDataPath("glsl")
-  var # Prepare Vars
-    vertShader = glCreateShader(GL_VERTEX_SHADER)
-    fragShader = glCreateShader(GL_FRAGMENT_SHADER)
-    buffer: string
-    bAddr: cstring
-    success: GLint
-  try: # -- LOAD VERTEX SHADER
-    buffer = readFile(path / vert)
-    bAddr = cast[cstring](addr buffer[0])
-  except IOError: log(lvError, "failed loading shader: ", vert)
-  glShaderSource(vertShader, 1, cast[cstringArray](addr bAddr), nil)
-  try: # -- LOAD FRAGMENT SHADER
-    buffer = readFile(path / frag)
-    bAddr = cast[cstring](addr buffer[0])
-  except IOError: log(lvError, "failed loading shader: ", frag)
-  glShaderSource(fragShader, 1, cast[cstringArray](addr bAddr), nil)
-  # -- COMPILE SHADERS
-  glCompileShader(vertShader)
-  glCompileShader(fragShader)
-  # -- CHECK SHADER ERRORS
-  glGetShaderiv(vertShader, GL_COMPILE_STATUS, addr success)
-  if not success.bool:
-    log(lvError, "failed compiling: ", vert)
-  glGetShaderiv(fragShader, GL_COMPILE_STATUS, addr success)
-  if not success.bool:
-    log(lvError, "failed compiling: ", frag)
-  # -- CREATE PROGRAM
+  let vertShader = compileShader(vert, GL_VERTEX_SHADER)
+  let fragShader = compileShader(frag, GL_FRAGMENT_SHADER)
+  # Create Shader Program
   result = glCreateProgram()
   glAttachShader(result, vertShader)
   glAttachShader(result, fragShader)
   glLinkProgram(result)
-  # -- CLEAN UP TEMPORALS
+  # Clean up Temporals
   glDeleteShader(vertShader)
   glDeleteShader(fragShader)
