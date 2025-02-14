@@ -153,19 +153,19 @@ proc compileShader*(shader: string, kind: GLenum): GLuint =
     let buffer = readFile(path / shader)
     let source = cast[cstring](addr buffer[0])
     glShaderSource(result, 1, cast[cstringArray](addr source), nil)
-  except IOError: log(lvError, "failed loading shader: ", shader)
+  except IOError: log(lvError, "failed loading shader:", shader)
   glCompileShader(result)
   # Check Shader Error
   var status {.noinit.}: GLint 
   glGetShaderiv(result, GL_COMPILE_STATUS, addr status)
-  if status == 0:
+  if status == GL_FALSE:
     var logsize {.noinit.}: GLint
     glGetShaderiv(result, GL_INFO_LOG_LENGTH, addr logsize)
     # Output Shader Compiler Error
     let buffer = newString(logsize)
     let error = cstring(buffer)
     glGetShaderInfoLog(result, logsize, addr logsize, error)
-    log(lvError, "failed compiling: ", shader)
+    log(lvError, "failed compiling:", shader)
     log(lvError, error)
 
 proc newShader*(vert, frag: string): GLuint =
@@ -175,7 +175,19 @@ proc newShader*(vert, frag: string): GLuint =
   result = glCreateProgram()
   glAttachShader(result, vertShader)
   glAttachShader(result, fragShader)
+  # Link Shader Program
   glLinkProgram(result)
+  var status {.noinit.}: GLint
+  glGetProgramiv(result, GL_LINK_STATUS, addr status)
+  if status == GL_FALSE:
+    var logsize {.noinit.}: GLint
+    glGetProgramiv(result, GL_INFO_LOG_LENGTH, addr logsize)
+    # Output Shader Link Error
+    let buffer = newString(logsize)
+    let error = cstring(buffer)
+    glGetProgramInfoLog(result, logsize, addr logsize, error)
+    log(lvError, "failed linking:", vert, frag)
+    log(lvError, error)
   # Clean up Temporals
   glDeleteShader(vertShader)
   glDeleteShader(fragShader)
