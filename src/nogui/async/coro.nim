@@ -28,6 +28,7 @@ type
     cond: Cond
     # Coroutine Base
     signal: CoroSignal
+    ghost: CoroSignal
     fn0: CoroHandle
     fn: CoroProc
     stack: pointer
@@ -130,6 +131,7 @@ proc detach(vm: ptr CoroVM) =
   else: man.free = vm
   # Wake Waiting
   vm.signal = coroFinalize
+  vm.ghost = coroFinalize
   broadcast(vm.cond)
   release(man.mtx)
 
@@ -157,13 +159,13 @@ proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
   # Execute Virtual Machine: Handle
   if vm.signal >= coroRunning:
     if result: return result
-  if vm.signal == coroPause and not result:
-    broadcast(vm.cond)
-    return result
   elif not isNil(vm.fn0):
-    wasMoved(vm.coro.vm)
-    vm.fn0(vm.coro, vm.signal)
-    vm.coro.vm = vm
+    if vm.signal != vm.ghost:
+      wasMoved(vm.coro.vm)
+      # Handle Signal Changes
+      vm.fn0(vm.coro, vm.signal)
+      vm.ghost = vm.signal
+      vm.coro.vm = vm
   # Execute Virtual Machine
   case vm.signal
   of coroFinalize: vm.detach()
@@ -173,11 +175,13 @@ proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
     else: vm.detach()
   of coroStart:
     vm.signal = coroRunning
+    vm.ghost = coroRunning
     let fn = cast[NGreenProc](payload)
     green_callctx(fn, vm, vm.stack)
   of coroPause: broadcast(vm.cond)
   of coroResume, coroRunning, coroRelax:
     vm.signal = coroRunning
+    vm.ghost = coroRunning
     green_jumpctx(addr vm.state, 1)
 
 proc worker(man: ptr CoroManager) =
@@ -265,7 +269,10 @@ proc pause(coro: ptr CoroBase) =
 
 proc resume(coro: ptr CoroBase) =
   if not coro.virtual():
-    coro.signal(coroResume)
+    let vm = coro.vm
+    # Resume Only if Coroutine is Paused
+    if not isNil(vm) and vm.ghost == coroPause:
+      coro.signal(coroResume)
 
 proc cancel(coro: ptr CoroBase) =
   if coro.virtual():
@@ -282,8 +289,9 @@ proc wait(coro: ptr CoroBase) =
   if isNil(vm): return
   # Lock Finalized
   acquire(vm.mtx)
-  if not isNil(vm.coro):
-    wait(vm.cond, vm.mtx)
+  if not isNil(vm.coro) and
+    vm.ghost != coroPause:
+      wait(vm.cond, vm.mtx)
   release(vm.mtx)
 
 # ---------------------------
@@ -439,6 +447,13 @@ template send*[T](coro: Coroutine[T], cb: CoroCallback) =
 
 template wait*[T](coro: Coroutine[T]) =
   wait cast[ptr CoroBase](coro)
+
+# -- Coroutine Locking --
+template mutexAcquire*[T](coro: Coroutine[T]) =
+  acquire cast[ptr CoroBase](coro).mtx
+
+template mutexRelease*[T](coro: Coroutine[T]) =
+  release cast[ptr CoroBase](coro).mtx
 
 template lock*[T](coro: Coroutine[T], body: untyped) =
   block control:
