@@ -1,6 +1,22 @@
 #include <stdatomic.h>
 
-// 16 Byte Thread Task - CMPXCHG16B
+typedef void (*green_vmproc_t)(void*);
+typedef __attribute__((aligned(16))) struct {
+  unsigned char buffer[128];
+} green_vmstack_t;
+
+typedef __attribute__((aligned(16))) struct {
+  unsigned long long buffer[32];
+} green_vmstate_t;
+
+extern void green_callctx(green_vmproc_t proc, void* data, void* stack);
+extern void green_jumpctx(green_vmstate_t* state, int signal);
+extern int green_setctx(green_vmstate_t* state);
+
+// --------------------
+// Thread Pool: Structs
+// --------------------
+
 typedef _Atomic long long pool_status_t;
 typedef void (*pool_fn_t)(void*);
 
@@ -26,9 +42,9 @@ typedef struct {
   _Alignas(64) pool_ring_t* _Atomic ring;
 } pool_lane_t;
 
-// ---------------------
-// Thread Pool Functions
-// ---------------------
+// ----------------------
+// Thread Pool: Functions
+// ----------------------
 
 void pool_lane_init(pool_lane_t* lane, void* opaque);
 void pool_lane_reset(pool_lane_t* lane);

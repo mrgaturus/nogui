@@ -1,5 +1,5 @@
 # Avoid import os.parentDir
-# TODO: rewrite c files to nimskull
+# TODO: use nimony $path
 proc includePath(): string {.compileTime.} =
   result = currentSourcePath()
   var l = result.len
@@ -17,18 +17,16 @@ proc includePath(): string {.compileTime.} =
 # Thread Pool FFI Import
 # ----------------------
 
+{.compile: "pool.c".}
+{.compile: "green.S".}
+{.push header: includePath() & "async.h".}
+
 type
   NThreadMode* {.size: 8.} = enum
     thrWorking
     thrSleep
     thrTerminate
-
-{.compile: "pool.c".}
-# Include Header File
-{.passC: "-I" & includePath().}
-{.push header: "pool.h".}
-
-type
+  # Thread Pool Task
   NThreadProc* {.importc: "pool_fn_t".} =
     proc (data: pointer) {.nimcall, gcsafe.}
   NThreadTask* {.importc: "pool_task_t".} = object
@@ -37,11 +35,19 @@ type
   NThreadLane* {.importc: "pool_lane_t".} = object
     opaque*: pointer
     rng*: uint64
-  # Thread Atomic Status Manager
+  # Thread Atomic Status
   NThreadCounter* {.importc: "pool_status_t".} = object
   NThreadStatus* {.importc: "pool_status_t".} = object
+  NGreenStack* {.importc: "green_vmstack_t".} = object
+  NGreenState* {.importc: "green_vmstate_t".} = object
+  NGreenProc* {.importc: "green_vmproc_t".} =
+    proc (data: pointer) {.nimcall, gcsafe.}
 
 {.push importc.}
+
+proc green_callctx*(fn: NGreenProc, data, stack: pointer)
+proc green_jumpctx*(state: ptr NGreenState, signal: int32)
+proc green_setctx*(state: ptr NGreenState): int32
 
 proc pool_lane_init*(lane: var NThreadLane, opaque: pointer)
 proc pool_lane_reset*(lane: var NThreadLane)

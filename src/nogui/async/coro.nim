@@ -3,26 +3,51 @@ from typetraits import
   supportsCopyMem
 
 type
-  CoroCallbackProc* = NThreadProc
-  CoroCallback* = NThreadTask
-  CoroStage = proc(coro: ptr CoroBase)
-    {.nimcall, gcsafe.}
-  CoroBase = object
+  CoroProc = proc(coro: ptr CoroBase) {.nimcall, gcsafe.}
+  CoroHandle = proc(coro: ptr CoroBase, signal: CoroSignal) {.nimcall, gcsafe.}
+  CoroCancel = ref object of Defect
+  CoroSignal* {.pure, size: 8.} = enum
+    coroFinalize
+    coroCancel
+    coroStart
+    coroPause
+    coroResume
+    coroRunning
+    coroKeep
+  # Coroutine Green Threads
+  CoroVM = object
+    state: NGreenState
+    prev, next: ptr CoroVM
     man: ptr CoroManager
-    prev, next: ptr CoroBase
-    stage: CoroStage
-    rc, stop: uint64
+    coro: ptr CoroBase
+    # Coroutine Lock
+    mtx: Lock
+    cond: Cond
+    # Coroutine Base
+    signal: CoroSignal
+    fn0: CoroHandle
+    fn: CoroProc
+    stack: pointer
+  CoroBase = object
+    rc: uint64
+    vm: ptr CoroVM
+    fn0: CoroHandle
+    fn: CoroProc
     # Coroutine Data
     mtx: Lock
-    cond: Cond
     data: pointer
   CoroManager = object
-    first, cursor: ptr CoroBase
+    state: NGreenState
     thr: Thread[ptr CoroManager]
     lane: NThreadLane
-    # Main Loop Sleep
+    # Lock Manager
     mtx: Lock
     cond: Cond
+    # Virtual Machine Manager
+    free: ptr CoroVM
+    first: ptr CoroVM
+    vmstack: uint64
+    signal: uint64
   # -- Coroutine Generic --
   CoroutineManager* = ptr CoroManager
   CoroutineOpaque = distinct ptr CoroBase
@@ -42,269 +67,219 @@ proc createCoroutine(size: int): ptr CoroBase =
   result.data = cast[pointer](user)
   # Initialize Mutex
   initLock(result.mtx)
-  initCond(result.cond)
-  # Initialize Ref-Count
   inc(result.rc)
 
 proc destroy(coro: ptr CoroBase) =
   deinitLock(coro.mtx)
-  deinitCond(coro.cond)
-  # Dealloc Coroutine
   deallocShared(coro)
 
-proc rc0ref(coro: ptr CoroBase) =
-  discard atomicAddFetch(
-    addr coro.rc, 1, ATOMIC_ACQUIRE)
+proc inc0ref(coro: ptr CoroBase) =
+  discard atomicAddFetch(addr coro.rc, 1, ATOMIC_ACQUIRE)
 
-proc rc0unref(coro: ptr CoroBase) =
+proc dec0ref(coro: ptr CoroBase) =
   if atomicSubFetch(addr coro.rc, 1, ATOMIC_RELEASE) <= 0:
     coro.destroy()
 
-proc detach(coro: ptr CoroBase) =
-  let man = coro.man
-  # Detach From List
-  let prev = coro.prev
-  let next = coro.next
-  if not isNil(prev):
-    prev.next = next
-  if not isNil(next):
-    next.prev = prev
-  if man.first == coro:
-    man.first = next
-  # Remove Values
-  coro.prev = nil
-  coro.next = nil
-  coro.man = nil
-  coro.stop = 0
-  # Release Manager
-  man.cursor = next
+# -----------------------------
+# Green VM Creation/Destruction
+# -----------------------------
 
-# --------------------
-# Coroutines Main Loop
-# --------------------
-
-proc dispatch(coro: ptr CoroBase): bool =
-  let stage = coro.stage
-  if not isNil(stage):
-    discard atomicCompareExchangeN(
-      cast[ptr pointer](addr coro.stage),
-      cast[ptr pointer](addr stage), nil,
-      false, ATOMIC_RELAXED, ATOMIC_RELAXED)
-    # Dispatch Stage
-    result = true
-    stage(coro)
-  # Detach When Terminated
-  let man = coro.man
-  acquire(man.mtx)
-  if not result or coro.stop > 0:
-    acquire(coro.mtx)
-    coro.detach()
-    # Signal Waiters
-    signal(coro.cond)
-    release(coro.mtx)
-    coro.rc0unref()
-  release(man.mtx)
-
-proc worker(man: ptr CoroManager) =
-  let brake = cast[ptr CoroBase](man)
-  var passed: int
-  # Step Coroutines
-  while true:
-    acquire(man.mtx)
-    let cursor = man.cursor
-    # Check Cursor Step
-    if cursor == brake: break
-    elif isNil(cursor):
-      if passed == 0:
-        wait(man.cond, man.mtx)
-      # Reset Current Cursor
-      if man.cursor != brake:
-        man.cursor = man.first
-        passed = 0
-      # Skip Current
-      release(man.mtx)
-      continue
-    # Step Current Cursor
-    man.cursor = cursor.next
-    release(man.mtx)
-    # Dispatch Coroutine
-    if cursor.dispatch():
-      inc(passed)
-
-# --------------------------------------
-# Coroutine Manager Creation/Destruction
-# --------------------------------------
-
-proc createCoroutineManager*(): CoroutineManager =
-  result = create(CoroManager)
-  pool_lane_init(result.lane, result)
-  # Create Syncronize Objects
+proc createVM(man: var CoroManager): ptr CoroVM =
+  let vmstack = max(man.vmstack, 4096)
+  let chunk = allocShared(vmstack)
+  # Initialize Virtual Machine
+  result = cast[ptr CoroVM](chunk)
+  result.man = addr man
   initLock(result.mtx)
   initCond(result.cond)
-  # Create Coroutines Thread
-  createThread(result.thr, worker, result)
+  # Initialize Stack Pointer
+  let stack = cast[uint64](chunk) + vmstack
+  result.stack = cast[pointer](stack)
 
-proc destroyCoroutines(man: CoroutineManager) =
-  var coro = man.first
-  # Dealloc Coroutines
-  while not isNil(coro):
-    let coro0 = coro
-    coro = coro.next
-    coro0.destroy()
-  # Stop Coroutine Main Loop
-  let brake = cast[ptr CoroBase](man)
-  man.cursor = brake
+proc destroy(vm: ptr CoroVM) =
+  deinitLock(vm.mtx)
+  deinitCond(vm.cond)
+  deallocShared(vm)
 
-proc destroy*(man: CoroutineManager) =
+proc detach(vm: ptr CoroVM) =
+  let man = vm.man
   acquire(man.mtx)
-  man.destroyCoroutines()
-  signal(man.cond)
+  if isNil(vm.coro):
+    release(man.mtx)
+    return
+  # Detach Execution
+  let prev = vm.prev
+  let next = vm.next
+  if not isNil(prev):
+    prev.next = vm.next
+  if not isNil(next):
+    next.prev = vm.prev
+  wasMoved(vm.next)
+  wasMoved(vm.prev)
+  # Detach Coroutine
+  dec0ref(vm.coro)
+  wasMoved(vm.coro)
+  if not isNil(man.free):
+    man.free.next = vm
+  else: man.free = vm
+  signal(vm.cond)
   release(man.mtx)
-  # Dealloc Syncronize Object
-  man.thr.joinThread()
-  deinitLock(man.mtx)
-  deinitCond(man.cond)
-  # Dealloc Coroutine Manager
-  pool_lane_destroy(man.lane)
-  dealloc(man)
+
+# ------------------------
+# Coroutines VM: Main Loop
+# ------------------------
+
+proc payload(vm: ptr CoroVM) =
+  let jmp = addr vm.man.state
+  try: vm.fn(vm.coro)
+  except CoroCancel:
+    vm.signal = coroCancel
+    green_jumpctx(jmp, 1)
+  # Finalize Coroutine
+  vm.signal = coroFinalize
+  green_jumpctx(jmp, 1)
+
+proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
+  result = false
+  if vm.signal == coroStart:
+    var no {.noinit, volatile.}: int64
+    no = green_setctx(addr man.state)
+    result = no != 0
+  # Execute Virtual Machine: Handle
+  if vm.signal >= coroRunning:
+    if result: return result
+  if vm.signal == coroPause and not result:
+    return result
+  elif not isNil(vm.fn0):
+    vm.fn0(vm.coro, vm.signal)
+  # Execute Virtual Machine
+  case vm.signal
+  of coroFinalize: vm.detach()
+  of coroCancel:
+    if result: vm.detach()
+    else: green_jumpctx(addr vm.state, 1)
+  of coroStart:
+    vm.signal = coroRunning
+    let fn = cast[NGreenProc](payload)
+    green_callctx(fn, vm, vm.stack)
+  of coroPause: discard
+  of coroResume, coroRunning, coroKeep:
+    vm.signal = coroRunning
+    green_jumpctx(addr vm.state, 1)
+
+proc worker(man: ptr CoroManager) =
+  var walk = man.first
+  var count = 0
+  while true:
+    acquire(man.mtx)
+    # Sleep Manager
+    if isNil(walk):
+      if count == 0:
+        broadcast(man.cond)
+        wait(man.cond, man.mtx)
+      walk = man.first
+      count = 0
+      # Wake Manager
+      release(man.mtx)
+      continue
+    # Step Manager
+    let vm = walk
+    walk = vm.next
+    release(man.mtx)
+    # Execute Virtual
+    acquire(vm.mtx)
+    if man.execute(vm):
+      inc(count)
+      if vm.signal == coroKeep:
+        walk = vm
+    release(vm.mtx)
+
+# ---------------------
+# Coroutines VM: Signal
+# ---------------------
+
+proc virtual(coro: ptr CoroBase): bool =
+  let vm = coro.vm
+  if isNil(vm):
+    return false
+  # Check Virutal Stack
+  let idx = cast[uint64](addr vm)
+  let s1 = cast[uint64](vm.stack)
+  let s0 = cast[uint64](vm)
+  result = idx >= s0 and idx <= s1
+
+proc escape(coro: ptr CoroBase) =
+  let vm = coro.vm
+  if green_setctx(addr vm.state) == 0:
+    green_jumpctx(addr vm.man.state, 1)
+  # Check Coroutine Cancel
+  if vm.signal == coroCancel:
+    raise CoroCancel()
+
+proc escape(coro: ptr CoroBase, sig: CoroSignal) {.inline.} =
+  coro.vm.signal = sig
+  coro.escape()
+
+proc signal(coro: ptr CoroBase, sig: CoroSignal) {.inline.} =
+  let vm = coro.vm
+  if not isNil(vm):
+    acquire(vm.mtx)
+    vm.signal = sig
+    release(vm.mtx)
 
 # ---------------------------
-# Coroutine Control Reference
+# Coroutines VM: Control Flow
+# ---------------------------
+
+proc pass(coro: ptr CoroBase) =
+  if coro.virtual():
+    coro.escape()
+
+proc keep(coro: ptr CoroBase) =
+  if coro.virtual():
+    coro.escape(coroKeep)
+
+proc pause(coro: ptr CoroBase) =
+  if coro.virtual():
+    coro.escape(coroPause)
+  else: coro.signal(coroPause)
+
+proc cancel(coro: ptr CoroBase) =
+  if coro.virtual():
+    raise CoroCancel()
+  coro.signal(coroCancel)
+
+proc resume(coro: ptr CoroBase) =
+  if not coro.virtual():
+    coro.signal(coroResume)
+
+# ---------------------------
+# Coroutines: Reference Count
 # ---------------------------
 
 proc `=destroy`(coro: CoroutineOpaque) =
   let c = cast[ptr CoroBase](coro)
-  # Decrement Reference
   if not isNil(c):
-    c.rc0unref()
+    c.dec0ref()
 
 proc `=copy`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
   let
     c0 = cast[ptr CoroBase](src)
     c1 = cast[ptr CoroBase](coro)
-  if c0 == c1:
-    return
+  if c0 == c1: return
   # Manipulate References
   `=destroy`(coro)
-  c0.rc0ref()
+  c0.inc0ref()
   # Copy Coroutine Reference
-  copyMem(addr coro, addr src,
-    sizeof pointer)
+  cast[ptr pointer](addr coro)[] =
+    cast[pointer](src)
 
 proc `=sink`(coro: var CoroutineOpaque, src: CoroutineOpaque) =
   let
     c0 = cast[ptr CoroBase](src)
     c1 = cast[ptr CoroBase](coro)
-  if c0 == c1:
-    return
+  if c0 == c1: return
   # Copy Coroutine Reference
   `=destroy`(coro)
-  copyMem(addr coro, addr src,
-    sizeof pointer)
-
-# -------------------------
-# Coroutine Control Spawner
-# -------------------------
-
-proc coroutine*(T: typedesc): Coroutine[T] =
-  when supportsCopyMem(T):
-    {.gcsafe.}:
-      let coro = createCoroutine(sizeof T)
-      copyMem(addr result, addr coro, sizeof pointer)
-  else: {.error: "attempted use a gc'd type".}
-
-proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
-  acquire(man.mtx)
-  coro.stop = 0
-  # Avoid Spawn Again
-  if not isNil(coro.man):
-    release(man.mtx)
-    return
-  # Attach to Manager
-  let first = man.first
-  if not isNil(first):
-    first.prev = coro
-  coro.next = first
-  coro.man = man
-  # Reset Cursors
-  man.first = coro
-  man.cursor = coro
-  # Increase Reference
-  inc(coro.rc)
-  signal(man.cond)
-  release(man.mtx)
-
-proc spawn*[T](man: CoroutineManager, coro: Coroutine[T]) =
-  man.spawn cast[ptr CoroBase](coro)
-
-# ----------------------
-# Coroutine Control Flow
-# ----------------------
-
-proc send(coro: ptr CoroBase, cb: CoroCallback) =
-  let man = coro.man
-  if not isNil(man):
-    pool_lane_push(man.lane, cb)
-
-proc pass(coro: ptr CoroBase, stage: CoroStage) =
-  coro.stage = stage
-
-proc keep(coro: ptr CoroBase, stage: CoroStage) =
-  coro.stage = stage
-  # Change Current Cursor
-  let man = coro.man
-  if not isNil(man):
-    acquire(man.mtx)
-    if man == coro.man:
-      man.cursor = coro
-    release(man.mtx)
-
-proc cancel(coro: ptr CoroBase) =
-  coro.stop = cast[uint64](coro)
-
-proc wait(coro: ptr CoroBase) =
-  acquire(coro.mtx)
-  if not isNil(coro.man):
-    wait(coro.cond, coro.mtx)
-  release(coro.mtx)
-
-# ------------------------------
-# Coroutine Control Flow Generic
-# ------------------------------
-
-template data*[T](coro: Coroutine[T]): ptr T =
-  let base = cast[ptr CoroBase](coro)
-  cast[ptr T](base.data)
-
-template send*[T](coro: Coroutine[T], cb: CoroCallback) =
-  send cast[ptr CoroBase](coro), cb
-
-template keep*[T](coro: Coroutine[T], fn: CoroutineProc[T]) =
-  {.gcsafe.}: keep cast[ptr CoroBase](coro), cast[CoroStage](fn)
-
-template pass*[T](coro: Coroutine[T], fn: CoroutineProc[T]) =
-  {.gcsafe.}: pass cast[ptr CoroBase](coro), cast[CoroStage](fn)
-
-template cancel*[T](coro: Coroutine[T]) =
-  cancel cast[ptr CoroBase](coro)
-
-template wait*[T](coro: Coroutine[T]) =
-  wait cast[ptr CoroBase](coro)
-
-template lock*[T](coro: Coroutine[T], body: untyped) =
-  block control:
-    let base = cast[ptr CoroBase](coro)
-    acquire(base.mtx); body
-    release(base.mtx)
-
-# ----------------------------------
-# Coroutine Manager Callback Pumping
-# ----------------------------------
-
-iterator pump*(man: CoroutineManager): CoroCallback =
-  let lane = addr man.lane
-  while true:
-    let task = pool_lane_steal(lane)
-    if isNil(task.fn): break
-    # Return Current Task
-    yield task
+  cast[ptr pointer](addr coro)[] =
+    cast[pointer](src)
