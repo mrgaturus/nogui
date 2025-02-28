@@ -1,6 +1,6 @@
 // Correct and Efficient Work-Stealing for Weak Memory Models
 // https://www.di.ens.fr/~zappa/readings/ppopp13.pdf
-#include "pool.h"
+#include "async.h"
 #include <stdlib.h>
 
 // -------------------------

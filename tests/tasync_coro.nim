@@ -1,61 +1,66 @@
 import nogui/async/coro
 
 type
-  Walker = object
-    name: cstring
-    i, len, sleep: int
+  Test = object
+    label: cstring
+    pause: bool
+    a, b: int
     # Finalized Callback
     cb: CoroCallback
 
-proc sleep0task(coro: Coroutine[Walker]) =
-  let data = coro.data
-  # Walk Coroutine Data
-  if data.i < data.len:
-    inc(data.i)
-    # Pass Continuation
-    echo "coroutine ", data.name, ": ", data.i
-    coro.pass(sleep0task)
-    return
-  # Send Finalized Callback
-  coro.send(data.cb)
+proc test0cb(test: ptr Test) =
+  echo "finalized: ", test[]
 
-# ----------------------
-# Coroutine Main Testing
-# ----------------------
+proc test0handle(coro: Coroutine[Test], signal: CoroSignal) =
+  echo "[signal] ", coro.data.label, ": ", signal
 
-proc finalize0cb(data: ptr Walker) =
-  echo "finalized ", data.name, ": ", data.i
+proc test0task(coro: Coroutine[Test]) =
+  let test = coro.data
+  for i in test.a .. test.b:
+    echo test.label, ": ", i
+    coro.pass()
+  # Cancelation
+  coro.send(test.cb)
+  if test.pause:
+    coro.pause()
+    assert false
 
-proc walker(name: cstring, len, sleep: int): Coroutine[Walker] =
-  result = coroutine(Walker)
-  result.pass(sleep0task)
-  # Walker Step Size
-  let data = result.data
-  data.len = len
-  data.sleep = sleep
-  data.name = name
+# -------------------------
+# Coroutine Testing: Object
+# -------------------------
+
+proc createTest(label: cstring, a, b: int, pause = false): Coroutine[Test] =
+  result = coroutine(Test)
+  result.setProc(test0task)
+  result.setHandle(test0handle)
+  # Define Testing
+  let test = result.data
+  test.label = label
+  test.pause = pause
+  test.a = a
+  test.b = b
   # Define Callback
-  data.cb.fn = cast[CoroCallbackProc](finalize0cb)
-  data.cb.data = data
+  test.cb.fn = cast[CoroCallbackProc](test0cb)
+  test.cb.data = test
 
 proc main() =
   let
-    man = createCoroutineManager()
-    coro0 = walker("one", 10, 16)
-    coro1 = walker("other", 5, 256)
-    coro2 = walker("another", 25, 16)
-  # Spawn Coroutine and Wait
-  man.spawn(coro0)
-  man.spawn(coro1)
-  man.spawn(coro2)
-  coro0.wait()
-  coro1.wait()
-  coro2.wait()
-  #echo "coroutine finalized: ", coro0.data.i
+    coros = createCoroutineManager()
+    coro0 = createTest("coroutine 0", 0, 5, pause = true)
+    coro1 = createTest("coroutine 1", 0, 10)
+    coro2 = createTest("coroutine 2", 0, 15)
+  # Spawn Coroutines
+  coros.spawn(coro0)
+  coros.spawn(coro1)
+  coros.spawn(coro2)
+  # Wait Coroutines
+  coros.wait()
   # Destroy Coroutine Manager
-  for cb in man.pump():
+  for cb in coros.pump():
     cb.fn(cb.data)
-  man.destroy()
+  coros.destroy()
+  echo "-- finalized coroutines --"
+  discard stdin.readLine()
 
 when isMainModule:
   main()

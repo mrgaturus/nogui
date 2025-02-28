@@ -17,16 +17,17 @@ proc includePath(): string {.compileTime.} =
 # Thread Pool FFI Import
 # ----------------------
 
-{.compile: "pool.c".}
-{.compile: "green.S".}
-{.push header: includePath() & "async.h".}
-
 type
   NThreadMode* {.size: 8.} = enum
     thrWorking
     thrSleep
     thrTerminate
-  # Thread Pool Task
+
+{.compile: "pool.c".}
+{.compile: "green.S".}
+{.push header: includePath() & "async.h".}
+
+type
   NThreadProc* {.importc: "pool_fn_t".} =
     proc (data: pointer) {.nimcall, gcsafe.}
   NThreadTask* {.importc: "pool_task_t".} = object

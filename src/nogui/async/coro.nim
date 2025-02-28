@@ -28,7 +28,7 @@ type
     cond: Cond
     # Coroutine Base
     signal: CoroSignal
-    ghost: CoroSignal
+    recv: CoroSignal
     fn0: CoroHandle
     fn: CoroProc
     stack: pointer
@@ -50,6 +50,7 @@ type
     # Virtual Machine Manager
     free: ptr CoroVM
     first: ptr CoroVM
+    last: ptr CoroVM
     signal: CoroSignal
     vmstack: uint64
   # -- Coroutine Generic --
@@ -112,6 +113,10 @@ proc detach(vm: ptr CoroVM) =
     release(man.mtx)
     return
   # Detach Execution
+  if vm == man.first:
+    man.first = vm.next
+  if vm == man.last:
+    man.last = vm.prev
   let prev = vm.prev
   let next = vm.next
   if not isNil(prev):
@@ -131,7 +136,7 @@ proc detach(vm: ptr CoroVM) =
   else: man.free = vm
   # Wake Waiting
   vm.signal = coroFinalize
-  vm.ghost = coroFinalize
+  vm.recv = coroFinalize
   broadcast(vm.cond)
   release(man.mtx)
 
@@ -160,11 +165,11 @@ proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
   if vm.signal >= coroRunning:
     if result: return result
   elif not isNil(vm.fn0):
-    if vm.signal != vm.ghost:
+    if vm.signal != vm.recv:
       wasMoved(vm.coro.vm)
       # Handle Signal Changes
       vm.fn0(vm.coro, vm.signal)
-      vm.ghost = vm.signal
+      vm.recv = vm.signal
       vm.coro.vm = vm
   # Execute Virtual Machine
   case vm.signal
@@ -175,13 +180,13 @@ proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
     else: vm.detach()
   of coroStart:
     vm.signal = coroRunning
-    vm.ghost = coroRunning
+    vm.recv = coroRunning
     let fn = cast[NGreenProc](payload)
     green_callctx(fn, vm, vm.stack)
   of coroPause: broadcast(vm.cond)
   of coroResume, coroRunning, coroRelax:
     vm.signal = coroRunning
-    vm.ghost = coroRunning
+    vm.recv = coroRunning
     green_jumpctx(addr vm.state, 1)
 
 proc worker(man: ptr CoroManager) =
@@ -189,14 +194,13 @@ proc worker(man: ptr CoroManager) =
   var count = 0
   while true:
     acquire(man.mtx)
-    # Sleep Manager
+    # Check Manager
     if isNil(walk):
-      if man.signal == coroCancel:
+      if count == 0:
         broadcast(man.cond)
-        release(man.mtx)
-        return
-      elif count == 0:
-        broadcast(man.cond)
+        # Stop or Sleep Manager
+        if man.signal == coroCancel:
+          release(man.mtx); return
         wait(man.cond, man.mtx)
       walk = man.first
       count = 0
@@ -270,9 +274,15 @@ proc pause(coro: ptr CoroBase) =
 proc resume(coro: ptr CoroBase) =
   if not coro.virtual():
     let vm = coro.vm
-    # Resume Only if Coroutine is Paused
-    if not isNil(vm) and vm.ghost == coroPause:
-      coro.signal(coroResume)
+    if isNil(vm): return
+    acquire(vm.mtx)
+    # Resume Only when Paused
+    if vm.recv == coroPause:
+      acquire(vm.man.mtx)
+      vm.signal = coroResume
+      signal(vm.man.cond)
+      release(vm.man.mtx)
+    release(vm.mtx)
 
 proc cancel(coro: ptr CoroBase) =
   if coro.virtual():
@@ -286,11 +296,12 @@ proc send(coro: ptr CoroBase, cb: CoroCallback) =
 
 proc wait(coro: ptr CoroBase) =
   let vm = coro.vm
-  if isNil(vm): return
+  if isNil(vm) or coro.virtual():
+    return
   # Lock Finalized
   acquire(vm.mtx)
   if not isNil(vm.coro) and
-    vm.ghost != coroPause:
+    vm.recv != coroPause:
       wait(vm.cond, vm.mtx)
   release(vm.mtx)
 
@@ -394,22 +405,26 @@ proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
     return
   acquire(man.mtx)
   var vm {.noinit.}: ptr CoroVM
-  let first = man.first
+  let last = man.last
   # Configure Virtual Machine
   if not isNil(man.free):
     vm = man.free
     man.free = vm.next
   else: vm = createVM(man)
   vm.signal = coroStart
+  vm.recv = coroFinalize
   # Configure Coroutine
   vm.coro = coro
   inc0ref(coro)
   vm.fn0 = coro.fn0
   vm.fn = coro.fn
   # Attach Virtual
-  vm.next = first
-  man.first = vm
-  first.prev = vm
+  if isNil(man.first):
+    man.first = vm
+  if not isNil(last):
+    last.next = vm
+    vm.prev = last
+  man.last = vm
   coro.vm = vm
   signal(man.cond)
   release(man.mtx)
