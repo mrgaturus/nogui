@@ -67,16 +67,31 @@ proc main() =
     # Cancel Pool Operation
     sleep(1000)
     pool.cancel()
+    pool.stop()
   echo "done multi-threading cancel 0"
+  # Dispatch Multi Threading Cancel
+  block cancel1:
+    pool.start()
+    # Cancel Pool Operation: Pass 1
+    for rngs in mitems(rngs0multi):
+      pool.spawn(fuse0task, addr rngs)
+    sleep(1000)
+    pool.cancel()
+    # Cancel Pool Operation: Pass 2
+    for rngs in mitems(rngs0multi):
+      pool.spawn(fuse0task, addr rngs)
+    sleep(1000)
+    pool.cancel()
+    pool.stop()
+  echo "done multi-threading cancel 1"
   # Backup Cancelation Data
   rngs0single = rngs0multi
-  # Try Again
-  block cancel1:
+  block cancel2:
     pool.start()
     sleep(1000)
     pool.sync()
     pool.stop()
-  echo "done multi-threading cancel 1"
+  echo "done multi-threading cancel 2"
   # Compare Values Equality
   var fuse: bool
   for i in 0 ..< size:
