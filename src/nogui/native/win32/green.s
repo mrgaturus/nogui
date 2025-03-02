@@ -11,11 +11,11 @@
 .global win32_green_callctx
 
 win32_green_callctx:
-  mov rsp, rdx  # change stack
+  mov rsp, r8   # change stack
   sub rsp, 32   # reserve 32 bytes
-  mov rdx, rcx  # call function
-  mov rcx, r8
-  call rdx      
+  mov r8, rcx   # call function
+  mov rcx, rdx
+  call r8
   ret
 
 win32_green_setctx:

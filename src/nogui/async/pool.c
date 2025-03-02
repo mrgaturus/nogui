@@ -1,6 +1,6 @@
 // Correct and Efficient Work-Stealing for Weak Memory Models
 // https://www.di.ens.fr/~zappa/readings/ppopp13.pdf
-#include "pool.h"
+#include "async.h"
 #include <stdlib.h>
 
 // -------------------------
@@ -122,11 +122,11 @@ pool_task_t pool_lane_steal(pool_lane_t* lane) {
 // -----------------------
 
 extern inline void pool_status_inc(pool_status_t* s) {
-  atomic_fetch_add_explicit(s, 1, memory_order_seq_cst);
+  atomic_fetch_add_explicit(s, 1, memory_order_relaxed);
 }
 
 extern inline void pool_status_dec(pool_status_t* s) {
-  atomic_fetch_sub_explicit(s, 1, memory_order_seq_cst);
+  atomic_fetch_sub_explicit(s, 1, memory_order_relaxed);
 }
 
 extern inline void pool_status_reset(pool_status_t* s) {

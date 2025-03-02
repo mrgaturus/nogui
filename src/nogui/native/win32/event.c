@@ -24,7 +24,7 @@ static void win32_green_call(win32_green_t* green, win32_vmfunc_t proc, void* p)
             
             void* stack = &green->stack.buffer[VM_STACK_SIZE];
             win32_vmproc_t proc = (win32_vmproc_t) win32_green_payload;
-            win32_green_callctx(proc, stack, green);
+            win32_green_callctx(proc, green, stack);
         } break;
         case VM_RUNNING: break;
         case VM_FINALIZED:

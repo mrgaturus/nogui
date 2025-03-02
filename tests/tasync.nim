@@ -14,18 +14,17 @@ from os import sleep
 
 type
   TestObject = object
-    time, idx: int32
+    time: int32
     cb: CoroCallback
 
-proc stage0test(coro: Coroutine[TestObject]) =
+proc test0handle(coro: Coroutine[TestObject], signal: CoroSignal) =
+  echo "handled signal: ", repr(cast[pointer](coro)), " ", signal
+
+proc test0task(coro: Coroutine[TestObject]) =
   let data = coro.data
-  # Sleep and Then Send
-  if data.idx < data.time:
-    inc(data.idx)
-    coro.pass(stage0test)
-    # Sleep Stage
-    sleep(1)
-    return
+  # Sleep and Send
+  for i in 0 ..< data.time:
+    sleep(1); coro.pass()
   coro.send(data.cb)
 
 # ---------------------
@@ -46,11 +45,12 @@ widget UXCoroutineButton:
     if state.kind == evCursorClick:
       let target = self.target
       target[] = coroutine(TestObject)
+      target[].setProc(test0task)
+      target[].setHandle(test0handle)
       let data = target[].data
       data.time = 1000
       data.cb = self.cb
       # Spawn Coroutine
-      target[].pass(stage0test)
       target[].spawn()
 
 # --------------------
@@ -65,6 +65,12 @@ controller CXCoroutineTest:
   callback cbHello:
     echo "hello world"
 
+  callback cbPause:
+    self.coro.pause()
+
+  callback cbResume:
+    self.coro.resume()
+
   proc createWidget: GUIWidget =
     let cbHello = self.cbHello
     # Create Layout
@@ -74,7 +80,9 @@ controller CXCoroutineTest:
       vertical().child:
         min: button("Minimun Top", cbHello)
         corobutton(addr self.coro, self.cbHello)
-        min: button("Minimun Bottom", cbHello)
+        min: horizontal().child:
+          button("Pause Coroutine", self.cbPause)
+          button("Resume Coroutine", self.cbResume)
         # Sub Sub Layout
         horizontal().child:
           button("Sub Sub Left", cbHello)

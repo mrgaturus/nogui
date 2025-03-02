@@ -11,6 +11,7 @@ type
     works {.align: 64.}: NThreadCounter 
     awake {.align: 64.}: NThreadCounter
     # Thread Sleep
+    latch: Lock
     mtx: Lock
     cond: Cond
     # Thread Count
@@ -73,8 +74,9 @@ proc worker(lane: ptr NThreadLane) =
 # ------------------------
 
 proc start*(pool: NThreadPool) =
+  acquire(pool.latch)
   pool_status_set(pool.status, thrWorking)
-  # Wake Up All Threads
+  # Wake Thread Workers
   acquire(pool.mtx)
   broadcast(pool.cond)
   release(pool.mtx)
@@ -113,9 +115,15 @@ proc cancel*(pool: NThreadPool) =
   for lane in mitems(pool.lanes):
     pool_lane_reset(lane)
   pool_status_reset(pool.works)
+  pool_status_set(pool.status, thrWorking)
+  # Resume Thread Workers
+  acquire(pool.mtx)
+  broadcast(pool.cond)
+  release(pool.mtx)
 
 proc stop*(pool: NThreadPool) =
   pool_status_set(pool.status, thrSleep)
+  release(pool.latch)
 
 # --------------------------------
 # Thread Pool Creation/Destruction
@@ -125,6 +133,7 @@ proc createThreadPool*(): NThreadPool =
   result = create(ThreadPool)
   pool_status_set(result.status, thrSleep)
   # Create Pool Sleep
+  initLock(result.latch)
   initLock(result.mtx)
   initCond(result.cond)
   # Create Worker Threads
@@ -155,6 +164,7 @@ proc terminate(pool: NThreadPool) =
 proc destroy*(pool: NThreadPool) =
   pool.terminate()
   # Destroy Pool Sleep
+  deinitLock(pool.latch)
   deinitLock(pool.mtx)
   deinitCond(pool.cond)
   # Destroy Lane Data
@@ -172,5 +182,8 @@ proc destroy*(pool: NThreadPool) =
 proc cores*(pool: NThreadPool): int {.inline.} =
   cast[int](pool.count)
 
-proc working*(pool: NThreadPool): bool =
+proc pending*(pool: NThreadPool): bool {.inline.} =
   pool_status_get(pool.works) > 0
+
+proc locked*(pool: NThreadPool): bool {.inline.} =
+  pool_status_get(pool.status) == thrWorking

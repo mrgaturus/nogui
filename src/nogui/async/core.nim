@@ -6,8 +6,6 @@ type
   GUIAsync = object
     coros: CoroutineManager
     pool: NThreadPool
-# Global Async Manager
-var man0: GUIAsync
 
 proc `=destroy`(man: GUIAsync) =
   if not isNil(man.coros):
@@ -16,25 +14,24 @@ proc `=destroy`(man: GUIAsync) =
   if not isNil(man.pool):
     destroy(man.pool)
 
-# -----------------------
-# Async Objects on Demand
-# -----------------------
+# ------------------------
+# Async Objects: On Demand
+# ------------------------
 
+var man0: GUIAsync
 proc getCoros*(): CoroutineManager =
   if isNil(man0.coros):
     man0.coros = createCoroutineManager()
-  # Return Coroutine Manager
   result = man0.coros
 
 proc getPool*(): NThreadPool =
   if isNil(man0.pool):
     man0.pool = createThreadPool()
-  # Return Thread Pool
   result = man0.pool
 
-# ------------------------
-# Async Objects on Prelude
-# ------------------------
+# ----------------------
+# Async Objects: Prelude
+# ----------------------
 
 export coro except
   createCoroutineManager,  
@@ -46,9 +43,9 @@ export pool except
   createThreadPool,
   destroy
 
-# ------------------------
-# Async Coroutine Callback
-# ------------------------
+# -------------------------
+# Async Coroutine: Callback
+# -------------------------
 
 template spawn*[T](coro: Coroutine[T]) =
   let coros = getCoros()
