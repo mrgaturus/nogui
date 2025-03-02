@@ -131,14 +131,14 @@ proc png_write_end*(png: ptr PNGstruct, info: ptr PNGinfo)
 {.pop.} # importc
 {.pop.} # header
 
-proc png_error_longjmp*(png: ptr PNGstruct) {.inline.} =
-  {.emit: "longjmp(png_jmpbuf(`png`), 1);".}
+{.emit: "#define png_error_setjmp(png) setjmp(png_jmpbuf(png))".}
+{.emit: "#define png_error_longjmp(png) longjmp(png_jmpbuf(png), 1)".}
+proc png_error_setjmp(png: ptr PNGstruct): int32 {.importc, nodecl.}
+proc png_error_longjmp*(png: ptr PNGstruct) {.importc, nodecl.}
 
 template png_error_setjmp*(png: ptr PNGstruct, body: untyped) =
   let frame = getFrameState()
-  var status {.noinit, volatile.}: int
-  {.emit: [status, " = setjmp(png_jmpbuf(", png, "));"].}
-  if status != 0:
+  if png_error_setjmp(png) != 0:
     setFrameState(frame)
     body
 
