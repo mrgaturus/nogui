@@ -126,14 +126,14 @@ proc detach(vm: ptr CoroVM) =
   wasMoved(vm.next)
   wasMoved(vm.prev)
   # Detach Coroutine
-  wasMoved(vm.coro.vm)
-  dec0ref(vm.coro)
+  let coro = vm.coro
+  wasMoved(coro.vm)
+  dec0ref(coro)
   wasMoved(vm.coro)
   wasMoved(vm.fn0)
   wasMoved(vm.fn)
-  if not isNil(man.free):
-    man.free.next = vm
-  else: man.free = vm
+  vm.next = man.free
+  man.free = vm
   # Wake Waiting
   vm.signal = coroFinalize
   vm.recv = coroFinalize
@@ -169,9 +169,9 @@ proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
       wasMoved(vm.coro.vm)
       # Handle Signal Changes
       vm.fn0(vm.coro, vm.signal)
-      vm.recv = vm.signal
       vm.coro.vm = vm
   # Execute Virtual Machine
+  vm.recv = vm.signal
   case vm.signal
   of coroFinalize: vm.detach()
   of coroCancel:
@@ -401,15 +401,20 @@ proc setHandle*[T](coro: Coroutine[T], fn: CoroutineHandle[T]) =
   {.gcsafe.}: cast[ptr CoroBase](coro).fn0 = cast[CoroHandle](fn)
 
 proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
-  if not isNil(coro.vm) or isNil(coro.fn):
-    return
-  acquire(man.mtx)
-  var vm {.noinit.}: ptr CoroVM
-  let last = man.last
+  var vm = coro.vm
+  if isNil(coro.fn): return
+  elif not isNil(vm):
+    acquire(vm.mtx)
+    if vm.coro == coro:
+      release(vm.mtx); return
+    release(vm.mtx)
   # Configure Virtual Machine
+  acquire(man.mtx)
+  let last = man.last
   if not isNil(man.free):
     vm = man.free
     man.free = vm.next
+    wasMoved(vm.next)
   else: vm = createVM(man)
   vm.signal = coroStart
   vm.recv = coroFinalize
