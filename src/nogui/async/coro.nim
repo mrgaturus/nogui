@@ -20,9 +20,12 @@ type
   # Coroutine Green Threads
   CoroVM = object
     state: NGreenState
-    prev, next: ptr CoroVM
     man: ptr CoroManager
     coro: ptr CoroBase
+    # Coroutine List
+    prev: ptr CoroVM
+    next: ptr CoroVM
+    free: ptr CoroVM
     # Coroutine Lock
     mtx: Lock
     cond: Cond
@@ -35,10 +38,11 @@ type
   CoroBase = object
     rc: uint64
     vm: ptr CoroVM
+    man: ptr CoroManager
+    mtx: Lock
+    # Coroutine Data
     fn0: CoroHandle
     fn: CoroProc
-    # Coroutine Data
-    mtx: Lock
     data: pointer
   CoroManager = object
     state: NGreenState
@@ -92,6 +96,7 @@ proc dec0ref(coro: ptr CoroBase) =
 proc createVM(man: ptr CoroManager): ptr CoroVM =
   let vmstack = max(man.vmstack, 4096)
   let chunk = allocShared(vmstack)
+  zeroMem(chunk, sizeof CoroVM)
   # Initialize Virtual Machine
   result = cast[ptr CoroVM](chunk)
   result.man = man
@@ -120,19 +125,20 @@ proc detach(vm: ptr CoroVM) =
   let prev = vm.prev
   let next = vm.next
   if not isNil(prev):
-    prev.next = vm.next
+    prev.next = next
   if not isNil(next):
-    next.prev = vm.prev
+    next.prev = prev
   wasMoved(vm.next)
   wasMoved(vm.prev)
   # Detach Coroutine
   let coro = vm.coro
   wasMoved(coro.vm)
+  wasMoved(coro.man)
   dec0ref(coro)
   wasMoved(vm.coro)
   wasMoved(vm.fn0)
   wasMoved(vm.fn)
-  vm.next = man.free
+  vm.free = man.free
   man.free = vm
   # Wake Waiting
   vm.signal = coroFinalize
@@ -175,7 +181,7 @@ proc execute(man: ptr CoroManager, vm: ptr CoroVM): bool =
   case vm.signal
   of coroFinalize: vm.detach()
   of coroCancel:
-    if not result:
+    if not result and vm.recv != coroFinalize:
       green_jumpctx(addr vm.state, 1)
     else: vm.detach()
   of coroStart:
@@ -209,10 +215,10 @@ proc worker(man: ptr CoroManager) =
       continue
     # Step Manager
     let vm = walk
-    walk = vm.next
     release(man.mtx)
     # Execute Virtual
     acquire(vm.mtx)
+    walk = vm.next
     if man.execute(vm):
       inc(count)
       if vm.signal == coroRelax:
@@ -290,9 +296,9 @@ proc cancel(coro: ptr CoroBase) =
   coro.signal(coroCancel)
 
 proc send(coro: ptr CoroBase, cb: CoroCallback) =
-  let vm = coro.vm
-  if isNil(vm): return
-  pool_lane_push(vm.man.lane, cb)
+  let man = coro.man
+  if isNil(man): return
+  pool_lane_push(man.lane, cb)
 
 proc wait(coro: ptr CoroBase) =
   let vm = coro.vm
@@ -300,7 +306,7 @@ proc wait(coro: ptr CoroBase) =
     return
   # Lock Finalized
   acquire(vm.mtx)
-  if not isNil(vm.coro) and
+  if vm.coro == coro and
     vm.recv != coroPause:
       wait(vm.cond, vm.mtx)
   release(vm.mtx)
@@ -413,8 +419,7 @@ proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
   let last = man.last
   if not isNil(man.free):
     vm = man.free
-    man.free = vm.next
-    wasMoved(vm.next)
+    man.free = vm.free
   else: vm = createVM(man)
   vm.signal = coroStart
   vm.recv = coroFinalize
@@ -430,7 +435,9 @@ proc spawn(man: CoroutineManager, coro: ptr CoroBase) =
     last.next = vm
     vm.prev = last
   man.last = vm
+  # Attach Manager
   coro.vm = vm
+  coro.man = man
   signal(man.cond)
   release(man.mtx)
 
@@ -487,6 +494,7 @@ template lock*[T](coro: Coroutine[T], body: untyped) =
 
 proc wait*(man: CoroutineManager) =
   acquire(man.mtx)
+  signal(man.cond)
   wait(man.cond, man.mtx)
   release(man.mtx)
 

@@ -53,14 +53,15 @@ proc main() =
   coros.spawn(coro0)
   coros.spawn(coro1)
   coros.spawn(coro2)
-  # Wait Coroutines
-  coros.wait()
+  coro0.wait()
+  coro1.wait()
+  coro2.wait()
   # Destroy Coroutine Manager
   for cb in coros.pump():
     cb.fn(cb.data)
-  coros.destroy()
   echo "-- finalized coroutines --"
   discard stdin.readLine()
+  coros.destroy()
 
 when isMainModule:
   main()
