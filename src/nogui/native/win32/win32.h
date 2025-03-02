@@ -65,7 +65,7 @@ nogui_keymask_t win32_keymask_lookup();
 int win32_keycode_utf8(WCHAR wide, CHAR* buffer, int size);
 
 // Win32 Green Thread
-extern void win32_green_callctx(win32_vmproc_t proc, void* stack, void* p);
+extern void win32_green_callctx(win32_vmproc_t proc, void* p, void* stack);
 extern void win32_green_jumpctx(win32_vmstate_t* state, int call);
 extern int win32_green_setctx(win32_vmstate_t* state);
 
