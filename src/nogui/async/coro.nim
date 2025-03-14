@@ -476,17 +476,16 @@ template wait*[T](coro: Coroutine[T]) =
   wait cast[ptr CoroBase](coro)
 
 # -- Coroutine Locking --
-template mutexAcquire*[T](coro: Coroutine[T]) =
+template lockAcquire*[T](coro: Coroutine[T]) =
   acquire cast[ptr CoroBase](coro).mtx
 
-template mutexRelease*[T](coro: Coroutine[T]) =
+template lockRelease*[T](coro: Coroutine[T]) =
   release cast[ptr CoroBase](coro).mtx
 
 template lock*[T](coro: Coroutine[T], body: untyped) =
-  block control:
-    let base = cast[ptr CoroBase](coro)
-    acquire(base.mtx); body
-    release(base.mtx)
+  let c = cast[ptr CoroBase](coro)
+  try: acquire(c.mtx); body
+  finally: release(c.mtx)
 
 # -----------------------------
 # Coroutine Manager: Operations

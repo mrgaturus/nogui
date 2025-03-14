@@ -16,9 +16,10 @@ proc test0handle(coro: Coroutine[Test], signal: CoroSignal) =
 
 proc test0task(coro: Coroutine[Test]) =
   let test = coro.data
-  for i in test.a .. test.b:
-    echo test.label, ": ", i
-    coro.pass()
+  coro.lock():
+    for i in test.a .. test.b:
+      echo test.label, ": ", i
+      coro.pass()
   # Cancelation
   coro.send(test.cb)
   if test.pause:
